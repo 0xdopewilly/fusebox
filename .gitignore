@@ -1,0 +1,10 @@
+# Foundry
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+# Node
+node_modules/
+# Local env
+.env
+.env.*
+!.env.example
