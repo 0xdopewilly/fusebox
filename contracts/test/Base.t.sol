@@ -89,6 +89,8 @@ abstract contract Base is Test {
         _installAll();
 
         vm.startPrank(owner);
+        wallet.setToken(address(usdt), true);
+        wallet.setToken(address(0), true);
         wallet.addPayee(supplier);
         wallet.setApprovers([approver1, approver2, approver3]);
         vm.stopPrank();

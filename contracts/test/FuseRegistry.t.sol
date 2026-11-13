@@ -30,6 +30,15 @@ contract FuseRegistryTest is Base {
         assertEq(registry.designerOf(fuseIds[0]), designer);
         assertEq(registry.fuseIdOf(address(processor), circuitIds[0]), fuseIds[0]);
         assertEq(registry.fuse(fuseIds[2]).nState, 1, "breaker keeps one state bit");
+        assertEq(registry.originalOf(x.netlistHash), fuseIds[0]);
+    }
+
+    function test_copies_are_listed_but_not_original() public {
+        (uint256 id, FuseFixtures.Fixture memory f) = _fresh(0); // same netlist, new circuit id
+        vm.prank(designer);
+        uint256 copy = registry.list(address(processor), id, f.socket, f.netlistHash, 0, "");
+        assertEq(registry.originalOf(f.netlistHash), fuseIds[0]);
+        assertTrue(copy != fuseIds[0]);
     }
 
     function test_only_the_circuit_owner_can_list() public {

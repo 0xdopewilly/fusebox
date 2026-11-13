@@ -337,6 +337,7 @@ contract FuseboxWalletTest is Base {
         wallet.setFuseParams(CAP, Sockets.Params({token: address(bad), unit: uint128(USDT), a: 50, b: 0}));
         wallet.removeFuse(APPROVAL);
         wallet.setAgent(address(bad), true); // worst case: the token itself is an agent
+        wallet.setToken(address(bad), true);
         vm.stopPrank();
         vm.prank(agent);
         (bool allowed,) = wallet.pay(address(bad), supplier, 10 * USDT, "");
@@ -345,6 +346,17 @@ contract FuseboxWalletTest is Base {
         assertFalse(bad.reentered(), "nonReentrant held");
         assertEq(bad.balanceOf(supplier), 10 * USDT);
         assertEq(wallet.decisionCount(), 1);
+    }
+
+    function test_only_enabled_tokens() public {
+        vm.prank(agent);
+        vm.expectRevert(abi.encodeWithSelector(FuseboxWallet.TokenNotEnabled.selector, address(registry)));
+        wallet.pay(address(registry), supplier, 1, "use the token argument as an arbitrary call");
+        vm.prank(owner);
+        wallet.setToken(address(usdt), false);
+        vm.prank(agent);
+        vm.expectRevert(abi.encodeWithSelector(FuseboxWallet.TokenNotEnabled.selector, address(usdt)));
+        wallet.pay(address(usdt), supplier, 1, "");
     }
 
     function test_paused_reverts_before_any_fuse() public {

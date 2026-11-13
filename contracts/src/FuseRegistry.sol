@@ -58,6 +58,8 @@ contract FuseRegistry is Ownable2Step, ReentrancyGuard {
     mapping(uint256 fuseId => Fuse) internal _fuses;
     mapping(uint256 fuseId => string) public metadataURI;
     mapping(address processor => mapping(uint256 circuitId => uint256 fuseId)) public fuseIdOf;
+    /// @notice The first fuse listed with a given netlist: lets the marketplace mark copies of a design.
+    mapping(bytes32 netlistHash => uint256 fuseId) public originalOf;
 
     /// @notice Allowlisted processor proxy code hash => the beacon that code delegates through.
     mapping(bytes32 codehash => address beacon) public beaconOfCodehash;
@@ -171,6 +173,7 @@ contract FuseRegistry is Ownable2Step, ReentrancyGuard {
             netlistHash: netlistHash
         });
         fuseIdOf[processor][circuitId] = fuseId;
+        if (originalOf[netlistHash] == 0) originalOf[netlistHash] = fuseId;
         metadataURI[fuseId] = uri;
         emit FuseListed(fuseId, processor, circuitId, msg.sender, socket, gates, nState, fee, netlistHash, uri);
     }

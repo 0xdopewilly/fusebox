@@ -89,6 +89,9 @@ contract FuseboxWallet is ReentrancyGuard {
     address public owner;
     address public pendingOwner;
     mapping(address => bool) public isAgent;
+    /// @notice Tokens the agent may pay with (address(0) = native OKB). `pay` reverts for any other token,
+    ///         so the agent cannot use the token argument to make the wallet call arbitrary contracts.
+    mapping(address token => bool) public tokenEnabled;
     bool public paused;
 
     Slot[] internal _stack;
@@ -136,6 +139,7 @@ contract FuseboxWallet is ReentrancyGuard {
     event FuseParamsSet(uint256 indexed slot, Sockets.Params params);
     event FuseMaxFeeSet(uint256 indexed slot, uint96 maxFee);
     event AgentSet(address indexed agent, bool enabled);
+    event TokenSet(address indexed token, bool enabled);
     event PayeeAdded(address indexed payee, uint64 at);
     event PayeeRemoved(address indexed payee);
     event ApproversSet(address[3] approvers, uint64 epoch);
@@ -157,6 +161,7 @@ contract FuseboxWallet is ReentrancyGuard {
     error TooManyFuses();
     error BadIndex();
     error BadPayee();
+    error TokenNotEnabled(address token);
     error ZeroAmount();
     error ZeroAddress();
     error BlockedLimitReached(uint32 limit);
@@ -215,6 +220,7 @@ contract FuseboxWallet is ReentrancyGuard {
         if (paused) revert IsPaused();
         if (to == address(0) || to == address(this)) revert BadPayee();
         if (amount == 0) revert ZeroAmount();
+        if (!tokenEnabled[token]) revert TokenNotEnabled(token);
         uint256 n = _stack.length;
         if (n == 0) revert NoFuses();
         uint32 today = uint32(block.timestamp / 1 days);
@@ -423,6 +429,11 @@ contract FuseboxWallet is ReentrancyGuard {
         if (agent == address(0)) revert ZeroAddress();
         isAgent[agent] = enabled;
         emit AgentSet(agent, enabled);
+    }
+
+    function setToken(address token, bool enabled) external onlyOwner {
+        tokenEnabled[token] = enabled;
+        emit TokenSet(token, enabled);
     }
 
     /// @notice Add a payee. Its cooling-off clock starts now.

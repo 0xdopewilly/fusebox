@@ -154,6 +154,7 @@ contract XLayerForkTest is Test {
         wallet.addFuse(fuseIds[1], Sockets.Params(USDT0, uint128(USDT), 24, 2), FEE); // 24h cooling, 2 USDT0 trial
         wallet.addFuse(fuseIds[2], none, FEE); // breaker
         wallet.addFuse(fuseIds[3], Sockets.Params(USDT0, uint128(USDT), 20, 0), FEE); // approvals above 20
+        wallet.setToken(USDT0, true);
         wallet.addPayee(supplier);
         wallet.setApprovers([approver1, approver2, approver3]);
         vm.stopPrank();
