@@ -58,6 +58,17 @@ Nothing has been sent to mainnet; no real OKB or USDT0 has been spent.
 - `tapeout.net` showing our circuits / listing them on its circuit market: not checked.
 - `delisting` only stops new installs; there is no designer-side kill switch for a buggy fuse, by design.
 
+## Against the rivals (read 2026-11-13)
+
+| Project | What it does | What Fusebox has that it lacks |
+|---|---|---|
+| IntentGuard (CPU 414, circuit 4) | One 1,766-gate, 451-input spending-policy circuit (about 4.2M gas per eval) plus off-chain GenLayer review | Small composable fuses (11 to 108 gates, ~0.9M gas for all four), a designer marketplace, per-decision fees, LATCH state |
+| Hardline | Compiles yes/no rules to NAND chips, proves them exhaustively, demo vault calls `eval` | Stackable fuses, sequential circuits (breaker), on-chain derived numeric inputs, designer income |
+| TapeSafe | 74-NAND team-approval circuit; its executor and vault are not deployed (per its README) | Deployed-and-tested wallet path on a mainnet fork, approvals as one fuse among several, designer income |
+| Remembrance Seal | Not reviewed in this pass | |
+
+None of them lets a third party sell a circuit as a product or earn when it is used.
+
 ## Open questions for you
 
 1. **Processor.** Tape out on OrderGuard (someone else's OKB-priced processor, works today, verified) or
