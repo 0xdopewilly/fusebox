@@ -27,5 +27,11 @@ xlayer = "https://rpc.xlayer.tech"
 xlayer_drpc = "https://xlayer.drpc.org"
 xlayer_tapeout = "https://tapeout.net/rpc-xlayer"
 
+[lint]
+# incorrect-shift: `1 << k` builds bit masks; the order is intended.
+# block-timestamp: fuses work in hours and UTC days, far above any sequencer drift.
+exclude_lints = ["incorrect-shift", "block-timestamp"]
+ignore = ["test/**/*.sol"]
+
 [fmt]
 line_length = 120
