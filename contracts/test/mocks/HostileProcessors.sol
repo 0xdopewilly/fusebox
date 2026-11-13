@@ -40,6 +40,7 @@ contract HostileProcessor {
         Huge,
         BadOffset,
         Short,
+        Long,
         Burn
     }
 
@@ -93,6 +94,13 @@ contract HostileProcessor {
                 mstore(0, 0xffff)
                 mstore(32, 1)
                 return(0, 64)
+            }
+            case 5 {
+                // well-formed but two bytes for a one-output circuit (TAP-02 says exactly one)
+                mstore(0, 0x20)
+                mstore(32, 2)
+                mstore(64, 0x0101000000000000000000000000000000000000000000000000000000000000)
+                return(0, 96)
             }
             default {
                 // well-formed bytes of length 0 (shorter than nOut needs)

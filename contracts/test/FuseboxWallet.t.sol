@@ -99,6 +99,21 @@ contract FuseboxWalletTest is Base {
         wallet.freeze();
     }
 
+    function test_freeze_still_works_when_breakers_cannot_step() public {
+        beacon.upgradeTo(makeAddr("unreviewedImplementation"));
+        vm.prank(approver1);
+        assertEq(wallet.freeze(), 0, "no breaker could latch");
+        assertTrue(wallet.paused(), "so the wallet paused instead");
+        vm.prank(admin);
+        registry.setTrustedImplementation(makeAddr("unreviewedImplementation"), true);
+        vm.prank(agent);
+        vm.expectRevert(FuseboxWallet.IsPaused.selector);
+        wallet.pay(address(usdt), supplier, 1, "");
+        vm.prank(owner);
+        wallet.setPaused(false);
+        assertTrue(pay(supplier, 1 * USDT));
+    }
+
     function test_owner_pulse_set_and_clear_together_stays_frozen() public {
         vm.prank(owner);
         wallet.pulse(BREAKER, true, true);
@@ -211,6 +226,32 @@ contract FuseboxWalletTest is Base {
         assertFalse(pay(supplier, 30 * USDT));
     }
 
+    function test_raising_ttl_does_not_revive_expired_approvals() public {
+        vm.prank(approver1);
+        wallet.approvePayment(address(usdt), supplier, 30 * USDT);
+        vm.prank(approver2);
+        wallet.approvePayment(address(usdt), supplier, 30 * USDT);
+        vm.warp(vm.getBlockTimestamp() + 3 days);
+        vm.prank(owner);
+        wallet.setApprovalTtl(7 days);
+        assertEq(wallet.approvalMaskOf(address(usdt), supplier, 30 * USDT), 0);
+        assertFalse(pay(supplier, 30 * USDT));
+        // a fresh single approval cannot combine with the stale bit
+        vm.prank(approver3);
+        wallet.approvePayment(address(usdt), supplier, 30 * USDT);
+        assertEq(wallet.approvalMaskOf(address(usdt), supplier, 30 * USDT), 4);
+        assertFalse(pay(supplier, 30 * USDT));
+    }
+
+    function test_agents_cannot_hold_approver_seats() public {
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(FuseboxWallet.AgentCannotApprove.selector, agent));
+        wallet.setApprovers([agent, approver2, approver3]);
+        vm.prank(owner);
+        vm.expectRevert(abi.encodeWithSelector(FuseboxWallet.AgentCannotApprove.selector, approver1));
+        wallet.setAgent(approver1, true);
+    }
+
     function test_approval_revoke_and_access() public {
         vm.prank(scammer);
         vm.expectRevert(FuseboxWallet.NotApprover.selector);
@@ -244,14 +285,43 @@ contract FuseboxWalletTest is Base {
         wallet.pay(address(usdt), supplier, 1 * USDT, "");
     }
 
-    function test_fee_increase_needs_owner_acceptance() public {
+    function test_fee_increase_is_charged_only_after_owner_accepts() public {
         vm.prank(designer);
         registry.setFee(fuseIds[CAP], FEE_CAP * 100);
-        vm.prank(agent);
-        vm.expectRevert(abi.encodeWithSelector(FuseRegistry.FeeAboveAccepted.selector, fuseIds[CAP], FEE_CAP * 100, FEE_CAP));
-        wallet.pay(address(usdt), supplier, 1 * USDT, "");
+        vm.recordLogs();
+        assertTrue(pay(supplier, 1 * USDT), "a price change never blocks payments");
+        (,,,,, uint256 fee) = lastDecision(vm.getRecordedLogs());
+        assertEq(fee, totalFee(), "charged the accepted price");
         vm.prank(owner);
         wallet.setFuseMaxFee(CAP, FEE_CAP * 100);
+        vm.recordLogs();
+        assertTrue(pay(supplier, 1 * USDT));
+        (,,,,, fee) = lastDecision(vm.getRecordedLogs());
+        assertEq(fee, totalFee() - FEE_CAP + FEE_CAP * 100);
+    }
+
+    function test_decision_limit_bounds_fee_drain_by_tiny_payments() public {
+        vm.prank(owner);
+        wallet.setDailyLimits(30, 20);
+        uint256 bal = registry.feeBalance(address(wallet));
+        for (uint256 i; i < 30; ++i) {
+            assertTrue(pay(supplier, 1)); // 1 base unit each
+        }
+        vm.prank(agent);
+        vm.expectRevert(abi.encodeWithSelector(FuseboxWallet.DecisionLimitReached.selector, 30));
+        wallet.pay(address(usdt), supplier, 1, "");
+        assertEq(bal - registry.feeBalance(address(wallet)), 30 * totalFee(), "at most limit * fees per day");
+        vm.warp(vm.getBlockTimestamp() + 1 days);
+        assertTrue(pay(supplier, 1));
+    }
+
+    function test_zero_blocked_limit_records_no_blocked_attempt() public {
+        vm.prank(owner);
+        wallet.setDailyLimits(100, 0);
+        vm.prank(agent);
+        vm.expectRevert(abi.encodeWithSelector(FuseboxWallet.BlockedLimitReached.selector, 0));
+        wallet.pay(address(usdt), scammer, 1, "");
+        assertEq(wallet.blockedCount(), 0);
         assertTrue(pay(supplier, 1 * USDT));
     }
 
@@ -266,7 +336,7 @@ contract FuseboxWalletTest is Base {
 
     function test_blocked_limit_bounds_fee_drain_but_not_good_payments() public {
         vm.prank(owner);
-        wallet.setMaxBlockedPerDay(2);
+        wallet.setDailyLimits(100, 2);
         vm.prank(owner);
         wallet.removeFuse(BREAKER); // keep the wallet usable after strangers
         assertFalse(pay(scammer, 1 * USDT));

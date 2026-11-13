@@ -5,7 +5,7 @@ import {Base} from "./Base.t.sol";
 import {FuseRegistry} from "../src/FuseRegistry.sol";
 import {Sockets} from "../src/libraries/Sockets.sol";
 import {FuseFixtures} from "./fixtures/FuseFixtures.sol";
-import {FakeProcessor} from "./mocks/HostileProcessors.sol";
+import {FakeProcessor, HostileProcessor} from "./mocks/HostileProcessors.sol";
 import {MockProcessor} from "./mocks/MockTapeout.sol";
 
 contract FuseRegistryTest is Base {
@@ -100,6 +100,49 @@ contract FuseRegistryTest is Base {
         vm.prank(designer);
         vm.expectRevert(abi.encodeWithSelector(FuseRegistry.NetlistHashMismatch.selector, wrong, f.netlistHash));
         registry.list(address(processor), id, f.socket, wrong, 0, "");
+    }
+
+    function test_state_must_match_socket() public {
+        // a 4-input combinational circuit cannot be a breaker (no latch to hold the freeze)
+        bytes memory comb = hex"00000002000003";
+        vm.prank(designer);
+        uint256 a = processor.tapeout(comb, 4, 1);
+        vm.prank(designer);
+        vm.expectRevert(abi.encodeWithSelector(FuseRegistry.StateMismatch.selector, Sockets.BREAKER, 0));
+        registry.list(address(processor), a, Sockets.BREAKER, keccak256(comb), 0, "");
+        // a 24-input circuit with a latch cannot be a daily cap (it could change behaviour over time)
+        bytes memory seq = hex"010000020000001a000002";
+        vm.prank(designer);
+        uint256 b = processor.tapeout(seq, 24, 1);
+        vm.prank(designer);
+        vm.expectRevert(abi.encodeWithSelector(FuseRegistry.StateMismatch.selector, Sockets.DAILY_CAP, 1));
+        registry.list(address(processor), b, Sockets.DAILY_CAP, keccak256(seq), 0, "");
+    }
+
+    function test_ref_netlists_are_refused() public {
+        bytes memory nl = bytes.concat(
+            hex"02", bytes20(address(processor)), bytes8(uint64(1)), hex"0101", hex"000002", hex"00000015000015"
+        );
+        // REF to a 1-in/1-out circuit, then a NAND; framing does not matter, the REF is caught first
+        vm.prank(designer);
+        HostileProcessor h = new HostileProcessor(nl, 19);
+        tapeFactory.setCPU(address(h), true);
+        vm.prank(admin);
+        registry.setProcessorCodehash(address(h).codehash, address(beacon));
+        vm.prank(designer);
+        vm.expectRevert(abi.encodeWithSelector(FuseRegistry.RefNotAllowed.selector, 0));
+        registry.list(address(h), 1, Sockets.APPROVAL_2OF3, keccak256(nl), 0, "");
+    }
+
+    function test_owner_actions_need_a_trusted_processor() public {
+        assertTrue(pay(supplier, 1 * USDT));
+        beacon.upgradeTo(makeAddr("unreviewedImplementation"));
+        vm.prank(designer);
+        vm.expectRevert(abi.encodeWithSelector(FuseRegistry.UntrustedProcessor.selector, address(processor)));
+        registry.claim(fuseIds[0], designer);
+        vm.prank(designer);
+        vm.expectRevert(abi.encodeWithSelector(FuseRegistry.UntrustedProcessor.selector, address(processor)));
+        registry.setFee(fuseIds[0], 1);
     }
 
     function test_gate_budget_is_enforced() public {

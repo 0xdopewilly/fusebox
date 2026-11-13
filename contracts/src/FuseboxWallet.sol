@@ -57,7 +57,8 @@ contract FuseboxWallet is ReentrancyGuard {
 
     struct Approval {
         uint8 mask;
-        uint64 firstAt;
+        /// fixed when the first approval lands; later TTL changes do not move it
+        uint64 expiresAt;
     }
 
     struct Ctx {
@@ -106,8 +107,13 @@ contract FuseboxWallet is ReentrancyGuard {
     uint64 public decisionCount;
     uint64 public allowedCount;
     uint64 public blockedCount;
-    uint32 public blockedDay;
+    /// UTC day the two counters below refer to
+    uint32 public counterDay;
+    uint32 public decisionsToday;
     uint32 public blockedToday;
+    /// recorded (and charged) decisions per UTC day, allowed or blocked; bounds fees per day
+    uint32 public maxDecisionsPerDay;
+    /// recorded (and charged) blocked attempts per UTC day
     uint32 public maxBlockedPerDay;
 
     // ---------------------------------------------------------------------------------------------
@@ -147,7 +153,8 @@ contract FuseboxWallet is ReentrancyGuard {
     event Approved(bytes32 indexed intent, address indexed approver, uint8 mask);
     event ApprovalRevoked(bytes32 indexed intent, address indexed approver, uint8 mask);
     event PausedSet(bool paused);
-    event MaxBlockedPerDaySet(uint32 limit);
+    event DailyLimitsSet(uint32 maxDecisions, uint32 maxBlocked);
+    event BreakerSkipped(uint256 indexed slot, uint8 status);
     event Executed(address indexed target, uint256 value, bytes data);
     event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
@@ -165,6 +172,8 @@ contract FuseboxWallet is ReentrancyGuard {
     error ZeroAmount();
     error ZeroAddress();
     error BlockedLimitReached(uint32 limit);
+    error DecisionLimitReached(uint32 limit);
+    error AgentCannotApprove(address who);
     error FuseNotListed(uint256 fuseId);
     error FeeAboveMax(uint256 fee, uint256 maxFee);
     error NoOwnerPins(uint256 slot);
@@ -197,6 +206,7 @@ contract FuseboxWallet is ReentrancyGuard {
             emit AgentSet(agents[i], true);
         }
         approvalTtl = 1 days;
+        maxDecisionsPerDay = 100;
         maxBlockedPerDay = 20;
     }
 
@@ -223,16 +233,18 @@ contract FuseboxWallet is ReentrancyGuard {
         if (!tokenEnabled[token]) revert TokenNotEnabled(token);
         uint256 n = _stack.length;
         if (n == 0) revert NoFuses();
-        uint32 today = uint32(block.timestamp / 1 days);
+        // forge-lint: disable-next-line(unsafe-typecast)
+        uint32 today = uint32(block.timestamp / 1 days); // day index fits u32 for 11M years
+        bool sameDay = counterDay == today;
+        // Daily budgets bound what a looping or hijacked agent can spend on fees: past either limit the
+        // attempt reverts, so nothing is recorded or charged.
+        if ((sameDay ? decisionsToday : 0) >= maxDecisionsPerDay) revert DecisionLimitReached(maxDecisionsPerDay);
 
         Ctx memory c = _context(token, to, amount, today);
         Verdict memory v = _decide(c);
         allowed = v.allowed;
-        // Past the daily limit a blocked attempt reverts: nothing recorded, no fees. Allowed payments still
-        // go through, so a looping or hijacked agent cannot drain the fee balance with refused payments.
-        if (!allowed && blockedDay == today && blockedToday >= maxBlockedPerDay) {
-            revert BlockedLimitReached(maxBlockedPerDay);
-        }
+        // Past the blocked limit a refused attempt reverts; allowed payments still go through.
+        if (!allowed && (sameDay ? blockedToday : 0) >= maxBlockedPerDay) revert BlockedLimitReached(maxBlockedPerDay);
 
         // effects: fuse state (every decision is one beat, allowed or blocked), counters, cap, approvals
         uint256 charged;
@@ -243,6 +255,12 @@ contract FuseboxWallet is ReentrancyGuard {
             if (s.nState != 0) s.state = v.newStates[i];
         }
         decisionId = ++decisionCount;
+        if (!sameDay) {
+            counterDay = today;
+            decisionsToday = 0;
+            blockedToday = 0;
+        }
+        decisionsToday++;
         if (allowed) {
             allowedCount++;
             for (uint256 i; i < n; ++i) {
@@ -258,10 +276,6 @@ contract FuseboxWallet is ReentrancyGuard {
             if (c.approvalMask != 0) delete approvals[c.intent];
         } else {
             blockedCount++;
-            if (blockedDay != today) {
-                blockedDay = today;
-                blockedToday = 0;
-            }
             blockedToday++;
         }
 
@@ -300,16 +314,23 @@ contract FuseboxWallet is ReentrancyGuard {
     // Freeze / breaker control beats
     // ---------------------------------------------------------------------------------------------
 
-    /// @notice Blow every breaker fuse (set pulse). Owner, agents and approvers may freeze;
-    ///         only the owner may reset.
-    function freeze() external nonReentrant {
+    /// @notice Blow every breaker fuse (set pulse). Owner, agents and approvers may freeze; only the owner
+    ///         may reset. Best effort per breaker: one that cannot be stepped (processor untrusted or failing)
+    ///         is skipped with an event, and if no breaker latched, the wallet is paused instead, so a freeze
+    ///         never depends on a processor being healthy.
+    /// @return latched Number of breakers that latched.
+    function freeze() external nonReentrant returns (uint256 latched) {
         if (msg.sender != owner && !isAgent[msg.sender] && !_isApprover(msg.sender)) revert NotAllowedToFreeze();
-        _pulseAllBreakers(true, false);
+        latched = _pulseAllBreakers(true, false);
+        if (latched == 0) {
+            paused = true;
+            emit PausedSet(true);
+        }
     }
 
-    /// @notice Reset every breaker fuse (clear pulse).
+    /// @notice Reset every breaker fuse (clear pulse). Does not lift a pause: use setPaused.
     function unfreeze() external onlyOwner nonReentrant {
-        _pulseAllBreakers(false, true);
+        if (_pulseAllBreakers(false, true) == 0) revert NoBreaker();
     }
 
     /// @notice One owner control beat on a single sequential fuse with owner pins.
@@ -329,8 +350,8 @@ contract FuseboxWallet is ReentrancyGuard {
         uint256 k = _approverIndex(msg.sender);
         intent = intentHash(token, to, amount);
         Approval storage a = approvals[intent];
-        if (a.mask != 0 && block.timestamp > uint256(a.firstAt) + approvalTtl) a.mask = 0;
-        if (a.mask == 0) a.firstAt = uint64(block.timestamp);
+        if (a.mask != 0 && block.timestamp > a.expiresAt) a.mask = 0;
+        if (a.mask == 0) a.expiresAt = uint64(block.timestamp + approvalTtl);
         // forge-lint: disable-next-line(unsafe-typecast)
         a.mask |= uint8(1 << k); // k < 3
         emit Approved(intent, msg.sender, a.mask);
@@ -352,7 +373,7 @@ contract FuseboxWallet is ReentrancyGuard {
     /// @notice Approver bits currently valid for a payment, as the 2-of-3 socket will see them.
     function approvalMaskOf(address token, address to, uint256 amount) public view returns (uint8) {
         Approval memory a = approvals[intentHash(token, to, amount)];
-        if (a.mask == 0 || block.timestamp > uint256(a.firstAt) + approvalTtl) return 0;
+        if (a.mask == 0 || block.timestamp > a.expiresAt) return 0;
         return a.mask;
     }
 
@@ -427,6 +448,7 @@ contract FuseboxWallet is ReentrancyGuard {
 
     function setAgent(address agent, bool enabled) external onlyOwner {
         if (agent == address(0)) revert ZeroAddress();
+        if (enabled && _isApprover(agent)) revert AgentCannotApprove(agent);
         isAgent[agent] = enabled;
         emit AgentSet(agent, enabled);
     }
@@ -452,6 +474,7 @@ contract FuseboxWallet is ReentrancyGuard {
     /// @notice Set the three approver seats (address(0) = empty seat). Invalidates every open approval.
     function setApprovers(address[3] calldata seats) external onlyOwner {
         for (uint256 i; i < 3; ++i) {
+            if (isAgent[seats[i]]) revert AgentCannotApprove(seats[i]);
             for (uint256 j = i + 1; j < 3; ++j) {
                 if (seats[i] != address(0) && seats[i] == seats[j]) revert DuplicateApprover();
             }
@@ -472,11 +495,14 @@ contract FuseboxWallet is ReentrancyGuard {
         emit PausedSet(paused_);
     }
 
-    /// @notice Recorded (and charged) blocked attempts per UTC day. Beyond it, blocked attempts revert
-    ///         without being recorded or charged; allowed payments are unaffected.
-    function setMaxBlockedPerDay(uint32 limit) external onlyOwner {
-        maxBlockedPerDay = limit;
-        emit MaxBlockedPerDaySet(limit);
+    /// @notice Daily budgets (UTC days). `maxDecisions`: recorded decisions of any outcome; beyond it every
+    ///         attempt reverts. `maxBlocked`: recorded blocked attempts; beyond it refused attempts revert
+    ///         while allowed payments continue. Reverted attempts are never charged, so the fee spend per day
+    ///         is at most maxDecisions * sum of the accepted fees.
+    function setDailyLimits(uint32 maxDecisions, uint32 maxBlocked) external onlyOwner {
+        maxDecisionsPerDay = maxDecisions;
+        maxBlockedPerDay = maxBlocked;
+        emit DailyLimitsSet(maxDecisions, maxBlocked);
     }
 
     /// @notice Withdraw unused prepaid fees from the registry.
@@ -609,14 +635,16 @@ contract FuseboxWallet is ReentrancyGuard {
         (bool ok, bytes memory ret) = _boundedStaticcall(s.processor, data);
         if (!ok) return (FAILED, out, newState);
         bool good;
+        // TAP-02 §5: outputs and new state are exactly ceil(n / 8) bytes; anything else is malformed
         if (sequential) {
             (good, newState) = _readBytes(ret, 0);
-            if (!good || newState.length < (uint256(s.nState) + 7) / 8) return (FAILED, "", "");
+            if (!good || newState.length != (uint256(s.nState) + 7) / 8) return (FAILED, "", "");
+            Sockets.maskTail(newState, s.nState);
             (good, out) = _readBytes(ret, 1);
         } else {
             (good, out) = _readBytes(ret, 0);
         }
-        if (!good || out.length < (uint256(s.nOut) + 7) / 8) return (FAILED, "", "");
+        if (!good || out.length != (uint256(s.nOut) + 7) / 8) return (FAILED, "", "");
         status = Sockets.allOnes(out, s.nOut) ? PASS : BLEW;
     }
 
@@ -673,26 +701,33 @@ contract FuseboxWallet is ReentrancyGuard {
         fee = registry.charge(ids, maxFees);
     }
 
-    function _pulseAllBreakers(bool set, bool clear) internal {
+    /// @return done Breakers stepped successfully; failing ones are skipped with BreakerSkipped.
+    function _pulseAllBreakers(bool set, bool clear) internal returns (uint256 done) {
         uint256 n = _stack.length;
-        bool any;
         for (uint256 i; i < n; ++i) {
             Slot storage s = _stack[i];
-            if (Sockets.hasOwnerPins(s.socket) && s.nState != 0) {
-                _pulse(i, set, clear);
-                any = true;
-            }
+            if (!Sockets.hasOwnerPins(s.socket) || s.nState == 0) continue;
+            uint8 status = _tryPulse(i, set, clear);
+            if (status > BLEW) emit BreakerSkipped(i, status);
+            else done++;
         }
-        if (!any) revert NoBreaker();
     }
 
     function _pulse(uint256 slot, bool set, bool clear) internal {
         Slot storage s = _stack[slot];
         if (!Sockets.hasOwnerPins(s.socket) || s.nState == 0) revert NoOwnerPins(slot);
-        bytes memory inputs = Sockets.breakerInputs(set, clear, false, false);
-        if (!registry.isTrustedProcessor(s.processor)) revert ControlBeatFailed(slot, UNTRUSTED);
-        (uint8 status,, bytes memory newState) = _evaluate(s, inputs);
+        uint8 status = _tryPulse(slot, set, clear);
         if (status > BLEW) revert ControlBeatFailed(slot, status);
+    }
+
+    /// @dev One control beat; commits the new state only if the processor answered well-formed.
+    function _tryPulse(uint256 slot, bool set, bool clear) internal returns (uint8 status) {
+        Slot storage s = _stack[slot];
+        if (!registry.isTrustedProcessor(s.processor)) return UNTRUSTED;
+        bytes memory inputs = Sockets.breakerInputs(set, clear, false, false);
+        bytes memory newState;
+        (status,, newState) = _evaluate(s, inputs);
+        if (status > BLEW) return status;
         s.state = newState;
         emit ControlBeat(slot, s.fuseId, msg.sender, inputs, newState);
     }

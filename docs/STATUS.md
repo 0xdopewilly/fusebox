@@ -10,8 +10,8 @@ Nothing has been sent to mainnet; no real OKB or USDT0 has been spent.
 |---|---|
 | Circuit toolchain (`circuits/`) | NAND/LATCH builder, TAP-02 encoder/decoder/evaluator (with REF), bitsliced simulator, dependency-free keccak256, build script that emits `build/fuses.json` and the Solidity fixtures. TypeScript, Node ≥ 23.6, only dev dependencies. |
 | Fuses | Daily Cap (108 gates), Payee Guard with cooling-off and trial allowance (79), Breaker LATCH (10 NAND + 1 LATCH), Two of Three above a threshold (46). |
-| `FuseRegistry` | Listing by circuit NFT owner with processor trust (code hash + factory + attested implementation), pinout, gate budget and netlist hash checks; originals marked; per-decision USDT0 fees; prepaid balances; claims by the current NFT owner; 10% protocol share (max 20%). |
-| `FuseboxWallet` | Owner, agents, enabled tokens, ordered stack of up to 8 fuses, `pay` with eval/step and stored LATCH state, recorded blocked attempts that still pay designers, payee book, 2-of-3 approvals bound to the exact payment, freeze (owner/agent/approver) and reset (owner), kill switch, daily limit on recorded blocks, `check` dry run, `execute`, two-step ownership. |
+| `FuseRegistry` | Listing by circuit NFT owner with processor trust (code hash + factory + attested implementation), pinout, statefulness, gate budget, no-REF and netlist hash checks; originals marked; per-decision USDT0 fees charged at min(fee, accepted); prepaid balances; claims by the current NFT owner (only while the processor is trusted); 10% protocol share (max 20%). |
+| `FuseboxWallet` | Owner, agents, enabled tokens, ordered stack of up to 8 fuses, `pay` with eval/step and stored LATCH state, recorded blocked attempts that still pay designers, payee book, 2-of-3 approvals bound to the exact payment with fixed expiry, freeze (owner/agent/approver, falls back to pause) and reset (owner), kill switch, daily budgets on decisions and blocks, `check` dry run, `execute`, two-step ownership. |
 | `FuseboxFactory` | Deploys and records wallets. |
 | Scripts | `Deploy.s.sol` (registry + factory + trust config, re-checks chain facts), `TapeOutFuses.s.sol` (buys transistors, tapes out, lists). Rehearsed on a local anvil fork with an impersonated sender. |
 | Docs | `docs/ARCHITECTURE.md` (diagrams, sockets, circuits, fee flow, threat model, gas). |
@@ -22,7 +22,8 @@ Nothing has been sent to mainnet; no real OKB or USDT0 has been spent.
 | Suite | Result |
 |---|---|
 | `circuits`: `npm test` | 17/17 pass: TAP-02 official vectors (SHA-256 pinned), builder and arithmetic blocks, random circuits, Daily Cap all 2^24 vectors, Two of Three all 2^19, Payee Guard block-exhaustive + 4M random, Breaker all state/input pairs, stuck-at fault coverage (no redundant gate). `npm run typecheck` clean. |
-| `contracts`: `forge test` (offline) | 53 pass, 0 fail (the fork suite is skipped without a fork). Includes 2 fuzz tests (cap never exceeded over a random day; quantisation never under-reports) and a solvency fuzz test. |
+| `contracts`: `forge test` (offline) | 61 pass, 0 fail (the fork suite is skipped without a fork). Includes 2 fuzz tests (cap never exceeded over a random day; quantisation never under-reports) and a solvency fuzz test. |
+| Independent review | A separate review pass found 7 issues (2 medium: fee drain through tiny allowed payments; earnings claimable through an unattested processor). All 7 are fixed with regression tests; its design notes are folded into ARCHITECTURE.md §7. |
 | `contracts`: fork suite (`--fork-url xlayer`) | 4/4 pass against X Layer mainnet state (block ~75.82M). |
 
 ## Verified on the X Layer fork (real TapeOut contracts, nothing broadcast)
@@ -62,6 +63,7 @@ Nothing has been sent to mainnet; no real OKB or USDT0 has been spent.
 1. **Processor.** Tape out on OrderGuard (someone else's OKB-priced processor, works today, verified) or
    create a "Fusebox" processor (0.1 BEM via the factory, transistors priced in BEM, own branding)?
 2. **Blocked attempts pay the designer.** Implemented and documented; confirm this is the product call.
+   Related defaults: 100 recorded decisions and 20 recorded blocks per UTC day per wallet.
 3. **Protocol share**: 10% to a Fusebox treasury, capped at 20%. Keep, change, or 0% for the hackathon?
 4. **Fee levels** for our four fuses (tests use 0.0005 to 0.002 USDT0 per decision).
 5. **Registry admin**: which address (ideally a multisig) attests processor implementations?

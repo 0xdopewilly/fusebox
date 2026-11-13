@@ -47,6 +47,13 @@ library Sockets {
         return (0, 0);
     }
 
+    /// @notice Whether circuits for this socket must keep LATCH state (true) or must have none (false).
+    ///         Only the breaker is sequential; for the others a stateful circuit could behave for N beats and
+    ///         then change, so the registry refuses state there.
+    function sequential(uint32 socket) internal pure returns (bool) {
+        return socket == BREAKER;
+    }
+
     function exists(uint32 socket) internal pure returns (bool) {
         (, uint32 nOut) = pinout(socket);
         return nOut != 0;
@@ -112,6 +119,13 @@ library Sockets {
             out[i] = bytes1(uint8(v >> (8 * i))); // keep the low byte on purpose
         }
         if (nBits % 8 != 0) out[n - 1] = bytes1(uint8(out[n - 1]) & uint8((1 << (nBits % 8)) - 1));
+    }
+
+    /// @notice Zero the unused high bits of the last byte of an n-bit vector.
+    function maskTail(bytes memory v, uint256 nBits) internal pure {
+        if (nBits % 8 != 0 && v.length != 0) {
+            v[v.length - 1] = bytes1(uint8(v[v.length - 1]) & uint8((1 << (nBits % 8)) - 1));
+        }
     }
 
     /// @notice True when the first nOut bits of `out` are all 1.

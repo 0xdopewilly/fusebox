@@ -109,10 +109,12 @@ contract FuseRegistry is Ownable2Step, ReentrancyGuard {
     error TooManyGates(uint32 gateCount);
     error TooMuchState(uint32 nState);
     error NetlistHashMismatch(bytes32 expected, bytes32 actual);
+    error StateMismatch(uint32 socket, uint32 nState);
+    error RefNotAllowed(uint256 byteOffset);
+    error MalformedNetlist(uint256 byteOffset);
     error BadCircuitId();
     error UnknownFuse(uint256 fuseId);
     error LengthMismatch();
-    error FeeAboveAccepted(uint256 fuseId, uint256 fee, uint256 maxFee);
     error InsufficientFeeBalance(uint256 balance, uint256 needed);
     error ZeroAddress();
     error FeeTooHigh();
@@ -154,8 +156,11 @@ contract FuseRegistry is Ownable2Step, ReentrancyGuard {
         if (nIn != sIn || nOut != sOut) revert PinoutMismatch(socket, nIn, nOut);
         if (gates == 0 || gates > MAX_GATES) revert TooManyGates(gates);
         if (nState > MAX_STATE_BITS) revert TooMuchState(nState);
-        bytes32 actual = keccak256(ITapeoutProcessor(processor).netlist(circuitId));
+        if (Sockets.sequential(socket) ? nState == 0 : nState != 0) revert StateMismatch(socket, nState);
+        bytes memory nl = ITapeoutProcessor(processor).netlist(circuitId);
+        bytes32 actual = keccak256(nl);
         if (actual != netlistHash) revert NetlistHashMismatch(netlistHash, actual);
+        _requireSelfContained(nl);
 
         fuseId = ++fuseCount;
         _fuses[fuseId] = Fuse({
@@ -178,8 +183,9 @@ contract FuseRegistry is Ownable2Step, ReentrancyGuard {
         emit FuseListed(fuseId, processor, circuitId, msg.sender, socket, gates, nState, fee, netlistHash, uri);
     }
 
-    /// @notice Change the per-decision fee. Wallets pin the highest fee they accepted, so an increase
-    ///         takes effect for a wallet only after its owner accepts it; a decrease applies at once.
+    /// @notice Change the per-decision fee. Payers pass the highest fee they accepted and are charged
+    ///         min(fee, accepted): a decrease applies at once, an increase only once a payer accepts it,
+    ///         and a price change can never block anyone's payments.
     function setFee(uint256 fuseId, uint96 fee) external {
         Fuse storage f = _ownedFuse(fuseId);
         emit FeeChanged(fuseId, f.fee, fee);
@@ -238,8 +244,9 @@ contract FuseRegistry is Ownable2Step, ReentrancyGuard {
 
     /// @notice Pay for one decision of each fuse in `fuseIds`, from the caller's fee balance.
     /// @dev Moves internal balances only (no token transfer, no external call). Any caller can only spend
-    ///      its own balance, so the registry does not need to trust wallets.
-    /// @param maxFees The highest fee the caller accepted for each fuse; a higher current fee reverts.
+    ///      its own balance, so the registry does not need to trust wallets. Because anyone can call it,
+    ///      `decisions` and `lifetimeEarned` are not proof of real usage; rank fuses by distinct paying wallets.
+    /// @param maxFees The highest fee the caller accepted for each fuse; it is charged min(fee, maxFee).
     function charge(uint256[] calldata fuseIds, uint256[] calldata maxFees) external returns (uint256 total) {
         uint256 n = fuseIds.length;
         if (maxFees.length != n) revert LengthMismatch();
@@ -250,7 +257,7 @@ contract FuseRegistry is Ownable2Step, ReentrancyGuard {
             Fuse storage f = _fuses[id];
             if (f.processor == address(0)) revert UnknownFuse(id);
             uint256 fee = f.fee;
-            if (fee > maxFees[i]) revert FeeAboveAccepted(id, fee, maxFees[i]);
+            if (fee > maxFees[i]) fee = maxFees[i];
             uint256 cut = (fee * bps) / 10_000;
             uint256 share = fee - cut;
             earned[id] += share;
@@ -299,6 +306,21 @@ contract FuseRegistry is Ownable2Step, ReentrancyGuard {
         }
     }
 
+    /// @dev A fuse must be fully described by its own bytes: REF records would pull in other circuits whose
+    ///      behaviour the netlist hash does not cover. Also re-checks record framing (TAP-02 §2).
+    function _requireSelfContained(bytes memory nl) internal pure {
+        uint256 p;
+        uint256 len = nl.length;
+        while (p < len) {
+            uint8 op = uint8(nl[p]);
+            if (op == 0x00) p += 7;
+            else if (op == 0x01) p += 4;
+            else if (op == 0x02) revert RefNotAllowed(p);
+            else revert MalformedNetlist(p);
+        }
+        if (p != len) revert MalformedNetlist(len);
+    }
+
     // ---------------------------------------------------------------------------------------------
     // Admin (trust configuration and protocol fee only; the admin cannot move anyone's funds)
     // ---------------------------------------------------------------------------------------------
@@ -328,9 +350,12 @@ contract FuseRegistry is Ownable2Step, ReentrancyGuard {
         emit ProtocolClaimed(to, amount);
     }
 
+    /// @dev Owner-only actions (claim, price, listing) also require the processor to be trusted now: an
+    ///      unattested implementation could otherwise report any ownerOf and claim the earnings.
     function _ownedFuse(uint256 fuseId) internal view returns (Fuse storage f) {
         f = _fuses[fuseId];
         if (f.processor == address(0)) revert UnknownFuse(fuseId);
+        if (!isTrustedProcessor(f.processor)) revert UntrustedProcessor(f.processor);
         address circuitOwner = ITapeoutProcessor(f.processor).ownerOf(f.circuitId);
         if (circuitOwner != msg.sender) revert NotCircuitOwner(msg.sender, circuitOwner);
     }
