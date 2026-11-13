@@ -1,0 +1,21 @@
+{
+  "name": "@fusebox/circuits",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Gate-level toolchain for Fusebox guard circuits: NAND/LATCH builder, TAP-02 encoder, simulator and exhaustive tests.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=23.6"
+  },
+  "scripts": {
+    "build": "node scripts/build.ts",
+    "test": "node --test test/*.test.ts",
+    "typecheck": "tsc --noEmit -p .",
+    "check": "npm run typecheck && npm test && npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "typescript": "5.9.3"
+  }
+}
