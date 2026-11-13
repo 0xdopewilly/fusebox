@@ -1,0 +1,398 @@
+{
+  "format": "fusebox-fuses/1",
+  "tap": "TAP-02",
+  "fuses": [
+    {
+      "key": "daily-cap",
+      "title": "Daily Cap",
+      "story": "Your agent can't spend more than the cap in a UTC day, no matter how it is asked.",
+      "socket": {
+        "id": 1,
+        "key": "DAILY_CAP",
+        "pins": [
+          {
+            "name": "amount",
+            "offset": 0,
+            "width": 8,
+            "doc": "this payment, in units of the install's `unit`, rounded up, saturating at 255"
+          },
+          {
+            "name": "spent",
+            "offset": 8,
+            "width": 8,
+            "doc": "already spent today (UTC day) through this fuse slot, rounded up, saturating at 255"
+          },
+          {
+            "name": "cap",
+            "offset": 16,
+            "width": 8,
+            "doc": "the owner's daily cap in units (0..254)"
+          }
+        ],
+        "ownerPins": [],
+        "doc": "Allow iff spent + amount <= cap. Payments in a token other than the install's token read amount = 255."
+      },
+      "nIn": 24,
+      "nOut": 1,
+      "nState": 0,
+      "nand": 108,
+      "latch": 0,
+      "gates": 108,
+      "bytes": 756,
+      "keccak256": "0xd65b2e8ad1a8f22b3dbf3f1aba8a003d3f99cda12b931e30bc44a9655fcfdd97",
+      "netlist": "0x0000000200000a0000000a00001a0000000200001a0000001b00001c0000001a00001a0000000300000b0000000b00001f0000000300001f000000200000210000001e000022000000220000230000001e000023000000240000250000001f0000230000000400000c0000000c000028000000040000280000002900002a0000002700002b0000002b00002c0000002700002c0000002d00002e0000002800002c0000000500000d0000000d000031000000050000310000003200003300000030000034000000340000350000003000003500000036000037000000310000350000000600000e0000000e00003a0000000600003a0000003b00003c0000003900003d0000003d00003e0000003900003e0000003f0000400000003a00003e0000000700000f0000000f00004300000007000043000000440000450000004200004600000046000047000000420000470000004800004900000043000047000000080000100000001000004c0000000800004c0000004d00004e0000004b00004f0000004f0000500000004b000050000000510000520000004c000050000000090000110000001100005500000009000055000000560000570000005400005800000058000059000000540000590000005a00005b000000550000590000001200001d0000001d00005e0000001300002600000026000060000000130000600000005f000061000000620000630000001400002f0000002f000065000000140000650000006400006600000067000068000000150000380000003800006a0000001500006a0000006900006b0000006c00006d000000160000410000004100006f0000001600006f0000006e000070000000710000720000001700004a0000004a0000740000001700007400000073000075000000760000770000001800005300000053000079000000180000790000007800007a0000007b00007c0000001900005c0000005c00007e0000001900007e0000007d00007f000000800000810000005d00005d0000008200008300000084000084",
+      "vectors": [
+        {
+          "state": "0x",
+          "inputs": "0x0a0a32",
+          "newState": "0x",
+          "outputs": "0x01",
+          "note": "10 + 10 <= 50"
+        },
+        {
+          "state": "0x",
+          "inputs": "0x0a2832",
+          "newState": "0x",
+          "outputs": "0x01",
+          "note": "40 + 10 == 50"
+        },
+        {
+          "state": "0x",
+          "inputs": "0x0a2932",
+          "newState": "0x",
+          "outputs": "0x00",
+          "note": "41 + 10 > 50"
+        },
+        {
+          "state": "0x",
+          "inputs": "0x330032",
+          "newState": "0x",
+          "outputs": "0x00",
+          "note": "first payment over the cap"
+        },
+        {
+          "state": "0x",
+          "inputs": "0xc864fe",
+          "newState": "0x",
+          "outputs": "0x00",
+          "note": "sum overflows 8 bits"
+        },
+        {
+          "state": "0x",
+          "inputs": "0xff00fe",
+          "newState": "0x",
+          "outputs": "0x00",
+          "note": "saturated amount never fits"
+        },
+        {
+          "state": "0x",
+          "inputs": "0x000000",
+          "newState": "0x",
+          "outputs": "0x01",
+          "note": "zero cap, zero amount"
+        },
+        {
+          "state": "0x",
+          "inputs": "0x010000",
+          "newState": "0x",
+          "outputs": "0x00",
+          "note": "zero cap, one unit"
+        },
+        {
+          "state": "0x",
+          "inputs": "0x7f7ffe",
+          "newState": "0x",
+          "outputs": "0x01",
+          "note": "254 exactly"
+        }
+      ]
+    },
+    {
+      "key": "payee-guard",
+      "title": "Payee Guard",
+      "story": "Only saved payees get paid. A payee added today can receive a small test payment, not the invoice.",
+      "socket": {
+        "id": 2,
+        "key": "PAYEE_GUARD",
+        "pins": [
+          {
+            "name": "listed",
+            "offset": 0,
+            "width": 1,
+            "doc": "the payee is in the owner's payee book"
+          },
+          {
+            "name": "age",
+            "offset": 1,
+            "width": 8,
+            "doc": "hours since the payee was added, saturating at 255 (0 if not listed)"
+          },
+          {
+            "name": "cooldown",
+            "offset": 9,
+            "width": 8,
+            "doc": "the install's cooling-off period in hours"
+          },
+          {
+            "name": "amount",
+            "offset": 17,
+            "width": 8,
+            "doc": "this payment in units, rounded up, saturating at 255 (255 for another token)"
+          },
+          {
+            "name": "trial",
+            "offset": 25,
+            "width": 8,
+            "doc": "largest payment in units allowed to a payee still cooling off (0..254)"
+          }
+        ],
+        "ownerPins": [],
+        "doc": "Payee book with a cooling-off period for new payees and a small trial allowance while cooling."
+      },
+      "nIn": 33,
+      "nOut": 1,
+      "nState": 0,
+      "nand": 79,
+      "latch": 0,
+      "gates": 79,
+      "bytes": 553,
+      "keccak256": "0x2d1dc771d9dad9741dd0c7225ac7408860c1900f13696a32914b2cc515569099",
+      "netlist": "0x0000000300000b0000000b0000230000000400000c0000000c0000250000000400002500000024000026000000270000280000000500000d0000000d00002a0000000500002a0000002900002b0000002c00002d0000000600000e0000000e00002f0000000600002f0000002e000030000000310000320000000700000f0000000f0000340000000700003400000033000035000000360000370000000800001000000010000039000000080000390000003800003a0000003b00003c000000090000110000001100003e0000000900003e0000003d00003f000000400000410000000a000012000000120000430000000a00004300000042000044000000450000460000001300001b000000130000480000001400001c0000001400004a0000001c00004a0000004900004b0000004c00004d0000001500001d0000001500004f0000001d00004f0000004e000050000000510000520000001600001e000000160000540000001e00005400000053000055000000560000570000001700001f000000170000590000001f0000590000005800005a0000005b00005c000000180000200000001800005e0000002000005e0000005d00005f0000006000006100000019000021000000190000630000002100006300000062000064000000650000660000001a0000220000001a00006800000022000068000000670000690000006a00006b000000470000470000006c00006c0000006d00006e0000000200006f00000070000070",
+      "vectors": [
+        {
+          "state": "0x",
+          "inputs": "0x3d30640400",
+          "newState": "0x",
+          "outputs": "0x01",
+          "note": "matured payee"
+        },
+        {
+          "state": "0x",
+          "inputs": "0x3130640400",
+          "newState": "0x",
+          "outputs": "0x01",
+          "note": "exactly at cooldown"
+        },
+        {
+          "state": "0x",
+          "inputs": "0x0730640400",
+          "newState": "0x",
+          "outputs": "0x00",
+          "note": "cooling, above trial"
+        },
+        {
+          "state": "0x",
+          "inputs": "0x0730040400",
+          "newState": "0x",
+          "outputs": "0x01",
+          "note": "cooling, within trial"
+        },
+        {
+          "state": "0x",
+          "inputs": "0x0030020400",
+          "newState": "0x",
+          "outputs": "0x00",
+          "note": "stranger"
+        },
+        {
+          "state": "0x",
+          "inputs": "0xfe0100fc01",
+          "newState": "0x",
+          "outputs": "0x00",
+          "note": "stranger, no cooldown"
+        },
+        {
+          "state": "0x",
+          "inputs": "0x0100fe0100",
+          "newState": "0x",
+          "outputs": "0x01",
+          "note": "zero cooldown"
+        }
+      ]
+    },
+    {
+      "key": "breaker",
+      "title": "Breaker",
+      "story": "The agent says \"sure thing, boss\" to a stranger: the fuse blows and stays blown until you reset it.",
+      "socket": {
+        "id": 3,
+        "key": "BREAKER",
+        "pins": [
+          {
+            "name": "set",
+            "offset": 0,
+            "width": 1,
+            "doc": "owner freeze pulse (control beats only)"
+          },
+          {
+            "name": "clear",
+            "offset": 1,
+            "width": 1,
+            "doc": "owner reset pulse (control beats only)"
+          },
+          {
+            "name": "attempt",
+            "offset": 2,
+            "width": 1,
+            "doc": "1 on every payment decision, 0 on control beats"
+          },
+          {
+            "name": "suspect",
+            "offset": 3,
+            "width": 1,
+            "doc": "the payee is not in the owner's payee book (payment beats only)"
+          }
+        ],
+        "ownerPins": [
+          "set",
+          "clear"
+        ],
+        "doc": "Sequential socket. Payment beats drive attempt=1 and suspect; owner control beats drive set/clear."
+      },
+      "nIn": 4,
+      "nOut": 1,
+      "nState": 1,
+      "nand": 10,
+      "latch": 1,
+      "gates": 11,
+      "bytes": 74,
+      "keccak256": "0xb3a4fd1288c6215e6e899bc3b853e75aa483a9cfd117cce46cc3034412c4f4ea",
+      "netlist": "0x0100000d000000040000050000000300000300000006000008000000020000020000000700000a0000000b00000b0000000900000c000000060000060000000700000e0000000f00000f",
+      "vectors": [
+        {
+          "state": "0x00",
+          "inputs": "0x04",
+          "newState": "0x00",
+          "outputs": "0x01",
+          "note": "known payee, not blown"
+        },
+        {
+          "state": "0x00",
+          "inputs": "0x0c",
+          "newState": "0x01",
+          "outputs": "0x00",
+          "note": "stranger trips it"
+        },
+        {
+          "state": "0x01",
+          "inputs": "0x04",
+          "newState": "0x01",
+          "outputs": "0x00",
+          "note": "blown stays blown"
+        },
+        {
+          "state": "0x01",
+          "inputs": "0x02",
+          "newState": "0x00",
+          "outputs": "0x00",
+          "note": "owner reset"
+        },
+        {
+          "state": "0x00",
+          "inputs": "0x01",
+          "newState": "0x01",
+          "outputs": "0x01",
+          "note": "owner freeze"
+        },
+        {
+          "state": "0x00",
+          "inputs": "0x03",
+          "newState": "0x01",
+          "outputs": "0x01",
+          "note": "set wins over clear"
+        },
+        {
+          "state": "0x01",
+          "inputs": "0x00",
+          "newState": "0x01",
+          "outputs": "0x00",
+          "note": "idle beat keeps state"
+        }
+      ]
+    },
+    {
+      "key": "approval-2of3",
+      "title": "Two of Three",
+      "story": "Small payments go through; anything above the threshold needs two of your three humans.",
+      "socket": {
+        "id": 4,
+        "key": "APPROVAL_2OF3",
+        "pins": [
+          {
+            "name": "approvals",
+            "offset": 0,
+            "width": 3,
+            "doc": "bit k = approver k approved this exact payment (wallet, chain, epoch, token, to, amount) within the TTL"
+          },
+          {
+            "name": "amount",
+            "offset": 3,
+            "width": 8,
+            "doc": "this payment in units, rounded up, saturating at 255 (255 for another token)"
+          },
+          {
+            "name": "threshold",
+            "offset": 11,
+            "width": 8,
+            "doc": "payments up to this many units need no approval (0..254)"
+          }
+        ],
+        "ownerPins": [],
+        "doc": "Human approvals recorded on chain become input bits; the circuit decides when they are needed."
+      },
+      "nIn": 19,
+      "nOut": 1,
+      "nState": 0,
+      "nand": 46,
+      "latch": 0,
+      "gates": 46,
+      "bytes": 322,
+      "keccak256": "0x1236c24f7c6166df88772d1dbbffd7d48f6c696d33f8cc3a48bb468400575027",
+      "netlist": "0x0000000500000d000000050000150000000600000e000000060000170000000e000017000000160000180000001900001a0000000700000f0000000700001c0000000f00001c0000001b00001d0000001e00001f000000080000100000000800002100000010000021000000200000220000002300002400000009000011000000090000260000001100002600000025000027000000280000290000000a0000120000000a00002b0000001200002b0000002a00002c0000002d00002e0000000b0000130000000b000030000000130000300000002f000031000000320000330000000c0000140000000c000035000000140000350000003400003600000037000038000000020000030000000200003a0000000300003a0000003b00003c0000000400003d0000003a00003e000000390000390000003f00003f00000040000041",
+      "vectors": [
+        {
+          "state": "0x",
+          "inputs": "0xa0a000",
+          "newState": "0x",
+          "outputs": "0x01",
+          "note": "under threshold, no approvals"
+        },
+        {
+          "state": "0x",
+          "inputs": "0xa9a000",
+          "newState": "0x",
+          "outputs": "0x00",
+          "note": "over threshold, one approval"
+        },
+        {
+          "state": "0x",
+          "inputs": "0xada000",
+          "newState": "0x",
+          "outputs": "0x01",
+          "note": "over threshold, two approvals"
+        },
+        {
+          "state": "0x",
+          "inputs": "0xffa700",
+          "newState": "0x",
+          "outputs": "0x01",
+          "note": "over threshold, three approvals"
+        },
+        {
+          "state": "0x",
+          "inputs": "0x260300",
+          "newState": "0x",
+          "outputs": "0x01",
+          "note": "over threshold, approvers 1 and 2"
+        },
+        {
+          "state": "0x",
+          "inputs": "0x240300",
+          "newState": "0x",
+          "outputs": "0x00",
+          "note": "over threshold, approver 2 only"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,182 @@
+/**
+ * Builds every fuse and writes:
+ *   circuits/build/fuses.json                     netlists, hashes, gate counts, pinouts, test vectors
+ *   contracts/test/fixtures/FuseFixtures.sol      the same, as a Solidity library for forge tests
+ *
+ * The test vectors come from the plain-JS specs and are evaluated again by the Solidity mock
+ * processor (unit tests) and by the real TapeOut processor on an X Layer fork (fork tests),
+ * so TS simulator, mock and chain are checked against one another.
+ */
+import { mkdirSync, writeFileSync } from "node:fs";
+import { FUSES, bitsFromFields, fieldsFromBits, type FuseDesign, type Fields } from "../src/fuses.ts";
+import { beat, bytesToHex, load, pack } from "../src/tap02.ts";
+
+interface Vec {
+  state: string;
+  inputs: string;
+  newState: string;
+  outputs: string;
+  note: string;
+}
+
+const h = (bits: number[]) => bytesToHex(pack(bits));
+
+function vectorsFor(f: FuseDesign): Vec[] {
+  const n = f.build();
+  const c = load(n.bytes, n.nIn, n.nOut);
+  const cases: { fields: Fields; state: number[]; note: string }[] = [];
+  const add = (note: string, fields: Fields, state: number[] = []) => cases.push({ note, fields, state });
+  switch (f.key) {
+    case "daily-cap":
+      add("10 + 10 <= 50", { amount: 10, spent: 10, cap: 50 });
+      add("40 + 10 == 50", { amount: 10, spent: 40, cap: 50 });
+      add("41 + 10 > 50", { amount: 10, spent: 41, cap: 50 });
+      add("first payment over the cap", { amount: 51, spent: 0, cap: 50 });
+      add("sum overflows 8 bits", { amount: 200, spent: 100, cap: 254 });
+      add("saturated amount never fits", { amount: 255, spent: 0, cap: 254 });
+      add("zero cap, zero amount", { amount: 0, spent: 0, cap: 0 });
+      add("zero cap, one unit", { amount: 1, spent: 0, cap: 0 });
+      add("254 exactly", { amount: 127, spent: 127, cap: 254 });
+      break;
+    case "payee-guard":
+      add("matured payee", { listed: 1, age: 30, cooldown: 24, amount: 50, trial: 2 });
+      add("exactly at cooldown", { listed: 1, age: 24, cooldown: 24, amount: 50, trial: 2 });
+      add("cooling, above trial", { listed: 1, age: 3, cooldown: 24, amount: 50, trial: 2 });
+      add("cooling, within trial", { listed: 1, age: 3, cooldown: 24, amount: 2, trial: 2 });
+      add("stranger", { listed: 0, age: 0, cooldown: 24, amount: 1, trial: 2 });
+      add("stranger, no cooldown", { listed: 0, age: 255, cooldown: 0, amount: 0, trial: 254 });
+      add("zero cooldown", { listed: 1, age: 0, cooldown: 0, amount: 255, trial: 0 });
+      break;
+    case "breaker":
+      add("known payee, not blown", { attempt: 1, suspect: 0 }, [0]);
+      add("stranger trips it", { attempt: 1, suspect: 1 }, [0]);
+      add("blown stays blown", { attempt: 1, suspect: 0 }, [1]);
+      add("owner reset", { clear: 1 }, [1]);
+      add("owner freeze", { set: 1 }, [0]);
+      add("set wins over clear", { set: 1, clear: 1 }, [0]);
+      add("idle beat keeps state", {}, [1]);
+      break;
+    case "approval-2of3":
+      add("under threshold, no approvals", { approvals: 0, amount: 20, threshold: 20 });
+      add("over threshold, one approval", { approvals: 0b001, amount: 21, threshold: 20 });
+      add("over threshold, two approvals", { approvals: 0b101, amount: 21, threshold: 20 });
+      add("over threshold, three approvals", { approvals: 0b111, amount: 255, threshold: 20 });
+      add("over threshold, approvers 1 and 2", { approvals: 0b110, amount: 100, threshold: 0 });
+      add("over threshold, approver 2 only", { approvals: 0b100, amount: 100, threshold: 0 });
+      break;
+    default:
+      throw new Error(`no vectors for ${f.key}`);
+  }
+  return cases.map(({ fields, state, note }) => {
+    const bits = bitsFromFields(f.socket, fields);
+    const r = beat(c, state, bits);
+    const want = f.spec(fieldsFromBits(f.socket, bits), state);
+    if (r.outputs[0] !== want.out || JSON.stringify(r.newState) !== JSON.stringify(want.newState))
+      throw new Error(`${f.key} ${note}: circuit disagrees with spec`);
+    return { state: h(state), inputs: h(bits), newState: h(r.newState), outputs: h(r.outputs), note };
+  });
+}
+
+const fuses = FUSES.map((f) => {
+  const n = f.build();
+  return {
+    key: f.key,
+    title: f.title,
+    story: f.story,
+    socket: { id: f.socket.id, key: f.socket.key, pins: f.socket.pins, ownerPins: f.socket.ownerPins, doc: f.socket.doc },
+    nIn: n.nIn,
+    nOut: n.nOut,
+    nState: n.nState,
+    nand: n.nand,
+    latch: n.latch,
+    gates: n.gates,
+    bytes: n.bytes.length,
+    keccak256: n.keccak,
+    netlist: n.hex,
+    vectors: vectorsFor(f),
+  };
+});
+
+const root = new URL("../", import.meta.url);
+mkdirSync(new URL("build/", root), { recursive: true });
+writeFileSync(new URL("build/fuses.json", root), JSON.stringify({ format: "fusebox-fuses/1", tap: "TAP-02", fuses }, null, 2) + "\n");
+
+const hexLit = (x: string) => `hex"${x.slice(2)}"`;
+let sol = `// SPDX-License-Identifier: MIT
+// AUTO-GENERATED by circuits/scripts/build.ts from circuits/src/fuses.ts. Do not edit by hand.
+pragma solidity ^0.8.24;
+
+/// @notice Netlists, metadata and spec vectors of the shipped Fusebox fuses.
+library FuseFixtures {
+    struct Fixture {
+        string key;
+        uint32 socket;
+        uint32 nIn;
+        uint32 nOut;
+        uint32 nState;
+        uint32 gates;
+        uint32 nand;
+        uint32 latch;
+        bytes32 netlistHash;
+        bytes netlist;
+    }
+
+    struct Vector {
+        bytes state;
+        bytes inputs;
+        bytes newState;
+        bytes outputs;
+        string note;
+    }
+
+    uint256 internal constant COUNT = ${fuses.length};
+`;
+fuses.forEach((f, i) => {
+  sol += `    uint256 internal constant ${f.key.toUpperCase().replace(/-/g, "_")} = ${i};\n`;
+});
+sol += `
+    function fixture(uint256 k) internal pure returns (Fixture memory f) {
+`;
+fuses.forEach((f, i) => {
+  sol += `        if (k == ${i}) {
+            return Fixture({
+                key: "${f.key}",
+                socket: ${f.socket.id},
+                nIn: ${f.nIn},
+                nOut: ${f.nOut},
+                nState: ${f.nState},
+                gates: ${f.gates},
+                nand: ${f.nand},
+                latch: ${f.latch},
+                netlistHash: ${f.keccak256},
+                netlist: ${hexLit(f.netlist)}
+            });
+        }
+`;
+});
+sol += `        revert("FuseFixtures: unknown fuse");
+    }
+
+    function vectors(uint256 k) internal pure returns (Vector[] memory v) {
+`;
+fuses.forEach((f, i) => {
+  sol += `        if (k == ${i}) {
+            v = new Vector[](${f.vectors.length});
+`;
+  f.vectors.forEach((x, j) => {
+    sol += `            v[${j}] = Vector(${hexLit(x.state)}, ${hexLit(x.inputs)}, ${hexLit(x.newState)}, ${hexLit(x.outputs)}, "${x.note}");\n`;
+  });
+  sol += `            return v;
+        }
+`;
+});
+sol += `        revert("FuseFixtures: unknown fuse");
+    }
+}
+`;
+const fixDir = new URL("../contracts/test/fixtures/", root);
+mkdirSync(fixDir, { recursive: true });
+writeFileSync(new URL("FuseFixtures.sol", fixDir), sol);
+
+for (const f of fuses)
+  console.log(`${f.key.padEnd(14)} socket ${f.socket.id}  nIn ${String(f.nIn).padStart(2)}  NAND ${String(f.nand).padStart(3)}  LATCH ${f.latch}  gates ${String(f.gates).padStart(3)}  ${f.bytes} bytes  ${f.keccak256}`);
