@@ -139,10 +139,14 @@ contract FuseRegistry is Ownable2Step, ReentrancyGuard {
     /// @param netlistHash keccak256 of the netlist bytes; re-checked against the chain here.
     /// @param fee USDT0 (6 decimals) charged per decision.
     /// @param uri Off-chain metadata: title, description, source, proofs.
-    function list(address processor, uint256 circuitId, uint32 socket, bytes32 netlistHash, uint96 fee, string calldata uri)
-        external
-        returns (uint256 fuseId)
-    {
+    function list(
+        address processor,
+        uint256 circuitId,
+        uint32 socket,
+        bytes32 netlistHash,
+        uint96 fee,
+        string calldata uri
+    ) external returns (uint256 fuseId) {
         if (circuitId == 0 || circuitId > type(uint64).max) revert BadCircuitId();
         if (!isTrustedProcessor(processor) || !factory.isCPU(processor)) revert UntrustedProcessor(processor);
         address circuitOwner = ITapeoutProcessor(processor).ownerOf(circuitId);

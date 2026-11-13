@@ -9,7 +9,10 @@ import {FuseRegistry} from "../../src/FuseRegistry.sol";
 import {FuseboxWallet} from "../../src/FuseboxWallet.sol";
 import {FuseboxFactory} from "../../src/FuseboxFactory.sol";
 import {
-    ITapeoutBeacon, ITapeoutFactory, ITapeoutProcessor, ITapeoutTransistors
+    ITapeoutBeacon,
+    ITapeoutFactory,
+    ITapeoutProcessor,
+    ITapeoutTransistors
 } from "../../src/interfaces/ITapeout.sol";
 import {Sockets} from "../../src/libraries/Sockets.sol";
 import {FuseFixtures} from "../fixtures/FuseFixtures.sol";
@@ -265,7 +268,9 @@ contract XLayerForkTest is Test {
         for (uint256 i; i < hot.length; ++i) {
             vm.cool(hot[i]);
         }
-        address usdtImpl = address(uint160(uint256(vm.load(USDT0, 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc))));
+        address usdtImpl = address(
+            uint160(uint256(vm.load(USDT0, 0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc)))
+        );
         if (usdtImpl != address(0)) vm.cool(usdtImpl);
     }
 

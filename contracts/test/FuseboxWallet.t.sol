@@ -27,8 +27,14 @@ contract FuseboxWalletTest is Base {
         assertEq(wallet.blockedCount(), 0);
         assertEq(wallet.spentToday(CAP), 10 * USDT);
 
-        (bool allowed, uint256[] memory ids, uint8[] memory status, bytes[] memory inputs, bytes[] memory outputs, uint256 fee) =
-            lastDecision(vm.getRecordedLogs());
+        (
+            bool allowed,
+            uint256[] memory ids,
+            uint8[] memory status,
+            bytes[] memory inputs,
+            bytes[] memory outputs,
+            uint256 fee
+        ) = lastDecision(vm.getRecordedLogs());
         assertTrue(allowed);
         assertEq(ids.length, 4);
         assertEq(fee, totalFee());

@@ -69,7 +69,8 @@ abstract contract Base is Test {
             vm.prank(designer);
             circuitIds[k] = processor.tapeout(f.netlist, f.nIn, f.nOut);
             vm.prank(designer);
-            fuseIds[k] = registry.list(address(processor), circuitIds[k], f.socket, f.netlistHash, fees[k], "ipfs://fuse");
+            fuseIds[k] =
+                registry.list(address(processor), circuitIds[k], f.socket, f.netlistHash, fees[k], "ipfs://fuse");
         }
 
         walletFactory = new FuseboxFactory(registry);
@@ -133,13 +134,20 @@ abstract contract Base is Test {
     function lastDecision(Vm.Log[] memory logs)
         internal
         view
-        returns (bool allowed, uint256[] memory ids, uint8[] memory status, bytes[] memory inputs, bytes[] memory outputs, uint256 fee)
+        returns (
+            bool allowed,
+            uint256[] memory ids,
+            uint8[] memory status,
+            bytes[] memory inputs,
+            bytes[] memory outputs,
+            uint256 fee
+        )
     {
         bytes32 sig = FuseboxWallet.Decision.selector;
         for (uint256 i = logs.length; i > 0; --i) {
             Vm.Log memory l = logs[i - 1];
             if (l.emitter == address(wallet) && l.topics[0] == sig) {
-                (, , allowed, ids, status, inputs, outputs, fee, ,) = abi.decode(
+                (,, allowed, ids, status, inputs, outputs, fee,,) = abi.decode(
                     l.data, (address, uint256, bool, uint256[], uint8[], bytes[], bytes[], uint256, bytes32, string)
                 );
                 return (allowed, ids, status, inputs, outputs, fee);

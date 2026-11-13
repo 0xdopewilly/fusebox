@@ -281,7 +281,19 @@ contract FuseboxWallet is ReentrancyGuard {
 
         uint256 fee = _charge(v, charged);
         emit Decision(
-            decisionId, msg.sender, to, token, amount, allowed, v.fuseIds, v.status, v.inputs, v.outputs, fee, c.intent, memo
+            decisionId,
+            msg.sender,
+            to,
+            token,
+            amount,
+            allowed,
+            v.fuseIds,
+            v.status,
+            v.inputs,
+            v.outputs,
+            fee,
+            c.intent,
+            memo
         );
         if (!allowed) {
             for (uint256 i; i < n; ++i) {
