@@ -63,6 +63,7 @@ export default function FuseView({ id }: { id: number }) {
           {meta?.description && <p>{meta.description}</p>}
           {meta?.rule && <div className="fv-rule m"><span className="mute">Rule</span><code>{meta.rule}</code></div>}
           {f.listed ? <MarketInstall fuseId={f.fuseId} name={name} /> : <p className="m red">Delisted: wallets already running it keep it, but it can&apos;t be installed.</p>}
+          {f.listed && <Link className="m lime" href={`/app/simulate?f=${f.fuseId}`}>Try it on payments in the simulator →</Link>}
         </div>
       </section>
 

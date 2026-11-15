@@ -59,6 +59,7 @@ export default function DocsPage() {
               <h2>Quickstart</h2>
               <h3>1 · Try it, no wallet needed</h3>
               <p>Open <Link href="/app/try">Try to scam it</Link> and run any of the tricks against <b>Atlas</b>, the public demo wallet. It&apos;s Atlas&apos;s real <code>check()</code> on mainnet: free, read-only, nothing moves.</p>
+              <p>To try a line of your own before you build it, open the <Link href="/app/simulate">line simulator</Link>: pick fuses (any listed design) and their limits, line up payments in order, and every verdict comes from an <code>eval</code> or <code>step</code> call on TapeOut&apos;s processor, with today&apos;s spend and the Breaker&apos;s latch carried from one payment to the next, as the wallet does.</p>
               <h3>2 · Give your agent the tools</h3>
               <p>The <a href="https://www.npmjs.com/package/fusebox-mcp" target="_blank" rel="noreferrer">fusebox-mcp</a> server works in Claude Code, Claude Desktop, Cursor and any MCP client. Without a key it&apos;s read-only and points at Atlas.</p>
               <Code label="Claude Code">{`claude mcp add fusebox -- npx -y fusebox-mcp`}</Code>

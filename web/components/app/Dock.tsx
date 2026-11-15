@@ -12,6 +12,7 @@ const TABS = [["/app", "Wallet"], ["/app/try", "Try"], ["/app/market", "Market"]
 const MORE = [
   ["/app/mine", "My wallets", "Every Fusebox wallet you own"],
   ["/app/new", "Wire up a wallet", "Pick fuses, seat approvers, fund it"],
+  ["/app/simulate", "Line simulator", "Test fuses on payments, on X Layer"],
   ["/app/approve", "Approvals", "Sign off a payment as an approver"],
   ["/docs", "Docs", "How it works, contracts, MCP"],
   ["/onchain", "DeWEB edition", "The serverless page for 15.2.272.tape"],
@@ -38,7 +39,7 @@ export default function Dock() {
   const [open, setOpen] = useState(false);
   const sheet = useRef<HTMLDivElement>(null);
   const shade = useRef<HTMLDivElement>(null);
-  const active = (h: string) => (h === "/app" ? path === "/app" || path.startsWith("/app/w/") : path.startsWith(h) || (h === "/app/market" && path.startsWith("/app/fuse/")));
+  const active = (h: string) => (h === "/app" ? path === "/app" || path.startsWith("/app/w/") : path.startsWith(h) || (h === "/app/market" && path.startsWith("/app/fuse/")) || (h === "/app/try" && path.startsWith("/app/simulate")));
 
   const close = useCallback(() => {
     if (!sheet.current || reduced()) { setOpen(false); return; }

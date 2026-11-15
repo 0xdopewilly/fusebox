@@ -56,6 +56,16 @@ export default function NewWalletView() {
   const [made, setMade] = useState<Ctx | null>(null);
 
   useEffect(() => { if (account && !approvers[0]) setApprovers((a) => [account, a[1], a[2]]); }, [account]); // eslint-disable-line react-hooks/exhaustive-deps
+  // arriving from the line simulator (?f=fuseId:a:b,…): start with the line that was tested
+  useEffect(() => {
+    const f = new URLSearchParams(window.location.search).get("f"); if (!f) return;
+    const ask = new Map(f.split(",").map((t) => { const [id, a, b] = t.split(":"); return [Number(id), { a, b }] as const; }));
+    setOn(Object.fromEntries(FUSES.map((x) => [x.key, ask.has(x.id)])) as Record<Key, boolean>);
+    const v = (id: number, k: "a" | "b") => ask.get(id)?.[k];
+    const [dc, pg, , ap] = FUSES;
+    if (v(dc.id, "a")) setCap(v(dc.id, "a")!); if (v(pg.id, "a")) setCool(v(pg.id, "a")!); if (v(pg.id, "b")) setTrial(v(pg.id, "b")!); if (v(ap.id, "a")) setThr(v(ap.id, "a")!);
+  }, []);
+  const simLink = `/app/simulate?f=${FUSES.filter((x) => on[x.key]).map((x) => (x.key === "daily-cap" ? `${x.id}:${clamp(cap)}` : x.key === "payee-guard" ? `${x.id}:${clamp(cool)}:${clamp(trial)}` : x.key === "approval-2of3" ? `${x.id}:${clamp(thr)}` : `${x.id}`)).join(",")}`;
   useEffect(() => {
     if (!account) return;
     Promise.all([pub.getBalance({ address: account }), pub.readContract({ address: DEP.usdt0 as Address, abi: erc20, functionName: "balanceOf", args: [account] })]).then(([okb, usdt]) => setBal({ okb, usdt })).catch(() => {});
@@ -208,6 +218,7 @@ export default function NewWalletView() {
               <div><span>Approvals over</span><span>{on["approval-2of3"] ? `${clamp(thr)} USDT0` : "off"}</span></div>
               <div><span>Saved payees</span><span>{goodPayees.length}</span></div>
             </div>
+            <Link className="m lime sim-link" href={simLink}>Test this line on sample payments first →</Link>
             {q.steps.length > 0 && (
               <ul className="txs">
                 {q.steps.map((s) => (
