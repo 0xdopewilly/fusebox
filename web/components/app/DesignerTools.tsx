@@ -7,6 +7,7 @@ import { short, fmt, OKLINK } from "@/lib/hooks";
 import { useTxQueue } from "@/lib/useTxQueue";
 import type { Market } from "@/lib/market";
 import { useWallet } from "./WalletProvider";
+import NoWallet from "./NoWallet";
 
 const SOCKETS: Record<number, [number, string]> = { 24: [1, "Daily Cap"], 33: [2, "Payee Guard"], 4: [3, "Breaker"], 19: [4, "Two of Three"] };
 interface Info { owner: Address; nIn: number; nOut: number; nState: number; gates: number; hash: Hex }
@@ -43,7 +44,7 @@ export default function DesignerTools({ market }: { market: Market | null }) {
           <div className="ix">↓</div>
           <div>
             <h3>Claim your earnings</h3>
-            {!account ? <><p className="lead">Connect the wallet that owns your circuit NFTs.</p><div className="prow">{wallets.map((w) => <button key={w.info.rdns} className="btn lime" onClick={() => connect(w.info.rdns)}>Connect {w.info.name}</button>)}</div></>
+            {!account ? <><p className="lead">Connect the wallet that owns your circuit NFTs.</p>{wallets.length ? <div className="prow">{wallets.map((w) => <button key={w.info.rdns} className="btn lime" onClick={() => connect(w.info.rdns)}>Connect {w.info.name}</button>)}</div> : <NoWallet />}</>
               : !mine.length ? <p className="lead">{short(account)} doesn&apos;t own any listed fuse yet. List one below.</p>
               : (
                 <>

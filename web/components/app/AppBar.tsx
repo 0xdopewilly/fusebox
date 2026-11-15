@@ -38,6 +38,7 @@ export default function AppBar() {
         <span className="ink" style={{ left: 0, width: 0 }} />
       </nav>
       <div className="right m">
+        <Link className="docs-l" href="/docs">Docs ↗</Link>
         {source && <span className={`badge ${source === "mainnet" ? "main" : "warn"}`}>{source === "mainnet" ? "X Layer mainnet" : source === "fork" ? "Mainnet fork · rehearsal" : "Rehearsal snapshot"}</span>}
         <span className="mute blk"><span className="live" />Block {block ? <Digits value={block.toLocaleString("en-US")} /> : "—"}</span>
       </div>

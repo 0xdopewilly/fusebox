@@ -6,6 +6,7 @@ import { fuseboxFactoryAbi, fuseboxWalletAbi } from "@/lib/abi";
 import { DEP, pub } from "@/lib/client-chain";
 import { short } from "@/lib/hooks";
 import { useWallet } from "./WalletProvider";
+import Loading from "./Loading";
 
 interface Row { address: Address; fuses: number; decisions: number; paused: boolean; block?: number }
 
@@ -39,11 +40,17 @@ export default function MineView() {
         <p data-a>Every Fusebox wallet your connected address owns, read from the factory on X Layer.</p>
       </section>
       {!account ? (
-        <div className="prow" data-a>{wallets.map((w) => <button key={w.info.rdns} className="btn lime" onClick={() => connect(w.info.rdns)}>Connect {w.info.name}</button>)}</div>
-      ) : !rows ? <p className="m skel">Reading the factory…</p> : (
+        <div className="empty-card" data-a>
+          <div className="m lime">Not connected</div>
+          <h3>Connect the wallet that owns them</h3>
+          <p>Fusebox reads every wallet the factory made for your address. Nothing is signed just to look.</p>
+          {wallets.length ? <div className="prow">{wallets.map((w) => <button key={w.info.rdns} className="btn lime" onClick={() => connect(w.info.rdns)}>Connect {w.info.name} <span className="k">→</span></button>)}</div>
+            : <p className="m mute">No wallet in this browser. <a className="lime" href="https://web3.okx.com/download" target="_blank" rel="noreferrer">Get OKX Wallet ↗</a> or open Fusebox in its built-in browser.</p>}
+        </div>
+      ) : !rows ? <Loading label="Finding your wallets in the factory" /> : (
         <div className="mine-list" data-a>
           {rows.map((r, i) => (
-            <Link className="fz" key={r.address} href={`/app/w/${r.address}${r.block ? `?from=${r.block}` : ""}`} style={{ minHeight: 0 }} data-cursor="Open">
+            <Link className="fz" key={r.address} href={`/app/w/${r.address}`} style={{ minHeight: 0 }} data-cursor="Open">
               <div><div className="ix">{String(i + 1).padStart(2, "0")}</div></div>
               <div style={{ gridColumn: "2 / 4" }}><h3>{short(r.address)}</h3><p className="say m">{r.address}</p></div>
               <div style={{ gridColumn: "4 / 7" }}><div className="chips"><span className="chip l">{r.fuses} fuses</span><span className="chip">{r.decisions} decisions</span><span className="chip">{r.paused ? "Paused" : "Live"}</span></div></div>

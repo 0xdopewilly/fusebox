@@ -6,6 +6,7 @@ import { DEP, pub } from "@/lib/client-chain";
 import { useAtlas, short, fmt, OKLINK } from "@/lib/hooks";
 import { useTxQueue } from "@/lib/useTxQueue";
 import { useWallet } from "./WalletProvider";
+import NoWallet from "./NoWallet";
 
 /** Two of Three: approvers sign off one exact payment (token, payee, amount) so the agent's retry can pass. */
 export default function ApproveView() {
@@ -96,7 +97,7 @@ export default function ApproveView() {
               ))}
             </div>
             <div className="go">
-              {!account ? wallets.map((w) => <button key={w.info.rdns} className="btn lime" style={{ marginBottom: 8 }} onClick={() => connect(w.info.rdns)}>Connect {w.info.name}</button>)
+              {!account ? (wallets.length ? wallets.map((w) => <button key={w.info.rdns} className="btn lime" style={{ marginBottom: 8 }} onClick={() => connect(w.info.rdns)}>Connect {w.info.name}</button>) : <NoWallet />)
                 : mySeat < 0 ? <div className="warn2">Your connected wallet {short(account)} isn&apos;t one of this wallet&apos;s approvers.</div>
                 : !payee || !amt ? <div className="warn2">Enter the payee and amount to approve.</div>
                 : approvedByMe ? <button className="btn" disabled={q.running} onClick={() => act("revokeApproval")}>Revoke my approval</button>

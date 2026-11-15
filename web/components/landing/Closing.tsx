@@ -76,7 +76,7 @@ export default function Closing() {
           <p>Give your agent a wallet with fuses on X Layer, or tape out a fuse of your own and earn from every decision it makes.</p>
           <div className="ctas">
             <a className="btn lime" href="/app" data-cursor="Enter"><span className="roll"><span>Open the app</span><span aria-hidden="true">Open the app</span></span> <span className="k">→</span></a>
-            <a className="btn" href="#build" data-cursor="Read"><span className="roll"><span>Read the docs</span><span aria-hidden="true">Read the docs</span></span></a>
+            <a className="btn" href="/docs" data-cursor="Read"><span className="roll"><span>Read the docs</span><span aria-hidden="true">Read the docs</span></span></a>
           </div>
         </div>
       </div>
@@ -84,7 +84,7 @@ export default function Closing() {
       <div className="foot m mute">
         <div>Fusebox<a href="https://www.okx.com/xlayer" target="_blank" rel="noreferrer">Built on X Layer</a><a href="https://tapeout.net" target="_blank" rel="noreferrer">Circuits on TapeOut</a></div>
         <div>Product<a href="/app">Wallet</a><a href="/app/market">Fuse market</a><a href="#designers">Designers</a></div>
-        <div>Developers<a href="#build">Docs</a><a href="https://github.com/0xdopewilly/fusebox" target="_blank" rel="noreferrer">GitHub</a><a href="/onchain">DeWEB edition</a><a href="#fuses">Contracts</a></div>
+        <div>Developers<a href="/docs">Docs</a><a href="https://github.com/0xdopewilly/fusebox" target="_blank" rel="noreferrer">GitHub</a><a href="/onchain">DeWEB edition</a><a href="/docs#contracts">Contracts</a></div>
         <div>Proof<a href="https://www.oklink.com/xlayer/address/0x0Db0457715a6445D8a65F820d717a6B39Be66800" target="_blank" rel="noreferrer">Atlas wallet ↗</a><a href="https://www.oklink.com/xlayer/address/0x852a278322667BB86A2665a38CbC5Bfd551B20d7" target="_blank" rel="noreferrer">Fuse registry ↗</a><a href="https://www.oklink.com/xlayer/address/0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355" target="_blank" rel="noreferrer">Circuits #15–18 ↗</a></div>
       </div>
       <div className="bigword" aria-hidden="true">Fusebox</div>

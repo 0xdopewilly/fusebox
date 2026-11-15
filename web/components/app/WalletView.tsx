@@ -8,6 +8,7 @@ import type { Atlas, DecisionRow } from "@/lib/atlas";
 import LineWire, { type WireStatus } from "./LineWire";
 import Netlist from "@/components/landing/Netlist";
 import OwnerPanel from "./OwnerPanel";
+import Loading from "./Loading";
 
 /** A number that rolls to its new value whenever it changes. */
 function Count({ value, d = 6, className }: { value: number; d?: number; className?: string }) {
@@ -68,7 +69,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
   useGSAP(() => { if (sel !== null && detailRef.current && !reduced()) gsap.fromTo(detailRef.current, { height: 0, autoAlpha: 0 }, { height: "auto", autoAlpha: 1, duration: 0.6, ease: "snap" }); }, { dependencies: [sel] });
 
   const live: WireStatus[] = useMemo(() => (data ? data.fuses.map((f) => (f.latched ? "latched" : "pass")) : []), [data]);
-  if (!data) return <div className="page"><div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div><p className="m skel">{error ? `Can't reach X Layer right now (${error}). Retrying…` : "Reading Atlas from X Layer…"}</p></div>;
+  if (!data) return <div className="page"><div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div><Loading label={address ? "Reading this wallet from X Layer" : "Reading Atlas from X Layer"} error={error} /></div>;
 
   const a: Atlas = data;
   const cap = a.fuses.find((f) => f.key === "daily-cap");

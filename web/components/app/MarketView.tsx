@@ -7,6 +7,7 @@ import { LAYERS } from "@/lib/fuses";
 import { short, fmt, OKLINK } from "@/lib/hooks";
 import Netlist from "@/components/landing/Netlist";
 import ChainNetlist from "./ChainNetlist";
+import Loading from "./Loading";
 
 const SAY: Record<string, string> = {
   "daily-cap": "No more than the owner's cap in a UTC day, however the agent is asked.",
@@ -37,7 +38,7 @@ export default function MarketView() {
         <h1 className="disp" data-a>The fuse <span className="lime">[market]</span>.</h1>
         <p data-a>Every fuse here is a NAND circuit taped out on TapeOut and listed in Fusebox&apos;s registry on X Layer. Wallets install them; designers earn every time one decides.</p>
       </section>
-      {!data ? <p className="m skel">{error ? `Can't reach X Layer right now (${error}).` : "Reading the registry…"}</p> : (
+      {!data ? <Loading label="Reading the fuse registry" error={error} /> : (
         <>
           <section className="stats m mute" data-a>
             <div>Fuses listed<b>{data.fuses.length}</b></div>

@@ -355,7 +355,7 @@ html.js .hero [data-in], html.js .hero .bigword { opacity: 0; animation: fx-fall
   .hero .sub { display: block; margin-top: 24px; }
   .hero .sub p { font-size: 15.5px; }
   .hero .ctas { margin-top: 22px; gap: 14px; }
-  .hero canvas.fuse { position: relative; left: auto; top: auto; width: calc(100% + 32px); height: 250px; margin: 10px -16px 0; display: block; }
+  .hero canvas.fuse { position: relative; left: auto; top: auto; width: calc(100% + 32px); height: 300px; margin: 6px -16px 0; display: block; }
   .fusewrap { display: contents; }
   .tag, .leaders, .hint { display: none; }
   .hero .facts { grid-template-columns: 1fr 1fr; row-gap: 18px; bottom: 96px; }
@@ -406,12 +406,17 @@ html.js .hero [data-in], html.js .hero .bigword { opacity: 0; animation: fx-fall
   .code { margin: 32px 0 0; }
   .code pre { font-size: 12px; padding: 20px 16px; }
   .code .out { padding: 14px 16px; }
-  .cta { height: auto; padding: 80px 0 340px; }
+  .cta { height: auto; padding: 80px 0 230px; }
   .cta h2 { font-size: 80px; }
   .cta .row2 .ctas { padding: 24px 0 0; flex-wrap: wrap; }
-  .foot { grid-template-columns: 1fr 1fr; row-gap: 24px; bottom: 150px; }
+  /* phones: the footer sits in the flow under the buttons; the binary rain stays down behind the wordmark */
+  .foot { position: relative; left: auto; right: auto; bottom: auto; grid-template-columns: 1fr 1fr; row-gap: 26px; margin: 64px var(--pad) 0; padding-top: 26px; border-top: 1px solid var(--hair2); }
+  .foot a { color: var(--soft); padding: 4px 0; }
   .foot > div:nth-child(3) { padding-left: 0; }
-  .rain { bottom: 110px; height: 300px; }
+  .rain { bottom: 0; height: 220px; opacity: 0.55; }
+  .code pre { white-space: pre-wrap; word-break: break-word; font-size: 12.5px; min-height: 0; padding: 20px 16px 24px; }
+  .code .ln { height: auto; min-height: 1.75em; }
+  .code .ln > span.t { display: inline; white-space: pre-wrap; width: auto !important; overflow: visible; } /* phones: readable beats typed */
   .word-hot { display: none; }
 }
 html[data-intro="skip"] .intro { display: none; }

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { decodeEventLog, isAddress, parseUnits, getAddress, toHex, type Address } from "viem";
 import { fuseboxFactoryAbi, fuseboxWalletAbi, fuseRegistryAbi } from "@/lib/abi";
 import { DEP, pub } from "@/lib/client-chain";
@@ -41,6 +41,13 @@ export default function NewWalletView() {
   const [approvers, setApprovers] = useState(["", "", ""]);
   const [payees, setPayees] = useState<string[]>([""]);
   const [deposit, setDeposit] = useState("0.1"); const [float, setFloat] = useState("0");
+  const side = useRef<HTMLElement>(null);
+  const [sideSeen, setSideSeen] = useState(false);
+  useEffect(() => {
+    const el = side.current; if (!el) return;
+    const io = new IntersectionObserver(([e]) => setSideSeen(e.isIntersecting), { rootMargin: "0px 0px -35% 0px" });
+    io.observe(el); return () => io.disconnect();
+  }, []);
   const [bal, setBal] = useState<{ okb: bigint; usdt: bigint } | null>(null);
   const [made, setMade] = useState<Ctx | null>(null);
 
@@ -104,6 +111,8 @@ export default function NewWalletView() {
   const launch = async () => { setMade(null); const ok = await q.start(plan(), {}); if (ok) setMade({ ...(q.ctx() ?? {}) }); };
   const retry = async () => { const ok = await q.retry(); if (ok) setMade({ ...(q.ctx() ?? {}) }); };
   const failed = q.steps.some((s) => s.state === "error");
+  // when the last step lands, bring the "It's live" card into view (on phones it sits under the step list)
+  useEffect(() => { if (made?.wallet) setTimeout(() => document.querySelector(".done-card")?.scrollIntoView({ behavior: "smooth", block: "center" }), 150); }, [made?.wallet]);
 
   const toggle = (k: Key) => setOn({ ...on, [k]: !on[k] });
   return (
@@ -184,7 +193,7 @@ export default function NewWalletView() {
             </div>
           </div>
         </div>
-        <aside className="wz-side" data-a>
+        <aside className="wz-side" data-a ref={side}>
           <div className="summary">
             <div className="sh2 m"><span className="mute">Your wallet</span><span className="lime">{Object.values(on).filter(Boolean).length} fuses</span></div>
             <div className="rows">
@@ -211,7 +220,7 @@ export default function NewWalletView() {
                 <div className="done-card">
                   <h4>It&apos;s live.</h4>
                   <p style={{ color: "var(--soft)", fontSize: 14, lineHeight: 1.5 }}>Your wallet <span className="m lime">{short(made.wallet)}</span> is on X Layer with its fuses spliced in. Give your agent its address.</p>
-                  <div className="prow" style={{ marginTop: 14 }}><Link className="btn lime" href={`/app/w/${made.wallet}?from=${made.block}`} data-cursor="Open">Open my wallet <span className="k">→</span></Link></div>
+                  <div className="prow" style={{ marginTop: 14 }}><Link className="btn lime" href={`/app/w/${made.wallet}`} data-cursor="Open">Open my wallet <span className="k">→</span></Link></div>
                 </div>
               ) : failed ? (
                 <button className="btn lime" onClick={retry} disabled={q.running} data-cursor="Retry">{q.running ? "Working…" : "Retry from the failed step"}</button>
@@ -224,6 +233,16 @@ export default function NewWalletView() {
           </div>
         </aside>
       </section>
+      {/* phones: the summary is at the end of a long form, so its action rides above the dock until you reach it */}
+      {!made?.wallet && !sideSeen && (
+        <div className="wz-sticky">
+          <div className="m"><b>{Object.values(on).filter(Boolean).length} fuses · {(Number(perDecision) / 1e6).toFixed(4)} USDT0 each</b>
+            <span className={!q.running && problems.length ? "warn" : "mute"}>{q.running ? "Sign each step in your wallet…" : failed ? "A step failed: retry it below" : problems[0] ?? "Ready to wire it up"}</span></div>
+          <button className="btn lime" disabled={q.running} onClick={() => { side.current?.scrollIntoView({ behavior: "smooth", block: "start" }); if (failed) retry(); else if (!problems.length) launch(); }}>
+            {failed ? "Retry" : problems.length ? "Review" : "Wire it up"} <span className="k">→</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }

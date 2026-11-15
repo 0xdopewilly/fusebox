@@ -2,6 +2,7 @@
 import { useMarket } from "@/lib/useMarket";
 import { short, fmt, OKLINK } from "@/lib/hooks";
 import DesignerTools from "./DesignerTools";
+import Loading from "./Loading";
 
 const STEPS = [
   ["Design the circuit", "Write it as NAND gates (plus LATCH bits if it needs memory) with the Fusebox toolchain, which builds, simulates and exhaustively tests TAP-02 netlists. It reads one socket: the payment's inputs, laid out bit by bit."],
@@ -31,7 +32,7 @@ export default function DesignersView() {
         ))}
       </section>
       <div className="blockhead" data-a><h2 className="disp">Earnings</h2><span className="m mute">read from the registry · {data ? `protocol keeps ${data.protocolBps / 100}%, earned ${fmt(data.protocolEarned)} USDT0` : ""}</span></div>
-      {!data ? <p className="m skel">{error ? `Can't reach X Layer right now (${error}).` : "Reading the registry…"}</p> : (
+      {!data ? <Loading label="Reading the fuse registry" error={error} /> : (
         <div style={{ overflowX: "auto" }} data-a>
           <table className="tbl">
             <thead><tr><th>Designer</th><th style={{ textAlign: "right" }}>Fuses</th><th style={{ textAlign: "right" }}>Decisions</th><th style={{ textAlign: "right" }}>Lifetime earned</th><th style={{ textAlign: "right" }}>Claimable now</th></tr></thead>
