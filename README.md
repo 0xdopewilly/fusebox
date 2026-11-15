@@ -82,7 +82,7 @@ RPC=http://127.0.0.1:8547 contracts/script/launch.sh
 (cd deweb && npm ci && npm run build)   # deweb/dist/index.html, same SHA-256 on every build
 ```
 
-X Layer's public RPCs cap `eth_getLogs` ranges (100 blocks on rpc.xlayer.tech, 1,000 on tapeout.net). The app therefore reads event history from a small block index ([`web/lib/deployments/mainnet-index.json`](web/lib/deployments/mainnet-index.json)) and scans forward from there. Refresh the index with `node web/scripts/index-logs.mjs`.
+X Layer's public RPCs cap `eth_getLogs` ranges (1,000 blocks on tapeout.net, about 100 on rpc.xlayer.tech and drpc), and tapeout.net sometimes hangs. The app therefore reads event history from a small block index ([`web/lib/deployments/mainnet-index.json`](web/lib/deployments/mainnet-index.json)), scans forward from there in cached windows, and races the three RPCs when one is slow. Refresh the index with `node web/scripts/index-logs.mjs`.
 
 ## Status
 
