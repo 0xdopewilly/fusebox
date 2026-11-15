@@ -3,7 +3,7 @@
 .appbar .logo { font-size: 17px; }
 .appbar .slash { color: var(--dim); margin-left: -14px; }
 .tabs-nav { position: relative; display: flex; height: 64px; align-items: stretch; margin-left: 8px; }
-.tabs-nav a { display: flex; align-items: center; padding: 0 16px; color: var(--mute); transition: color 0.3s; }
+.tabs-nav a { display: flex; align-items: center; padding: 0 16px; color: var(--mute); transition: color 0.3s; white-space: nowrap; }
 .tabs-nav a:hover { color: var(--ink); }
 .tabs-nav a.on { color: var(--ink); }
 .tabs-nav .sh { display: none; }
@@ -20,7 +20,7 @@
 /* ---------- wallet ---------- */
 .w-hero { display: grid; grid-template-columns: repeat(6, 1fr); padding: 56px 0 40px; }
 .w-hero .who { grid-column: 1 / 5; }
-.w-hero .who .addr { display: inline-flex; gap: 10px; align-items: center; margin-top: 10px; color: var(--mute); }
+.w-hero .who .addr { display: inline-flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; margin-top: 10px; color: var(--mute); max-width: 100%; overflow-wrap: anywhere; }
 .w-hero .who .addr button { color: var(--dim); font: inherit; letter-spacing: inherit; text-transform: inherit; }
 .w-hero .who .addr button:hover { color: var(--lime); }
 .bal { display: flex; align-items: baseline; gap: 14px; margin-top: 26px; }
@@ -141,6 +141,8 @@
   .try-head p { padding: 16px 0 0; } .try-form { padding-right: 0; } .try-out { padding-left: 0; margin-top: 34px; }
   .why { grid-template-columns: 1fr 1fr; } .why > div:nth-child(3) { border-left: 0; } .why > div:nth-child(n+3) { border-top: 1px solid var(--hair2); }
   .verdict2 { flex-direction: column; align-items: flex-start; }
+  .blockhead { flex-direction: column; align-items: flex-start; gap: 10px; padding-top: 44px; }
+  .tbl.decisions { min-width: 640px; } /* scrolls sideways inside its wrapper instead of crushing the memo column */
 }
 @media (max-width: 1100px) { .appbar .right .blk { display: none; } }
 @media (max-width: 900px) { .appbar .right { display: none; } .tabs-nav .lg { display: none; } .tabs-nav .sh { display: inline; } .appbar .slash { display: none; } .tabs-nav { margin-left: auto; } .tabs-nav a { padding: 0 10px; }

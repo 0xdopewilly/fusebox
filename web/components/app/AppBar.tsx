@@ -8,7 +8,7 @@ import Digits from "@/components/fx/Digits";
 import { Logo } from "@/components/landing/Header";
 import Connect from "./Connect";
 
-const TABS = [["/app", "Wallet", "Wallet"], ["/app/try", "Try to scam it", "Try it"], ["/app/market", "Fuse market", "Market"], ["/app/designers", "Designers", "Sell"]] as const;
+const TABS = [["/app", "Wallet", "Wallet"], ["/app/try", "Try to scam it", "Try"], ["/app/market", "Fuse market", "Market"], ["/app/designers", "Designers", "Sell"]] as const;
 
 export default function AppBar() {
   const path = usePathname();

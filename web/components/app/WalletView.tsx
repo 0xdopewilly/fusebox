@@ -143,7 +143,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
       <div className="blockhead" data-b><h2 className="disp">Decisions</h2><span className="m mute">{a.counts.decisions} on-chain · {a.counts.allowed} paid · {a.counts.blocked} stopped</span></div>
       <div data-b><Scope rows={a.decisions} /></div>
       <div style={{ overflowX: "auto" }} data-b>
-        <table className="tbl">
+        <table className="tbl decisions">
           <thead><tr><th>#</th><th className="hide-s">Time (UTC)</th><th>Result</th><th style={{ textAlign: "right" }}>Amount</th><th>To · what the agent said</th><th>Fuses</th><th className="hide-s" style={{ textAlign: "right" }}>Fees</th><th className="hide-s">Tx</th></tr></thead>
           <tbody>
             {a.decisions.map((r) => (
