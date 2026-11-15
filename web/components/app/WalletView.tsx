@@ -7,6 +7,7 @@ import { LAYERS } from "@/lib/fuses";
 import type { Atlas, DecisionRow } from "@/lib/atlas";
 import LineWire, { type WireStatus } from "./LineWire";
 import Netlist from "@/components/landing/Netlist";
+import OwnerPanel from "./OwnerPanel";
 
 /** A number that rolls to its new value whenever it changes. */
 function Count({ value, d = 6, className }: { value: number; d?: number; className?: string }) {
@@ -56,8 +57,8 @@ function Scope({ rows }: { rows: DecisionRow[] }) {
   );
 }
 
-export default function WalletView() {
-  const { data, error, fresh } = useAtlas();
+export default function WalletView({ address, from }: { address?: string; from?: number }) {
+  const { data, error, fresh } = useAtlas(4000, address ? `/api/wallet/${address}${from ? `?from=${from}` : ""}` : "/api/atlas");
   const [sel, setSel] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
   const detailRef = useRef<HTMLDivElement>(null);
@@ -72,7 +73,6 @@ export default function WalletView() {
   const a: Atlas = data;
   const cap = a.fuses.find((f) => f.key === "daily-cap");
   const blown = a.fuses.find((f) => f.latched);
-  const designers = a.fuses.reduce((t, f) => t + Number(f.lifetimeEarned), 0);
   const isPayee = (addr: string) => a.payees.some((p) => p.address.toLowerCase() === addr.toLowerCase());
   const f = sel !== null ? a.fuses[sel] : null;
   const layout = f ? LAYERS.find((l) => l.key === f.key) : null;
@@ -83,7 +83,7 @@ export default function WalletView() {
       <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
       <section className="w-hero">
         <div className="who" data-b>
-          <div className="m"><span className="lime">[Atlas]</span> <span className="mute">ops agent · public demo wallet · owner {short(a.owner)}</span></div>
+          <div className="m">{a.isAtlas ? <><span className="lime">[Atlas]</span> <span className="mute">ops agent · public demo wallet · owner {short(a.owner)}</span></> : <><span className="lime">[Fusebox wallet]</span> <span className="mute">owner {short(a.owner)} · agent {short(a.agent)}</span></>}</div>
           <div className="m addr">{a.wallet}<button onClick={copy} data-cursor="Copy">{copied ? "Copied" : "Copy"}</button><a href={`${OKLINK}/address/${a.wallet}`} target="_blank" rel="noreferrer" data-cursor="OKLink">↗</a></div>
           <div className="bal"><b><Count value={Number(a.balance)} /></b><span className="m">USDT0 in the wallet</span></div>
           <div className={`state-line${blown || a.paused ? " bad" : ""}`}>
@@ -93,7 +93,8 @@ export default function WalletView() {
           </div>
         </div>
         <div className="acts" data-b>
-          <Link className="btn lime" href="/app/try" data-cursor="Try it"><span className="roll"><span>Try to scam Atlas</span><span aria-hidden="true">Try to scam Atlas</span></span> <span className="k">→</span></Link>
+          {a.isAtlas ? <Link className="btn lime" href="/app/try" data-cursor="Try it"><span className="roll"><span>Try to scam Atlas</span><span aria-hidden="true">Try to scam Atlas</span></span> <span className="k">→</span></Link>
+            : <Link className="btn lime" href="/app/new" data-cursor="New"><span className="roll"><span>Wire up another</span><span aria-hidden="true">Wire up another</span></span> <span className="k">→</span></Link>}
           <a className="btn" href={`${OKLINK}/address/${a.wallet}`} target="_blank" rel="noreferrer" data-cursor="OKLink"><span className="roll"><span>Open on OKLink</span><span aria-hidden="true">Open on OKLink</span></span> <span className="k">↗</span></a>
         </div>
       </section>
@@ -104,8 +105,10 @@ export default function WalletView() {
         <div>Paid<b className="lime"><Count value={a.counts.allowed} d={0} /></b></div>
         <div>Stopped<b style={{ color: "var(--red)" }}><Count value={a.counts.blocked} d={0} /></b></div>
         <div>Fee balance<b><Count value={Number(a.feeBalance)} d={4} /><small>USDT0</small></b></div>
-        <div>Earned by designers<b><Count value={designers} d={5} /><small>USDT0</small></b></div>
+        <div>Fees paid to designers<b><Count value={Number(a.paidToDesigners)} d={4} /><small>USDT0</small></b></div>
       </section>
+
+      <OwnerPanel data={a} />
 
       <div className="blockhead" data-b><h2 className="disp">The line</h2><span className="m mute">{a.fuses.length} fuses in series · click one to inspect it</span></div>
       <div className="linepanel" data-b>

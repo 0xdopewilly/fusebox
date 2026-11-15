@@ -6,6 +6,7 @@ import { gsap } from "@/lib/gsap";
 import { useBlock } from "@/lib/hooks";
 import Digits from "@/components/fx/Digits";
 import { Logo } from "@/components/landing/Header";
+import Connect from "./Connect";
 
 const TABS = [["/app", "Wallet", "Wallet"], ["/app/try", "Try to scam it", "Try it"], ["/app/market", "Fuse market", "Market"], ["/app/designers", "Designers", "Sell"]] as const;
 
@@ -31,8 +32,9 @@ export default function AppBar() {
       </nav>
       <div className="right m">
         {source && <span className={`badge ${source === "mainnet" ? "main" : "warn"}`}>{source === "mainnet" ? "X Layer mainnet" : source === "fork" ? "Mainnet fork · rehearsal" : "Rehearsal snapshot"}</span>}
-        <span className="mute"><span className="live" />Block {block ? <Digits value={block.toLocaleString("en-US")} /> : "—"}</span>
+        <span className="mute blk"><span className="live" />Block {block ? <Digits value={block.toLocaleString("en-US")} /> : "—"}</span>
       </div>
+      <Connect />
     </header>
   );
 }

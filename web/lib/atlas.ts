@@ -1,8 +1,8 @@
 import "server-only";
 import { decodeEventLog, formatUnits, type Address, type Hex } from "viem";
-import { fuseboxLogs } from "./logs";
+import { fuseboxLogs, walletLogs } from "./logs";
 import { client, DEPLOYMENT, IS_FORK } from "./chain";
-import { fuseboxWalletAbi, fuseRegistryAbi } from "./abi";
+import { fuseboxWalletAbi, fuseRegistryAbi, fuseboxFactoryAbi } from "./abi";
 
 const erc20 = [{ type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "a", type: "address" }], outputs: [{ type: "uint256" }] }] as const;
 const SOCKET_KEY: Record<number, string> = { 1: "daily-cap", 2: "payee-guard", 3: "breaker", 4: "approval-2of3" };
@@ -21,7 +21,7 @@ export interface DecisionRow {
   status: FuseStatus[]; fee: string; memo: string;
 }
 export interface Atlas {
-  source: "fork" | "mainnet" | "snapshot"; block: number; time: number;
+  source: "fork" | "mainnet" | "snapshot"; block: number; time: number; isAtlas?: boolean;
   wallet: Address; registry: Address; processor: Address; owner: Address; agent: Address; usdt0: Address;
   paused: boolean; balance: string; feeBalance: string; protocolBps: number;
   counts: { decisions: number; allowed: number; blocked: number };
@@ -31,9 +31,12 @@ export interface Atlas {
 
 // ------------------------------------------------------------------ decision log (from the shared log layer)
 const blockTime = new Map<number, number>();
-async function readHistory(head: bigint) {
-  const logs = (await fuseboxLogs(Number(head))).filter((l) => l.address.toLowerCase() === DEPLOYMENT.atlas.toLowerCase());
-  const rows: DecisionRow[] = []; const payees = new Map<Address, number>();
+const isAtlas = (a: Address) => a.toLowerCase() === DEPLOYMENT.atlas.toLowerCase();
+async function readHistory(addr: Address, head: bigint, from: number) {
+  const logs = isAtlas(addr)
+    ? (await fuseboxLogs(Number(head))).filter((l) => l.address.toLowerCase() === addr.toLowerCase())
+    : await walletLogs(addr, from, Number(head));
+  const rows: DecisionRow[] = []; const payees = new Map<Address, number>(); const agents = new Set<Address>();
   const need = [...new Set(logs.map((l) => l.blockNumber))].filter((b) => !blockTime.has(b));
   await Promise.all(need.map(async (b) => blockTime.set(b, Number((await client.getBlock({ blockNumber: BigInt(b) })).timestamp))));
   for (const l of [...logs].sort((x, y) => x.blockNumber - y.blockNumber || x.logIndex - y.logIndex)) {
@@ -41,29 +44,40 @@ async function readHistory(head: bigint) {
     try { ev = decodeEventLog({ abi: fuseboxWalletAbi, data: l.data, topics: l.topics as [Hex, ...Hex[]] }); } catch { continue; }
     if (ev.eventName === "PayeeAdded") payees.set(ev.args.payee, Number(ev.args.at));
     else if (ev.eventName === "PayeeRemoved") payees.delete(ev.args.payee);
+    else if (ev.eventName === "AgentSet") { if (ev.args.enabled) agents.add(ev.args.agent); else agents.delete(ev.args.agent); }
     else if (ev.eventName === "Decision") {
       const a = ev.args;
       rows.push({ id: Number(a.decisionId), block: l.blockNumber, time: blockTime.get(l.blockNumber)!, tx: l.transactionHash, to: a.to, amount: usd(a.amount), allowed: a.allowed, status: a.status.map((s) => STATUS[s] ?? "failed"), fee: usd(a.feePaid), memo: a.memo });
     }
   }
-  return { rows, payees };
+  return { rows, payees, agents };
 }
 
 // ------------------------------------------------------------------ snapshot
-let cached: { at: number; data: Atlas } | null = null;
-let inflight: Promise<Atlas> | null = null;
+const cache = new Map<string, { at: number; data: Atlas }>();
+const inflight = new Map<string, Promise<Atlas>>();
 
-export async function getAtlas(): Promise<Atlas> {
-  if (cached && Date.now() - cached.at < 3_000) return cached.data;
-  if (inflight) return inflight;
-  inflight = build().finally(() => { inflight = null; });
-  const data = await inflight;
-  cached = { at: Date.now(), data };
+export const getAtlas = () => getWallet(DEPLOYMENT.atlas);
+
+/** Any wallet made by the Fusebox factory. `from` is where to start reading its history (its creation block if known). */
+export async function getWallet(addr: Address, from?: number): Promise<Atlas> {
+  const key = addr.toLowerCase();
+  const c = cache.get(key);
+  if (c && Date.now() - c.at < 3_000) return c.data;
+  if (inflight.has(key)) return inflight.get(key)!;
+  const p = build(addr, from).finally(() => inflight.delete(key));
+  inflight.set(key, p);
+  const data = await p;
+  cache.set(key, { at: Date.now(), data });
   return data;
 }
 
-async function build(): Promise<Atlas> {
-  const W = { address: DEPLOYMENT.atlas, abi: fuseboxWalletAbi } as const;
+export async function isFuseboxWallet(addr: Address) {
+  return client.readContract({ address: DEPLOYMENT.factory, abi: fuseboxFactoryAbi, functionName: "isWallet", args: [addr] });
+}
+
+async function build(addr: Address, from?: number): Promise<Atlas> {
+  const W = { address: addr, abi: fuseboxWalletAbi } as const;
   const R = { address: DEPLOYMENT.registry, abi: fuseRegistryAbi } as const;
   const head = await client.getBlock();
   const [owner, paused, n, decisions, allowed, blocked, approvers, balance, feeBalance, protocolBps] = await Promise.all([
@@ -74,8 +88,8 @@ async function build(): Promise<Atlas> {
     client.readContract({ ...W, functionName: "allowedCount" }),
     client.readContract({ ...W, functionName: "blockedCount" }),
     client.readContract({ ...W, functionName: "approvers" }),
-    client.readContract({ address: DEPLOYMENT.usdt0, abi: erc20, functionName: "balanceOf", args: [DEPLOYMENT.atlas] }),
-    client.readContract({ ...R, functionName: "feeBalance", args: [DEPLOYMENT.atlas] }),
+    client.readContract({ address: DEPLOYMENT.usdt0, abi: erc20, functionName: "balanceOf", args: [addr] }),
+    client.readContract({ ...R, functionName: "feeBalance", args: [addr] }),
     client.readContract({ ...R, functionName: "protocolFeeBps" }),
   ]);
   const fuses = await Promise.all(Array.from({ length: Number(n) }, async (_, i) => {
@@ -97,16 +111,16 @@ async function build(): Promise<Atlas> {
       earned: usd(earned), lifetimeEarned: usd(life), spentToday: usd(spent),
     } satisfies FuseSlot;
   }));
-  const hist = await readHistory(head.number);
+  const hist = await readHistory(addr, head.number, from ?? Math.max(DEPLOYMENT.fromBlock, Number(head.number) - 20_000));
   const paidToDesigners = usd(hist.rows.reduce((t, r) => t + BigInt(Math.round(Number(r.fee) * 1e6)), 0n));
   return {
     source: IS_FORK ? "fork" : "mainnet", block: Number(head.number), time: Number(head.timestamp),
-    wallet: DEPLOYMENT.atlas, registry: DEPLOYMENT.registry, processor: DEPLOYMENT.processor, owner, agent: DEPLOYMENT.agent, usdt0: DEPLOYMENT.usdt0,
+    wallet: addr, registry: DEPLOYMENT.registry, processor: DEPLOYMENT.processor, owner, agent: isAtlas(addr) ? DEPLOYMENT.agent : ([...hist.agents][0] ?? ("0x0000000000000000000000000000000000000000" as Address)), usdt0: DEPLOYMENT.usdt0,
     paused, balance: usd(balance), feeBalance: usd(feeBalance), protocolBps: Number(protocolBps),
     counts: { decisions: Number(decisions), allowed: Number(allowed), blocked: Number(blocked) },
     fuses, decisions: [...hist.rows].sort((a, b) => b.id - a.id).slice(0, 60),
     payees: [...hist.payees].map(([address, since]) => ({ address, since })), approvers: [...approvers],
-    paidToDesigners,
+    paidToDesigners, isAtlas: isAtlas(addr),
   };
 }
 

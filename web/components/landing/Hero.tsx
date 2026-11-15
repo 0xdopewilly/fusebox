@@ -117,7 +117,7 @@ export default function Hero() {
           <p>Fusebox wires an AI agent&apos;s wallet through small logic circuits taped out on X Layer. A payment reaches the payee only if every fuse holds, and each fuse that checks it pays its designer.</p>
         </div>
         <div className="ctas">
-          <a className="btn lime" href="/app" data-cursor="Enter"><span className="roll"><span>Wire up a wallet</span><span aria-hidden="true">Wire up a wallet</span></span> <span className="k">→</span></a>
+          <a className="btn lime" href="/app/new" data-cursor="Enter"><span className="roll"><span>Wire up a wallet</span><span aria-hidden="true">Wire up a wallet</span></span> <span className="k">→</span></a>
           <a className="btn line" href="#designers" data-cursor="Earn"><span className="roll"><span>Sell a fuse</span><span aria-hidden="true">Sell a fuse</span></span> <span className="k">→</span></a>
         </div>
       </div>

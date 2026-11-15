@@ -18,7 +18,7 @@ async function rpc<T>(url: string, method: string, params: unknown[]): Promise<T
   if (j.error) throw new Error(j.error.message);
   return j.result as T;
 }
-async function getLogs(a: number, b: number): Promise<RawLog[]> {
+async function getLogs(a: number, b: number, addresses: Address[] = [DEPLOYMENT.atlas, DEPLOYMENT.registry]): Promise<RawLog[]> {
   let last: unknown;
   for (const [url, step] of SOURCES) {
     try {
@@ -26,7 +26,7 @@ async function getLogs(a: number, b: number): Promise<RawLog[]> {
       const windows: [number, number][] = [];
       for (let f = a; f <= b; f += step) windows.push([f, Math.min(b, f + step - 1)]);
       for (let i = 0; i < windows.length; i += 6) {
-        const res = await Promise.all(windows.slice(i, i + 6).map(([f, t]) => rpc<Record<string, string | string[]>[]>(url, "eth_getLogs", [{ address: [DEPLOYMENT.atlas, DEPLOYMENT.registry], fromBlock: "0x" + f.toString(16), toBlock: "0x" + t.toString(16) }])));
+        const res = await Promise.all(windows.slice(i, i + 6).map(([f, t]) => rpc<Record<string, string | string[]>[]>(url, "eth_getLogs", [{ address: addresses, fromBlock: "0x" + f.toString(16), toBlock: "0x" + t.toString(16) }])));
         res.flat().forEach((l) => out.push({ address: l.address as Address, topics: l.topics as Hex[], data: l.data as Hex, blockNumber: parseInt(l.blockNumber as string, 16), transactionHash: l.transactionHash as Hex, logIndex: parseInt(l.logIndex as string, 16) }));
       }
       return out;
@@ -52,4 +52,15 @@ export function fuseboxLogs(head: number): Promise<RawLog[]> {
     return state.logs;
   })().finally(() => { inflight = null; });
   return inflight;
+}
+
+/** Logs of any Fusebox wallet from `from` (its creation block, or a recent window) to head, cached per wallet. */
+const perWallet = new Map<string, { start: number; scannedTo: number; logs: RawLog[] }>();
+export async function walletLogs(address: Address, from: number, head: number): Promise<RawLog[]> {
+  const key = address.toLowerCase();
+  let st = perWallet.get(key);
+  if (!st || from < st.start) st = { start: from, scannedTo: from - 1, logs: [] };
+  if (head > st.scannedTo) { st.logs.push(...(await getLogs(st.scannedTo + 1, head, [address]))); st.scannedTo = head; }
+  perWallet.set(key, st);
+  return st.logs;
 }

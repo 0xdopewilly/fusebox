@@ -14,7 +14,7 @@ export function useBlock(ms = 2500) {
 }
 
 /** The Atlas snapshot, polled. `fresh` holds decision ids that arrived since the first load. */
-export function useAtlas(ms = 4000) {
+export function useAtlas(ms = 4000, url = "/api/atlas") {
   const [data, setData] = useState<Atlas | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fresh, setFresh] = useState<Set<number>>(new Set());
@@ -23,7 +23,7 @@ export function useAtlas(ms = 4000) {
     let alive = true;
     const pull = async () => {
       try {
-        const r = await fetch("/api/atlas", { cache: "no-store" });
+        const r = await fetch(url, { cache: "no-store" });
         const j = await r.json();
         if (!alive) return;
         if (!r.ok) { setError(j.error || "unreachable"); return; }
@@ -36,7 +36,7 @@ export function useAtlas(ms = 4000) {
     };
     pull(); const id = setInterval(pull, ms);
     return () => { alive = false; clearInterval(id); };
-  }, [ms]);
+  }, [ms, url]);
   return { data, error, fresh };
 }
 
