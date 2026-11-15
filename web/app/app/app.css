@@ -49,6 +49,7 @@
 .fz-hit { cursor: pointer; }
 .fz-hit .glass { transition: stroke 0.3s; }
 .fz-hit:hover .glass, .fz-hit.sel .glass { stroke: var(--lime); }
+.linepanel .wire-wrap svg.vert { min-width: 0; max-width: 420px; margin: 0 auto; }
 .flow { stroke-dasharray: 2 14; animation: flow 0.9s linear infinite; }
 @keyframes flow { to { stroke-dashoffset: -16; } }
 .detail { border-top: 1px solid var(--hair2); display: grid; grid-template-columns: repeat(6, 1fr); overflow: hidden; }
@@ -142,5 +143,5 @@
   .verdict2 { flex-direction: column; align-items: flex-start; }
 }
 @media (max-width: 900px) { .appbar .right { display: none; } .tabs-nav .lg { display: none; } .tabs-nav .sh { display: inline; } .appbar .slash { display: none; } .tabs-nav { margin-left: auto; } .tabs-nav a { padding: 0 10px; }
-  .linepanel .wire-wrap { -webkit-mask-image: linear-gradient(90deg, #000 85%, transparent); mask-image: linear-gradient(90deg, #000 85%, transparent); } }
+  .linepanel .wire-wrap { padding: 24px 16px 18px; } }
 @media (max-width: 420px) { .appbar .logo { font-size: 0; gap: 0; } .tabs-nav a { padding: 0 8px; } }
