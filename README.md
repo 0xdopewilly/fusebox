@@ -63,18 +63,23 @@ Every address is in [`deployments/xlayer-mainnet.json`](deployments/xlayer-mainn
 ## Run it
 
 ```bash
+git clone --recursive https://github.com/0xdopewilly/fusebox.git && cd fusebox
+
 # circuits: build the netlists and run the exhaustive tests
-cd circuits && npm ci && npm test
+(cd circuits && npm ci && npm test)
 
 # contracts: unit, fuzz and X Layer mainnet-fork tests
-cd contracts && forge test && forge test --match-path test/fork/XLayerFork.t.sol --fork-url https://rpc.xlayer.tech
+(cd contracts && forge test && forge test --match-path test/fork/XLayerFork.t.sol --fork-url https://rpc.xlayer.tech)
 
-# rehearse the whole launch on a local fork of X Layer mainnet (no keys or funds needed beyond a local .env)
+# rehearse the whole launch on a local fork of X Layer mainnet (no keys or funds: it makes throwaway keys)
 anvil --fork-url https://rpc.xlayer.tech --port 8547 --chain-id 196 --auto-impersonate &
 RPC=http://127.0.0.1:8547 contracts/script/launch.sh
 
 # web: reads X Layer mainnet by default
-cd web && pnpm install && pnpm dev   # http://localhost:3120
+(cd web && pnpm install && pnpm dev)   # http://localhost:3120
+
+# DeWEB edition: build the self-contained page; it fails on any off-chain reference
+(cd deweb && npm ci && npm run build)   # deweb/dist/index.html, same SHA-256 on every build
 ```
 
 X Layer's public RPCs cap `eth_getLogs` ranges (100 blocks on rpc.xlayer.tech, 1,000 on tapeout.net). The app therefore reads event history from a small block index ([`web/lib/deployments/mainnet-index.json`](web/lib/deployments/mainnet-index.json)) and scans forward from there. Refresh the index with `node web/scripts/index-logs.mjs`.

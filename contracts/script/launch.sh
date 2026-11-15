@@ -5,12 +5,23 @@
 # Reads keys from ../.env. Writes the addresses to ../deployments/<chain>-<tag>.json.
 set -euo pipefail
 cd "$(dirname "$0")/.."
-set -a; source ../.env; set +a
 RPC="${RPC:?set RPC}"
 USDT0=0x779Ded0c9e1022225f8E0630b35a9b54bE713736
 SCAMMER=0x9f3e71b8d05a2c6e94f13b7d5e0a8c2f6b19c41a
 FORK=0
 [[ "$RPC" == http://127.0.0.1* || "$RPC" == http://localhost* ]] && FORK=1
+if [[ -f ../.env ]]; then
+  set -a; source ../.env; set +a
+elif [[ $FORK == 1 ]]; then
+  # A fork rehearsal needs no real keys: make throwaway ones for this run.
+  echo "no ../.env, so this fork rehearsal uses throwaway keys"
+  for n in DEPLOYER AGENT SUPPLIER APPROVER1 APPROVER2 APPROVER3; do
+    read -r a k < <(cast wallet new | awk '/^Address/{a=$2} /^Private key/{k=$3} END{print a, k}')
+    export "${n}_ADDRESS=$a" "${n}_PRIVATE_KEY=$k"
+  done
+else
+  echo "a mainnet launch reads its keys from ../.env (see .env.example)"; exit 1
+fi
 if [[ $FORK == 0 && "${CONFIRM:-}" != yes ]]; then echo "mainnet launch needs CONFIRM=yes"; exit 1; fi
 TAG="${TAG:-$([[ $FORK == 1 ]] && echo fork || echo mainnet)}"
 mkdir -p ../deployments; OUT="../deployments/xlayer-$TAG.json"
@@ -18,8 +29,8 @@ mkdir -p ../deployments; OUT="../deployments/xlayer-$TAG.json"
 bal() { cast balance "$1" --rpc-url "$RPC"; }
 if [[ $FORK == 1 ]]; then
   cast rpc anvil_setBalance "$DEPLOYER_ADDRESS" $(cast to-hex ${FORK_OKB_WEI:-32700000000000000}) --rpc-url "$RPC" >/dev/null   # default 0.0327 OKB, the real budget
-  # USDT0 to the deployer (balance slot found with script/dev/FindSlot.s.sol)
-  cast rpc anvil_setStorageAt "$USDT0" 0xcca656092db7fffb8faf01f7f6acd6babe34b5eed06562c523e5fe89f54f3509 $(cast to-uint256 ${FORK_USDT0:-300000}) --rpc-url "$RPC" >/dev/null   # default 0.3 USDT0
+  # USDT0 to the deployer (balances mapping slot found with script/dev/FindSlot.s.sol)
+  cast rpc anvil_setStorageAt "$USDT0" "$(cast index address "$DEPLOYER_ADDRESS" 51)" $(cast to-uint256 ${FORK_USDT0:-300000}) --rpc-url "$RPC" >/dev/null   # default 0.3 USDT0 (balances mapping is slot 51)
 fi
 OKB0=$(bal "$DEPLOYER_ADDRESS")
 START=$(cast block-number --rpc-url "$RPC")
