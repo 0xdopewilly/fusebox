@@ -6,6 +6,7 @@ import { fuseboxFactoryAbi, fuseboxWalletAbi, fuseRegistryAbi } from "@/lib/abi"
 import { DEP, pub } from "@/lib/client-chain";
 import { useTxQueue, type TxStep } from "@/lib/useTxQueue";
 import { short, OKLINK } from "@/lib/hooks";
+import { useMarket } from "@/lib/useMarket";
 import { useWallet } from "./WalletProvider";
 
 const erc20 = [
@@ -35,6 +36,9 @@ function Field({ label, v, set, suffix }: { label: string; v: string; set: (s: s
 export default function NewWalletView() {
   const { account, wallets, connect, write } = useWallet();
   const q = useTxQueue<Ctx>();
+  // designers can reprice their fuses, so the wizard reads today's fee and accepts exactly that
+  const { data: market } = useMarket();
+  const feeOf = (f: (typeof FUSES)[number]) => { const m = market?.fuses.find((x) => x.fuseId === f.id); return m ? parseUnits(m.fee, 6) : f.fee; };
   const [agent, setAgent] = useState("");
   const [on, setOn] = useState<Record<Key, boolean>>({ "daily-cap": true, "payee-guard": true, breaker: true, "approval-2of3": true });
   const [cap, setCap] = useState("50"); const [cool, setCool] = useState("24"); const [trial, setTrial] = useState("2"); const [thr, setThr] = useState("20");
@@ -57,7 +61,7 @@ export default function NewWalletView() {
     Promise.all([pub.getBalance({ address: account }), pub.readContract({ address: DEP.usdt0 as Address, abi: erc20, functionName: "balanceOf", args: [account] })]).then(([okb, usdt]) => setBal({ okb, usdt })).catch(() => {});
   }, [account, made]);
 
-  const perDecision = FUSES.filter((f) => on[f.key]).reduce((t, f) => t + f.fee, 0n);
+  const perDecision = FUSES.filter((f) => on[f.key]).reduce((t, f) => t + feeOf(f), 0n);
   const depositUnits = (() => { try { return parseUnits(deposit || "0", 6); } catch { return -1n; } })();
   const floatUnits = (() => { try { return parseUnits(float || "0", 6); } catch { return -1n; } })();
   const goodPayees = payees.filter((p) => p.trim());
@@ -93,7 +97,7 @@ export default function NewWalletView() {
       const params = f.key === "breaker" ? { token: "0x0000000000000000000000000000000000000000" as Address, unit: 0n, a: 0, b: 0 }
         : { token: DEP.usdt0 as Address, unit: USDT, a: f.key === "daily-cap" ? clamp(cap) : f.key === "payee-guard" ? clamp(cool) : clamp(thr), b: f.key === "payee-guard" ? clamp(trial) : 0 };
       const detail = f.key === "daily-cap" ? `${clamp(cap)} USDT0 a day` : f.key === "payee-guard" ? `${clamp(cool)} h cooling-off, ${clamp(trial)} USDT0 trial` : f.key === "approval-2of3" ? `approvals over ${clamp(thr)} USDT0` : "trips on strangers";
-      steps.push({ id: `fuse-${f.key}`, label: `Splice in ${f.name}`, detail: `${detail} · ${Number(f.fee) / 1e6} USDT0 per check`, run: (c) => write({ ...W(), address: c.wallet!, functionName: "addFuse", args: [BigInt(f.id), params, f.fee] }) });
+      steps.push({ id: `fuse-${f.key}`, label: `Splice in ${f.name}`, detail: `${detail} · ${Number(feeOf(f)) / 1e6} USDT0 per check`, run: (c) => write({ ...W(), address: c.wallet!, functionName: "addFuse", args: [BigInt(f.id), params, feeOf(f)] }) });
     });
     goodPayees.forEach((p, i) => steps.push({ id: `payee-${i}`, label: "Save a payee", detail: short(p.trim()), run: (c) => write({ ...W(), address: c.wallet!, functionName: "addPayee", args: [getAddress(p.trim().toLowerCase())] }) }));
     if (on["approval-2of3"]) steps.push({ id: "approvers", label: "Seat the three approvers", detail: approvers.map((a) => short(a.trim())).join(" · "), run: (c) => write({ ...W(), address: c.wallet!, functionName: "setApprovers", args: [approvers.map((a) => getAddress(a.trim().toLowerCase())) as [Address, Address, Address]] }) });
@@ -154,7 +158,7 @@ export default function NewWalletView() {
                 <div className="fopt" key={f.key}>
                   <Toggle on={on[f.key]} flip={() => toggle(f.key)} name={f.name} />
                   <div>
-                    <h4>{f.name}<small>{Number(f.fee) / 1e6} USDT0 / check</small></h4>
+                    <h4>{f.name}<small>{Number(feeOf(f)) / 1e6} USDT0 / check</small></h4>
                     <p>{f.say}</p>
                     {on[f.key] && f.key === "daily-cap" && <div className="prow"><Field label="Cap per day" suffix="USDT0" v={cap} set={setCap} /></div>}
                     {on[f.key] && f.key === "payee-guard" && <div className="prow"><Field label="Cooling-off" suffix="hours" v={cool} set={setCool} /><Field label="Trial amount" suffix="USDT0" v={trial} set={setTrial} /></div>}

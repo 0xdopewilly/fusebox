@@ -7,7 +7,7 @@ import { LAYERS } from "@/lib/fuses";
 import type { Atlas, DecisionRow } from "@/lib/atlas";
 import LineWire, { type WireStatus } from "./LineWire";
 import Netlist from "@/components/landing/Netlist";
-import OwnerPanel from "./OwnerPanel";
+import OwnerConsole from "./OwnerConsole";
 import Loading from "./Loading";
 
 /** A number that rolls to its new value whenever it changes. */
@@ -118,7 +118,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
         <div>Fees paid to designers<b><Count value={Number(a.paidToDesigners)} d={4} /><small>USDT0</small></b></div>
       </section>
 
-      <OwnerPanel data={a} />
+      <OwnerConsole data={a} />
 
       <div className="blockhead" data-b><h2 className="disp">The line</h2><span className="m mute">{a.fuses.length} fuses in series · click one to inspect it</span></div>
       <div className="linepanel" data-b>

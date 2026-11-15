@@ -8,6 +8,7 @@ import { short, fmt, OKLINK } from "@/lib/hooks";
 import Netlist from "@/components/landing/Netlist";
 import ChainNetlist from "./ChainNetlist";
 import Loading from "./Loading";
+import MarketInstall from "./MarketInstall";
 
 const SAY: Record<string, string> = {
   "daily-cap": "No more than the owner's cap in a UTC day, however the agent is asked.",
@@ -65,7 +66,7 @@ export default function MarketView() {
                     <span className="chip">{f.decisions} decisions</span>
                     <span className="chip">earned {Number(f.lifetimeEarned).toFixed(5)}</span>
                     <span className="chip">{f.listed ? "Listed" : "Delisted"}</span>
-                  </div></div>
+                  </div>{f.listed && <MarketInstall fuseId={f.fuseId} name={f.name} />}</div>
                 </div>
               );
             })}

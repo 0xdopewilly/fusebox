@@ -152,6 +152,7 @@ if (allowed) await agent.writeContract({ address: WALLET, abi: fuseboxWalletAbi,
                   <tr><td><b>Anyone</b></td><td><code>check</code> and every view</td></tr>
                 </tbody>
               </table></div>
+              <p>Every owner call is in the app. Open the wallet&apos;s page and connect the owner&apos;s address: the owner console has <b>Safety</b> (freeze, reset, pause, daily budgets), <b>Fuses</b> (edit, remove, install from the market, accept a new fee), <b>Payees</b>, <b>People</b> (agents, approvers, the approval window), <b>Money</b> (fund or withdraw the wallet, top up or withdraw fees) and <b>Ownership</b> (a two-step handover the new owner accepts). Each write is simulated before you sign.</p>
             </section>
 
             <section id="mcp">
@@ -180,7 +181,8 @@ if (allowed) await agent.writeContract({ address: WALLET, abi: fuseboxWalletAbi,
                 <li><b>Design the circuit</b> as NAND gates (plus LATCH bits if it needs memory) against one socket&apos;s pinout. The repo&apos;s <a href="https://github.com/0xdopewilly/fusebox/tree/main/circuits" target="_blank" rel="noreferrer">circuits toolchain</a> builds, simulates and exhaustively tests TAP-02 netlists, and passes TapeOut&apos;s official test vectors.</li>
                 <li><b>Tape it out</b> on an X Layer TapeOut processor: mint one transistor per gate and call <code>tapeout(netlist, nIn, nOut)</code>. You get the circuit NFT.</li>
                 <li><b>List it</b> on the <Link href="/app/designers">designers page</Link>, or call <code>registry.list(processor, circuitId, socket, netlistHash, fee, uri)</code>. The registry checks the pinout, the gate budget (512), the state rules and the netlist hash against the chain.</li>
-                <li><b>Earn on every decision</b>, the no&apos;s included. Claim with <code>claim(fuseId, to)</code>. Sell the NFT and the income moves with it.</li>
+                <li><b>Earn on every decision</b>, the no&apos;s included. Claim with <code>claim(fuseId, to)</code>. Sell the NFT and the income moves with it. Wallet owners install your fuse from the <Link href="/app/market">fuse market</Link> in one signature.</li>
+                <li><b>Run it like a product.</b> From the designers page, change the fee (<code>setFee</code>), delist it from new installs (<code>setListed</code>) or link a page that explains it (<code>setMetadataURI</code>). A lower fee applies to everyone at once; a higher one only to wallets whose owner accepts it.</li>
               </ol>
               <p className="small">Duplicate-invoice checks, business hours only, per-payee caps, velocity limits: there&apos;s room for many more fuses.</p>
             </section>

@@ -29,18 +29,19 @@ export async function getMarket(): Promise<Market> {
   ]);
   const fuses = await Promise.all(listed.map(async (l) => {
     const id = l.fuseId;
-    const [f, designer, dec, earned, life] = await Promise.all([
+    const [f, designer, dec, earned, life, uri] = await Promise.all([
       client.readContract({ ...R, functionName: "fuse", args: [id] }),
       client.readContract({ ...R, functionName: "designerOf", args: [id] }),
       client.readContract({ ...R, functionName: "decisions", args: [id] }),
       client.readContract({ ...R, functionName: "earned", args: [id] }),
       client.readContract({ ...R, functionName: "lifetimeEarned", args: [id] }),
+      client.readContract({ ...R, functionName: "metadataURI", args: [id] }), // live: designers can change it
     ]);
     const [key, name] = SOCKET[Number(f.socket)] ?? [`socket-${f.socket}`, `Fuse #${id}`];
     return {
       fuseId: Number(id), key, name, processor: f.processor, circuitId: Number(f.circuitId), designer, socket: Number(f.socket),
       gates: Number(f.gateCount), nState: Number(f.nState), fee: usd(f.fee), listed: f.listed, decisions: Number(dec),
-      earned: usd(earned), lifetimeEarned: usd(life), metadataURI: l.metadataURI ?? "", onAtlas: DEPLOYMENT.fuseIds.includes(Number(id)), netlistHash: f.netlistHash, nIn: Number(f.nIn),
+      earned: usd(earned), lifetimeEarned: usd(life), metadataURI: uri || l.metadataURI || "", onAtlas: DEPLOYMENT.fuseIds.includes(Number(id)), netlistHash: f.netlistHash, nIn: Number(f.nIn),
     } satisfies MarketFuse;
   }));
   const data: Market = {

@@ -12,7 +12,30 @@ import NoWallet from "./NoWallet";
 const SOCKETS: Record<number, [number, string]> = { 24: [1, "Daily Cap"], 33: [2, "Payee Guard"], 4: [3, "Breaker"], 19: [4, "Two of Three"] };
 interface Info { owner: Address; nIn: number; nOut: number; nState: number; gates: number; hash: Hex }
 
-/** For designers: claim what your fuses earned, and list a circuit you've taped out. */
+/** Price, listing and description link for one fuse you own. A fee rise only reaches wallets that accept it. */
+function ManageFuse({ f, busy, run }: { f: Market["fuses"][number]; busy: boolean; run: (label: string, fn: () => Promise<Hex>) => void }) {
+  const { write } = useWallet();
+  const R = { address: DEP.registry as Address, abi: fuseRegistryAbi } as const;
+  const [fee, setFee] = useState(f.fee); const [uri, setUri] = useState(f.metadataURI);
+  const feeOk = /^\d+(\.\d{1,6})?$/.test(fee.trim()) && Number(fee) <= 1;
+  const up = feeOk && Number(fee) > Number(f.fee);
+  return (
+    <div className="mf">
+      <div className="mf-top"><b>#{f.fuseId} {f.name}</b><span className={f.listed ? "lime" : "red"}>{f.listed ? "Listed" : "Delisted"}</span></div>
+      <div className="mf-grid">
+        <label className="field"><span>Fee per check (USDT0)</span><input aria-label={`Fee per check for fuse ${f.fuseId}`} value={fee} onChange={(e) => setFee(e.target.value)} inputMode="decimal" /></label>
+        <button className="btn" disabled={busy || !feeOk || Number(fee) === Number(f.fee)} onClick={() => run(`Set fuse #${f.fuseId}'s fee`, () => write({ ...R, functionName: "setFee", args: [BigInt(f.fuseId), parseUnits(fee.trim(), 6)] }))}>Set fee</button>
+        <label className="field"><span>Description link</span><input aria-label={`Description link for fuse ${f.fuseId}`} value={uri} onChange={(e) => setUri(e.target.value)} placeholder="ipfs://… or https://…" spellCheck={false} /></label>
+        <button className="btn" disabled={busy || uri === f.metadataURI || uri.length > 300} onClick={() => run(`Set fuse #${f.fuseId}'s link`, () => write({ ...R, functionName: "setMetadataURI", args: [BigInt(f.fuseId), uri.trim()] }))}>Save link</button>
+      </div>
+      {!feeOk && <p className="m red" style={{ fontSize: 11 }}>A fee from 0 to 1 USDT0, up to 6 decimals.</p>}
+      {up && <p className="m mute" style={{ fontSize: 11 }}>A higher fee applies to new installs at once; wallets already running this fuse keep paying their accepted {f.fee} until their owner accepts the new price. A lower fee applies to everyone straight away.</p>}
+      <button className={`btn${f.listed ? " danger" : ""}`} style={{ marginTop: 10 }} disabled={busy} onClick={() => run(f.listed ? `Delist fuse #${f.fuseId}` : `Relist fuse #${f.fuseId}`, () => write({ ...R, functionName: "setListed", args: [BigInt(f.fuseId), !f.listed] }))}>{f.listed ? "Delist (existing installs keep working)" : "List it again"}</button>
+    </div>
+  );
+}
+
+/** For designers: claim what your fuses earned, manage their price and listing, and list a circuit you've taped out. */
 export default function DesignerTools({ market }: { market: Market | null }) {
   const { account, wallets, connect, write } = useWallet();
   const q = useTxQueue<object>();
@@ -62,6 +85,16 @@ export default function DesignerTools({ market }: { market: Market | null }) {
               )}
           </div>
         </div>
+        {account && mine.length > 0 && (
+          <div className="wz-sec">
+            <div className="ix">⇄</div>
+            <div>
+              <h3>Price and listing</h3>
+              <p className="lead">Change what a check costs, delist a fuse from new installs, or point it at a page that explains it. Only the circuit NFT&apos;s owner can.</p>
+              {mine.map((f) => <ManageFuse key={f.fuseId} f={f} busy={q.running} run={(label, fn) => q.start([{ id: label, label, run: fn }], {})} />)}
+            </div>
+          </div>
+        )}
         <div className="wz-sec">
           <div className="ix">+</div>
           <div>

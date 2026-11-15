@@ -14,7 +14,7 @@ const usd = (v: bigint) => formatUnits(v, 6);
 
 export interface FuseSlot {
   slot: number; fuseId: number; key: string; name: string; circuitId: number; processor: Address;
-  gates: number; nState: number; fee: string; maxFee: string; unit: string; a: number; b: number;
+  gates: number; nState: number; fee: string; maxFee: string; unit: string; a: number; b: number; token: Address; socket: number;
   latched: boolean; designer: Address; decisions: number; earned: string; lifetimeEarned: string; spentToday: string;
 }
 export interface DecisionRow {
@@ -28,6 +28,9 @@ export interface Atlas {
   counts: { decisions: number; allowed: number; blocked: number };
   fuses: FuseSlot[]; decisions: DecisionRow[]; payees: { address: Address; since: number }[]; approvers: Address[];
   paidToDesigners: string;
+  /** Owner-console fields (absent from older snapshots). */
+  agents?: Address[]; pendingOwner?: Address; approvalTtl?: number;
+  limits?: { maxDecisions: number; maxBlocked: number; decisionsToday: number; blockedToday: number; day: number };
 }
 
 // ------------------------------------------------------------------ decision log (from the shared log layer)
@@ -85,7 +88,7 @@ async function build(addr: Address): Promise<Atlas> {
   const headP = client.getBlock();
   const histP = headP.then((h) => readHistory(addr, h.number));
   histP.catch(() => {}); // awaited below; this only stops an early failure from leaving it unhandled
-  const [head, [owner, paused, n, decisions, allowed, blocked, approvers, balance, feeBalance, protocolBps]] = await Promise.all([headP, Promise.all([
+  const [head, [owner, paused, n, decisions, allowed, blocked, approvers, balance, feeBalance, protocolBps, pendingOwner, approvalTtl, maxDec, maxBlk, decToday, blkToday, day]] = await Promise.all([headP, Promise.all([
     client.readContract({ ...W, functionName: "owner" }),
     client.readContract({ ...W, functionName: "paused" }),
     client.readContract({ ...W, functionName: "fuseCount" }),
@@ -96,6 +99,13 @@ async function build(addr: Address): Promise<Atlas> {
     client.readContract({ address: DEPLOYMENT.usdt0, abi: erc20, functionName: "balanceOf", args: [addr] }),
     client.readContract({ ...R, functionName: "feeBalance", args: [addr] }),
     client.readContract({ ...R, functionName: "protocolFeeBps" }),
+    client.readContract({ ...W, functionName: "pendingOwner" }),
+    client.readContract({ ...W, functionName: "approvalTtl" }),
+    client.readContract({ ...W, functionName: "maxDecisionsPerDay" }),
+    client.readContract({ ...W, functionName: "maxBlockedPerDay" }),
+    client.readContract({ ...W, functionName: "decisionsToday" }),
+    client.readContract({ ...W, functionName: "blockedToday" }),
+    client.readContract({ ...W, functionName: "counterDay" }),
   ])]);
   const fuses = await Promise.all(Array.from({ length: Number(n) }, async (_, i) => {
     const s = await client.readContract({ ...W, functionName: "slotAt", args: [BigInt(i)] });
@@ -113,7 +123,7 @@ async function build(addr: Address): Promise<Atlas> {
       gates: Number(f.gateCount), nState: Number(s.nState), fee: usd(f.fee), maxFee: usd(s.maxFee),
       unit: usd(s.params.unit), a: Number(s.params.a), b: Number(s.params.b),
       latched: s.nState > 0 && s.state !== "0x" && BigInt(s.state) !== 0n, designer, decisions: Number(dCount),
-      earned: usd(earned), lifetimeEarned: usd(life), spentToday: usd(spent),
+      earned: usd(earned), lifetimeEarned: usd(life), spentToday: usd(spent), token: s.params.token, socket: Number(s.socket),
     } satisfies FuseSlot;
   }));
   const hist = await histP;
@@ -126,6 +136,11 @@ async function build(addr: Address): Promise<Atlas> {
     fuses, decisions: [...hist.rows].sort((a, b) => b.id - a.id).slice(0, 60),
     payees: [...hist.payees].map(([address, since]) => ({ address, since })), approvers: [...approvers],
     paidToDesigners, isAtlas: isAtlas(addr),
+    agents: [...hist.agents], pendingOwner, approvalTtl: Number(approvalTtl),
+    // the counters roll over at the first decision of a new UTC day; before that, today's count is 0
+    limits: { maxDecisions: Number(maxDec), maxBlocked: Number(maxBlk), day: Number(day),
+      decisionsToday: Number(day) === Math.floor(Number(head.timestamp) / 86400) ? Number(decToday) : 0,
+      blockedToday: Number(day) === Math.floor(Number(head.timestamp) / 86400) ? Number(blkToday) : 0 },
   };
 }
 

@@ -1,37 +1,14 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import type { Address } from "viem";
-import { fuseboxFactoryAbi, fuseboxWalletAbi } from "@/lib/abi";
-import { DEP, pub } from "@/lib/client-chain";
+import { useMyWallets } from "@/lib/useMyWallets";
 import { short } from "@/lib/hooks";
 import { useWallet } from "./WalletProvider";
 import Loading from "./Loading";
 
-interface Row { address: Address; fuses: number; decisions: number; paused: boolean; block?: number }
-
 /** Every Fusebox wallet the connected address owns, read straight from the factory. */
 export default function MineView() {
   const { account, wallets, connect } = useWallet();
-  const [rows, setRows] = useState<Row[] | null>(null);
-  useEffect(() => {
-    if (!account) return;
-    (async () => {
-      const n = Number(await pub.readContract({ address: DEP.factory as Address, abi: fuseboxFactoryAbi, functionName: "walletCount" }));
-      const addrs = await Promise.all(Array.from({ length: n }, (_, i) => pub.readContract({ address: DEP.factory as Address, abi: fuseboxFactoryAbi, functionName: "walletAt", args: [BigInt(i)] })));
-      const owners = await Promise.all(addrs.map((a) => pub.readContract({ address: a, abi: fuseboxWalletAbi, functionName: "owner" })));
-      const mine = addrs.filter((_, i) => owners[i].toLowerCase() === account.toLowerCase());
-      let local: { address: string; block: number }[] = []; try { local = JSON.parse(localStorage.getItem("fusebox:mine") || "[]"); } catch {}
-      setRows(await Promise.all(mine.map(async (a) => {
-        const [f, d, p] = await Promise.all([
-          pub.readContract({ address: a, abi: fuseboxWalletAbi, functionName: "fuseCount" }),
-          pub.readContract({ address: a, abi: fuseboxWalletAbi, functionName: "decisionCount" }),
-          pub.readContract({ address: a, abi: fuseboxWalletAbi, functionName: "paused" }),
-        ]);
-        return { address: a, fuses: Number(f), decisions: Number(d), paused: p, block: local.find((x) => x.address?.toLowerCase() === a.toLowerCase())?.block };
-      })));
-    })().catch(() => setRows([]));
-  }, [account]);
+  const rows = useMyWallets(account);
   return (
     <div className="page">
       <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
