@@ -1,0 +1,536 @@
+<!doctype html>
+<!--
+  Fusebox, design direction A: "Consumer unit"
+  A literal breaker panel. Fuses are switches on a rail; a blown fuse is a lever that has dropped.
+
+  Brand token sources (read 2026-11-13 with headless Chrome, .tools/qa puppeteer):
+  - tapeout.net (TapeOut app, live :root CSS custom properties):
+      --color-bg #f6f5f1, --color-panel #fff, --color-chip #efede6, --color-hover #f1efe9,
+      --color-line #e3e1da, --color-ink #1d1d1b, --color-muted #6b6a66, --color-faint #a9a7a0,
+      --color-accent #0f6b5c, --color-accent-hi #0c5a4d, --color-accent-soft #e6f0ed,
+      --color-ok #1a7f37, --color-warn #9a6700, --color-warn-soft #fdf8ec,
+      --color-err #b42318, --color-err-soft #fdf1ef,
+      --radius-lg .5rem (buttons, 8px), --radius-2xl 1rem (panels, 16px), --tracking-tight -.025em.
+  - tapeout.net/app/assets/icon-*.svg: TapeOut mark path and its navy #192b53.
+  - tapeout.net app bundle chain config: X Layer chain colour "#1d1d1b" (same as TapeOut ink).
+  - X Layer mark: official kit, github.com/okx/xlayer-docs/media-kit/XLayer-logo-kit.zip (small-size icon).
+  Type is not from either site (TapeOut uses the system stack): Bricolage Grotesque, Google Fonts.
+  Not reachable: xlayer.tech (TLS name error over https, parked "/lander" page over http);
+  okx.com / web3.okx.com not attempted (geo-blocked here, per instructions).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fusebox Consumer Unit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f5f1; --panel:#fff; --chip:#efede6; --hover:#f1efe9; --line:#e3e1da;
+  --ink:#1d1d1b; --muted:#6b6a66; --faint:#a9a7a0;
+  --accent:#0f6b5c; --accent-hi:#0c5a4d; --accent-soft:#e6f0ed;
+  --ok:#1a7f37; --warn:#9a6700; --warn-soft:#fdf8ec; --err:#b42318; --err-soft:#fdf1ef;
+  --navy:#192b53;
+  --r-btn:8px; --r-panel:16px;
+  --font:"Bricolage Grotesque", system-ui, sans-serif;
+  /* canvas only */
+  --canvas:#d6d5d0; --canvas-ink:#3b3a37; --pin:#2563eb;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--canvas)}
+body{font-family:var(--font);color:var(--ink);-webkit-font-smoothing:antialiased}
+.num{font-variant-numeric:tabular-nums}
+.nw{white-space:nowrap}
+
+/* ---------- canvas ---------- */
+.canvas{padding:56px 64px 80px;width:max-content}
+.canvas-head{display:flex;align-items:baseline;gap:24px;margin-bottom:40px;color:var(--canvas-ink)}
+.canvas-head h1{font-size:40px;font-weight:700;letter-spacing:-.02em}
+.canvas-head p{font-size:17px;max-width:880px;line-height:1.45}
+.row{display:flex;gap:72px;align-items:flex-start}
+.frame-label{font:500 15px/1 system-ui,sans-serif;color:var(--canvas-ink);margin-bottom:14px}
+.frame{position:relative;background:var(--bg);box-shadow:0 1px 0 rgba(0,0,0,.08),0 18px 50px rgba(0,0,0,.12);overflow:hidden}
+.notes{margin-top:22px;font:400 14px/1.5 system-ui,sans-serif;color:var(--canvas-ink);max-width:720px}
+.notes b{font-weight:600}
+.notes ol{list-style:none;display:grid;gap:8px}
+.notes li{display:grid;grid-template-columns:24px 1fr;gap:8px}
+.pin,.notes li::before{width:22px;height:22px;border-radius:50%;background:var(--pin);color:#fff;font:600 12px/22px system-ui,sans-serif;text-align:center}
+.notes li::before{content:attr(data-n)}
+.pin{position:absolute;z-index:20;box-shadow:0 0 0 3px rgba(255,255,255,.9)}
+
+/* ---------- shared product pieces ---------- */
+.logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:21px;letter-spacing:-.02em;color:var(--ink);text-decoration:none}
+.logo svg{display:block}
+.btn{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 18px;border-radius:var(--r-btn);font:600 16px/1 var(--font);text-decoration:none;border:1px solid transparent;white-space:nowrap}
+.btn-accent{background:var(--accent);color:#fff}
+.btn-ink{background:var(--ink);color:#fff}
+.btn-line{border-color:var(--line);background:var(--panel);color:var(--ink)}
+.btn-sm{height:36px;padding:0 14px;font-size:15px}
+.muted{color:var(--muted)}
+.tag{display:inline-flex;align-items:center;height:24px;padding:0 9px;border-radius:6px;font-size:13px;font-weight:600;white-space:nowrap}
+.tag-on{background:var(--accent-soft);color:var(--accent-hi)}
+.tag-blown{background:var(--err-soft);color:var(--err)}
+.tag-quiet{background:var(--chip);color:var(--muted)}
+
+/* breaker module */
+.brk{position:relative;width:96px;height:206px;background:var(--panel);border:1px solid var(--line);border-radius:12px;box-shadow:0 2px 0 var(--line);display:flex;flex-direction:column;align-items:center;padding:10px 8px 12px}
+.brk-slot{font-size:12px;color:var(--faint);font-weight:600}
+.brk-window{width:28px;height:7px;border-radius:2px;background:var(--accent);margin:7px 0 8px}
+.brk-well{position:relative;width:46px;height:86px;border-radius:9px;background:var(--chip);border:1px solid var(--line)}
+.brk-lever{position:absolute;left:5px;right:5px;top:5px;height:38px;border-radius:6px;background:var(--ink)}
+.brk-lever::after{content:"";position:absolute;left:8px;right:8px;top:8px;height:2px;border-radius:1px;background:rgba(255,255,255,.35);box-shadow:0 5px 0 rgba(255,255,255,.35),0 10px 0 rgba(255,255,255,.35)}
+.brk-name{margin-top:auto;font-size:14px;font-weight:650;line-height:1.15;text-align:center}
+.brk-read{margin-top:3px;font-size:12px;color:var(--muted);text-align:center}
+.brk.blown .brk-window{background:var(--err)}
+.brk.blown .brk-lever{transform:translateY(39px);background:var(--err)}
+.brk.blown .brk-read{color:var(--err);font-weight:600}
+.slot-empty{width:96px;height:206px;background:var(--hover);border:1.5px dashed #cfccc3;border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:13px;font-weight:600;text-align:center;line-height:1.2}
+.slot-empty .plus{width:30px;height:30px;border-radius:8px;background:var(--chip);display:grid;place-items:center;font-size:20px;font-weight:500;color:var(--ink)}
+
+/* the trip: lever drops with a small overshoot, then the module shudders */
+@keyframes trip{
+  0%,30%{transform:translateY(0);background:var(--ink)}
+  36%{transform:translateY(43px);background:var(--err)}
+  40%{transform:translateY(37px);background:var(--err)}
+  43%,88%{transform:translateY(39px);background:var(--err)}
+  94%,100%{transform:translateY(0);background:var(--ink)}
+}
+@keyframes tripWindow{0%,33%{background:var(--accent)}35%,90%{background:var(--err)}93%,100%{background:var(--accent)}}
+@keyframes shudder{0%,35%,45%,100%{transform:translateX(0)}37%{transform:translateX(-2px)}39%{transform:translateX(2px)}41%{transform:translateX(-1px)}}
+@keyframes swapA{0%,33%{opacity:1}35%,90%{opacity:0}93%,100%{opacity:1}}
+@keyframes swapB{0%,33%{opacity:0}35%,90%{opacity:1}93%,100%{opacity:0}}
+.loop .brk-lever{animation:trip 6s cubic-bezier(.3,.7,.2,1) infinite}
+.loop .brk-window{animation:tripWindow 6s linear infinite}
+.loop{animation:shudder 6s linear infinite}
+.swap{position:relative;display:block}
+.swap>span{display:block}
+.swap>span+span{position:absolute;inset:0}
+.loop-text .a{animation:swapA 6s linear infinite}
+.loop-text .b{animation:swapB 6s linear infinite}
+
+/* ---------- 1. landing ---------- */
+.landing{width:1440px}
+.l-nav{height:84px;display:flex;align-items:center;gap:44px;padding:0 64px;border-bottom:1px solid var(--line)}
+.l-nav nav{display:flex;gap:30px;font-size:16px;color:var(--muted)}
+.l-nav .spacer{flex:1}
+.hero{display:grid;grid-template-columns:560px minmax(0,1fr);gap:48px;padding:88px 64px 96px;align-items:center}
+.hero h1{font-size:90px;line-height:.95;font-weight:750;letter-spacing:-.032em;font-variation-settings:"opsz" 96}
+.hero .lede{margin-top:30px;font-size:21px;line-height:1.5;color:#3b3a37;max-width:540px}
+.hero .ctas{display:flex;gap:12px;margin-top:36px}
+.hero .facts{display:flex;gap:22px;margin-top:40px;font-size:15px;color:var(--muted);align-items:center}
+.hero .facts span{display:flex;align-items:center;gap:8px}
+.hero-panel{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:22px;padding:28px 30px 26px}
+.hero-panel .head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:20px}
+.hero-panel .head b{font-size:17px;font-weight:650}
+.hero-panel .head span{font-size:14px;color:var(--muted)}
+.rail{position:relative;display:flex;gap:12px;padding:16px;background:var(--hover);border-radius:14px}
+.rail::before{content:"";position:absolute;left:16px;right:16px;top:50%;height:14px;margin-top:-7px;background:#e7e4dc;border-radius:3px}
+.rail>*:not(.pin){position:relative}
+.hero-panel .brk,.hero-panel .slot-empty{width:104px;height:226px}
+.hero-panel .brk-well{height:96px}
+.hero-panel .brk.loop .brk-lever,.hero-panel .brk.blown .brk-lever{}
+.ticket{margin-top:18px;display:grid;grid-template-columns:auto 1fr auto;gap:16px;align-items:center;padding:14px 16px;border-radius:12px;background:var(--bg);font-size:15px}
+.ticket time{color:var(--muted)}
+.ticket .t-msg{min-height:22px}
+
+.how{background:var(--panel);border-top:1px solid var(--line);padding:88px 64px 92px}
+.how-top{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:56px}
+.how h2{font-size:56px;line-height:1;font-weight:720;letter-spacing:-.035em}
+.how-top p{max-width:430px;font-size:18px;line-height:1.5;color:var(--muted)}
+.steps{position:relative;display:grid;grid-template-columns:repeat(4,1fr);gap:40px}
+.steps::before{content:"";position:absolute;left:24px;right:24px;top:23px;height:2px;background:var(--ink)}
+.step{position:relative}
+.step .node{width:48px;height:48px;border-radius:12px;background:var(--panel);border:2px solid var(--ink);display:grid;place-items:center;font-weight:700;font-size:18px;margin-bottom:26px}
+.step:nth-child(3) .node{background:var(--accent);border-color:var(--accent);color:#fff}
+.step h3{font-size:24px;font-weight:680;letter-spacing:-.02em;margin-bottom:10px}
+.step p{font-size:16.5px;line-height:1.5;color:#45443f}
+.fee-strip{margin-top:64px;display:grid;grid-template-columns:1fr auto;gap:40px;align-items:center;padding:28px 32px;border-radius:var(--r-panel);background:var(--bg)}
+.fee-strip .big{font-size:26px;font-weight:650;letter-spacing:-.02em;line-height:1.3}
+.fee-strip .big em{font-style:normal;color:var(--accent)}
+.fee-split{display:flex;gap:3px;height:18px;width:460px}
+.fee-split div{border-radius:4px}
+.fee-legend{display:grid;grid-template-columns:repeat(4,auto);justify-content:space-between;margin-top:14px;font-size:13.5px;color:var(--muted);width:460px}
+.fee-legend span{display:grid;grid-template-columns:10px auto;column-gap:7px;align-items:center}
+.fee-legend i{width:10px;height:10px;border-radius:2px}
+.fee-legend b{grid-column:2;color:var(--ink);font-weight:600;font-size:14.5px;margin-top:2px}
+.proof{margin-top:28px;font-size:16px;color:var(--muted)}
+.proof b{color:var(--ink);font-weight:600}
+
+/* ---------- 2. app desktop ---------- */
+.app{width:1440px}
+.a-top{height:72px;display:flex;align-items:center;gap:28px;padding:0 40px;background:var(--panel);border-bottom:1px solid var(--line)}
+.wallet-pick{display:flex;align-items:center;gap:12px;padding:0 14px;height:44px;border:1px solid var(--line);border-radius:10px;font-size:15px}
+.wallet-pick .av{width:26px;height:26px;border-radius:7px;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:13px;font-weight:700}
+.a-top nav{display:flex;gap:4px;font-size:15px}
+.a-top nav a{padding:9px 14px;border-radius:8px;color:var(--muted);text-decoration:none}
+.a-top nav a.on{background:var(--chip);color:var(--ink);font-weight:600}
+.a-top .spacer{flex:1}
+.chain{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+.a-sum{display:grid;grid-template-columns:1.3fr 1fr 1fr 1fr;padding:26px 40px;gap:0;border-bottom:1px solid var(--line)}
+.a-sum>div{padding:0 28px;border-left:1px solid var(--line)}
+.a-sum>div:first-child{padding-left:0;border-left:0}
+.a-sum .k{font-size:14px;color:var(--muted);margin-bottom:6px}
+.a-sum .v{font-size:30px;font-weight:650;letter-spacing:-.025em}
+.a-sum .v small{font-size:15px;font-weight:500;color:var(--muted);letter-spacing:0}
+.a-sum .s{font-size:13.5px;color:var(--muted);margin-top:4px}
+.meter{height:6px;border-radius:3px;background:var(--chip);margin-top:10px;overflow:hidden}
+.meter i{display:block;height:100%;background:var(--ink);border-radius:3px}
+.a-body{display:grid;grid-template-columns:1fr 412px;gap:32px;padding:28px 40px 44px}
+.alert{display:grid;grid-template-columns:auto 1fr auto;gap:18px;align-items:center;padding:18px 20px;border-radius:14px;background:var(--err-soft);border:1px solid #f3d4cf;margin-bottom:22px}
+.alert .ic{width:40px;height:40px;border-radius:10px;background:var(--err);display:grid;place-items:center}
+.alert h3{font-size:18px;font-weight:680;color:var(--err);letter-spacing:-.01em}
+.alert p{font-size:15px;line-height:1.45;color:#5b2a24;margin-top:3px}
+.alert .acts{display:flex;gap:8px}
+.board{position:relative;overflow:hidden;background:var(--panel);border:1px solid var(--line);border-radius:var(--r-panel);padding:22px 22px 0}
+.board-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px}
+.board-head h2{font-size:22px;font-weight:680;letter-spacing:-.02em}
+.board-head span{font-size:14px;color:var(--muted)}
+.board .rail{gap:10px;padding:14px}
+.board .rail::before{left:14px;right:14px}
+.board .brk,.board .slot-empty{width:calc((100% - 70px)/8);min-width:0}
+.sched{width:calc(100% + 44px);margin:22px -22px 0;border-collapse:collapse;font-size:14.5px}
+.sched th{white-space:nowrap;text-align:left;font-weight:500;color:var(--muted);font-size:13px;padding:12px 10px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--hover)}
+.sched td{padding:14px 10px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.4}
+.sched tr:last-child td{border-bottom:0}
+.sched th:first-child,.sched td:first-child{padding-left:22px}
+.sched th:last-child,.sched td:last-child{padding-right:22px;text-align:right}
+.sched .fn{font-weight:650;font-size:15.5px}
+.sched .what{color:#45443f;margin-top:2px;max-width:290px}
+.sched .meta{color:var(--faint);font-size:12.5px;margin-top:4px}
+.sched .slotn{font-weight:650;color:var(--faint)}
+.sched .addr{color:var(--muted)}
+.sched tfoot td{background:var(--hover);font-size:14px;color:var(--muted);border-top:1px solid var(--line)}
+.sched tfoot b{color:var(--ink);font-weight:650}
+.side h2{font-size:22px;font-weight:680;letter-spacing:-.02em}
+.side .sub{font-size:14px;color:var(--muted);margin-top:4px}
+.feed{list-style:none;margin-top:16px;border-top:1px solid var(--line)}
+.feed li{display:grid;grid-template-columns:44px 20px 1fr;gap:10px;padding:13px 0;border-bottom:1px solid var(--line)}
+.feed time{font-size:13.5px;color:var(--muted);padding-top:2px}
+.lev{width:14px;height:24px;border-radius:4px;border:1.5px solid #c9c6bd;background:var(--panel);position:relative;margin-top:0}
+.lev::after{content:"";position:absolute;left:2px;right:2px;height:9px;border-radius:2px;top:2px;background:var(--accent)}
+.lev.down{border-color:#e9b3ab}
+.lev.down::after{top:10px;background:var(--err)}
+.feed .l1{font-size:15px;font-weight:600}
+.feed .l1 .v-no{color:var(--err)}
+.feed .l1 .v-yes{color:var(--accent-hi)}
+.feed .l2{font-size:14px;color:#45443f;margin-top:2px;line-height:1.4}
+.feed .l3{font-size:13px;color:var(--faint);margin-top:3px}
+.feed li.new{animation:slideIn .5s cubic-bezier(.2,.8,.2,1) both}
+@keyframes slideIn{from{transform:translateY(-10px);opacity:0}to{transform:none;opacity:1}}
+.budget{display:flex;gap:18px;font-size:13.5px;color:var(--muted);margin-top:12px}
+.market{margin-top:24px;padding:20px;border-radius:14px;background:var(--panel);border:1px solid var(--line)}
+.market h3{font-size:18px;font-weight:680;letter-spacing:-.01em}
+.market p{font-size:14.5px;color:#45443f;line-height:1.45;margin-top:6px}
+.market .next{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line);font-size:14px}
+.market .acts{display:flex;gap:8px;margin-top:16px}
+
+/* ---------- 3. mobile ---------- */
+.phone{width:390px;background:var(--bg)}
+.m-top{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.m-top .logo{font-size:18px}
+.m-wallet{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600}
+.m-wallet .av{width:24px;height:24px;border-radius:7px;background:var(--ink);color:#fff;display:grid;place-items:center;font-size:12px}
+.m-bal{padding:20px 16px 18px;background:var(--panel);border-bottom:1px solid var(--line)}
+.m-bal .k{font-size:13.5px;color:var(--muted)}
+.m-bal .v{font-size:38px;font-weight:700;letter-spacing:-.035em;margin-top:2px}
+.m-bal .v small{font-size:16px;font-weight:500;color:var(--muted);letter-spacing:0}
+.m-bal .row2{display:flex;justify-content:space-between;font-size:13.5px;color:var(--muted);margin-top:12px}
+.m-sec{padding:20px 16px 4px}
+.m-sec h2{font-size:19px;font-weight:680;letter-spacing:-.015em;display:flex;justify-content:space-between;align-items:baseline}
+.m-sec h2 span{font-size:13.5px;font-weight:500;color:var(--muted);letter-spacing:0}
+.m-alert{margin:16px 16px 0;padding:14px;border-radius:12px;background:var(--err-soft);border:1px solid #f3d4cf}
+.m-alert h3{font-size:16px;color:var(--err);font-weight:680}
+.m-alert p{font-size:14px;line-height:1.45;color:#5b2a24;margin-top:4px}
+.m-alert .acts{display:flex;gap:8px;margin-top:12px}
+.m-alert .btn{flex:1;justify-content:center;height:42px}
+.m-rail{display:flex;gap:10px;padding:14px 16px;margin-top:12px;overflow:hidden;background:var(--hover);position:relative}
+.m-rail::before{content:"";position:absolute;left:0;right:0;top:50%;height:12px;margin-top:-6px;background:#e7e4dc}
+.m-rail>*:not(.pin){position:relative;flex:none}
+.m-rail{gap:8px}.m-rail .brk,.m-rail .slot-empty{width:76px;height:178px}
+.m-rail .brk-well{height:72px;width:38px}
+.m-rail .brk-lever{height:32px}
+.m-rail .brk.blown .brk-lever{transform:translateY(31px)}
+.m-rail .brk-name{font-size:13px}
+.m-list{list-style:none;margin-top:8px}
+.m-list li{display:grid;grid-template-columns:1fr auto;gap:4px 12px;padding:14px 0;border-bottom:1px solid var(--line)}
+.m-list .fn{font-size:15.5px;font-weight:650}
+.m-list .what{grid-column:1/-1;font-size:14px;color:#45443f;line-height:1.4}
+.m-list .meta{grid-column:1/-1;font-size:13px;color:var(--muted)}
+.m-list .what+.meta{margin-top:4px}
+.m-feed{list-style:none;margin-top:8px}
+.m-feed li{display:grid;grid-template-columns:20px 1fr auto;gap:10px;padding:13px 0;border-bottom:1px solid var(--line)}
+.m-feed .l1{font-size:14.5px;font-weight:600}
+.m-feed .l2{font-size:13.5px;color:#45443f;line-height:1.4;margin-top:2px}
+.m-feed time{font-size:13px;color:var(--muted)}
+.m-market{margin:20px 16px 0;padding:16px;border-radius:12px;background:var(--panel);border:1px solid var(--line)}
+.m-market h3{font-size:16.5px;font-weight:680}
+.m-market p{font-size:14px;color:#45443f;line-height:1.45;margin-top:4px}
+.m-market .btn{width:100%;justify-content:center;margin-top:12px}
+.m-tabs{position:sticky;bottom:0;margin-top:24px;display:grid;grid-template-columns:repeat(4,1fr);height:64px;background:var(--panel);border-top:1px solid var(--line);font-size:12.5px;color:var(--muted)}
+.m-tabs a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-decoration:none;color:inherit}
+.m-tabs a.on{color:var(--ink);font-weight:650}
+.m-tabs svg{display:block}
+
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="canvas-head">
+    <h1>A · Consumer unit</h1>
+    <p>Your agent's wallet is a breaker panel. Each fuse is a switch on a rail; when one says no, its lever drops and stays down. It's warm and tactile, built on TapeOut's own paper, ink and teal, and nobody has to read a diagram to get it.</p>
+  </div>
+
+  <div class="row">
+  <!-- ================= 1. LANDING ================= -->
+  <div>
+    <div class="frame-label">1 · Landing hero + how it works · 1440</div>
+    <section class="frame landing">
+      <header class="l-nav">
+        <a class="logo" href="#">
+          <svg width="34" height="18" viewBox="0 0 34 18" fill="none"><rect x="1" y="1" width="32" height="16" rx="8" stroke="#1d1d1b" stroke-width="2"/><rect x="1" y="1" width="7" height="16" rx="3.5" fill="#1d1d1b"/><rect x="26" y="1" width="7" height="16" rx="3.5" fill="#1d1d1b"/><path d="M8 9h4l2-3 3 6 2-3h7" stroke="#0f6b5c" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          Fusebox
+        </a>
+        <nav><a>How it works</a><a>Fuses</a><a>For designers</a><a>Docs</a></nav>
+        <div class="spacer"></div>
+        <a class="btn btn-line btn-sm">Design a fuse</a>
+        <a class="btn btn-accent btn-sm">Open app</a>
+      </header>
+
+      <div class="hero">
+        <div>
+          <h1>Fuses for your agent's wallet.</h1>
+          <p class="lede">Your AI agent can only spend through circuits you pick: a daily cap, a list of payees, a breaker, a two-of-three sign-off. If any of them says no, the money stays put. Whoever designed that circuit is paid for the decision, yes or no.</p>
+          <div class="ctas">
+            <a class="btn btn-accent">Set up a wallet</a>
+            <a class="btn btn-line">Design a fuse and earn</a>
+          </div>
+          <div class="facts">
+            <span><svg width="20" height="16" viewBox="0 0 64 50"><g fill="#1d1d1b"><rect x=".4" y=".6" width="16.3" height="16.3" rx="1.1"/><rect x="33" y=".6" width="16.3" height="16.3" rx="1.1"/><rect x="16.8" y="17" width="16.3" height="16.1" rx="1.1"/><rect x=".4" y="33.3" width="16.3" height="16.3" rx="1.1"/><rect x="33" y="33.3" width="16.3" height="16.3" rx="1.1"/><rect x="54.1" y=".6" width="9.2" height="16.3" rx="1.1" opacity=".5"/><rect x="54.1" y="33.3" width="9.2" height="16.3" rx="1.1" opacity=".5"/></g></svg>Runs on X Layer</span>
+            <span><svg width="20" height="17" viewBox="0 0 1020 856"><path fill="#192b53" fill-rule="evenodd" d="M0 0L472 256L472 599L0 856ZM41 72L41 786L431 575L431 283ZM1020 0L548 256L548 599L1020 856ZM979 72L979 786L589 575L589 283Z"/></svg>Circuits taped out on TapeOut</span>
+            <span>Paid in USDT0</span>
+          </div>
+        </div>
+
+        <div class="hero-panel">
+          <div class="head"><b>Atlas · ops agent</b><span>4 fuses · 2 free slots</span></div>
+          <div class="rail">
+            <div class="brk"><span class="brk-slot">1</span><span class="brk-window"></span><div class="brk-well"><div class="brk-lever"></div></div><span class="brk-name">Daily Cap</span><span class="brk-read num">45.25 of 50</span></div>
+            <div class="brk"><span class="brk-slot">2</span><span class="brk-window"></span><div class="brk-well"><div class="brk-lever"></div></div><span class="brk-name">Payee Guard</span><span class="brk-read">6 payees</span></div>
+            <div class="brk loop" data-still="2600"><span class="brk-slot">3</span><span class="brk-window" data-still="2600"></span><div class="brk-well"><div class="brk-lever" data-still="2600"></div></div><span class="brk-name">Breaker</span><span class="brk-read swap loop-text"><span class="a" data-still="2600">Closed</span><span class="b" data-still="2600" style="color:var(--err);font-weight:600">Blown</span></span></div>
+            <div class="brk"><span class="brk-slot">4</span><span class="brk-window"></span><div class="brk-well"><div class="brk-lever"></div></div><span class="brk-name">Two of Three</span><span class="brk-read num">over 20</span></div>
+            <div class="slot-empty"><span class="plus">+</span>Add a<br>fuse</div>
+            <span class="pin" style="top:-11px;left:250px">1</span>
+          </div>
+          <div class="ticket">
+            <time class="num">14:02</time>
+            <span class="t-msg swap loop-text"><span class="a" data-still="2600">12.000000 USDT0 to Render Farm Co · allowed</span><span class="b" data-still="2600"><b>2.500000 USDT0 to a stranger</b> · Breaker blew</span></span>
+            <span class="tag tag-quiet num">fees 0.004500</span>
+          </div>
+        </div>
+      </div>
+
+      <section class="how">
+        <div class="how-top">
+          <h2>One payment, four checks.</h2>
+          <p>Every payment your agent tries is put to every fuse on the panel, in order. It goes through only if all of them say yes.</p>
+        </div>
+        <div class="steps">
+          <span class="pin" style="top:12px;left:-34px">2</span>
+          <div class="step"><div class="node">1</div><h3>Your agent asks</h3><p>It names the payee, the amount and a reason. That is all it controls. The fuses read everything else from the wallet itself.</p></div>
+          <div class="step"><div class="node">2</div><h3>Each fuse decides</h3><p>A small logic circuit on X Layer answers yes or no. The Breaker is 11 gates; the Daily Cap, the largest, is 108.</p></div>
+          <div class="step"><div class="node">3</div><h3>All yes, money moves</h3><p>One no and nothing leaves the wallet. The decision and the fuse that stopped it are written on chain for you to read.</p></div>
+          <div class="step"><div class="node">4</div><h3>The designer is paid</h3><p>Every fuse that decided earns its fee in USDT0, including the ones that said no. Designers keep 90%.</p></div>
+        </div>
+        <div class="fee-strip">
+          <div>
+            <div class="big">A payment checked by all four fuses costs <em class="num">0.004500 USDT0</em> in fees and about <span class="num">0.000018</span> OKB in gas.</div>
+            <div class="proof">Tested the long way: the Daily Cap circuit was run against <b class="num">all 16,777,216</b> possible inputs before it went on chain.</div>
+          </div>
+          <div>
+            <div class="fee-split num">
+              <div style="flex:2;background:#1d1d1b"></div>
+              <div style="flex:2;background:#6b6a66"></div>
+              <div style="flex:1;background:#a9a7a0"></div>
+              <div style="flex:4;background:#0f6b5c"></div>
+            </div>
+            <div class="fee-legend num">
+              <span><i style="background:#1d1d1b"></i>Daily Cap<b>0.001000</b></span>
+              <span><i style="background:#6b6a66"></i>Payee Guard<b>0.001000</b></span>
+              <span><i style="background:#a9a7a0"></i>Breaker<b>0.000500</b></span>
+              <span><i style="background:#0f6b5c"></i>Two of Three<b>0.002000</b></span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </section>
+    <div class="notes"><ol>
+      <li data-n="1"><span><b>The trip, on loop.</b> Every 6 s the Breaker lever drops (180 ms, overshoot 4 px, settles), its window turns red, the module shudders 2 px, and the ticket below swaps to the blocked payment. 3 s later it resets. This is the only motion above the fold.</span></li>
+      <li data-n="2"><span><b>Wire draws in.</b> On scroll into view the black line runs left to right through the four nodes (600 ms), each node fills as the line reaches it; node 3 lands teal. The fee bar segments grow in after, in stack order.</span></li>
+    </ol></div>
+  </div>
+
+  <!-- ================= 2. APP DESKTOP ================= -->
+  <div>
+    <div class="frame-label">2 · Agent wallet · 1440</div>
+    <section class="frame app">
+      <header class="a-top">
+        <a class="logo" href="#">
+          <svg width="30" height="16" viewBox="0 0 34 18" fill="none"><rect x="1" y="1" width="32" height="16" rx="8" stroke="#1d1d1b" stroke-width="2"/><rect x="1" y="1" width="7" height="16" rx="3.5" fill="#1d1d1b"/><rect x="26" y="1" width="7" height="16" rx="3.5" fill="#1d1d1b"/><path d="M8 9h4l2-3 3 6 2-3h7" stroke="#0f6b5c" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          Fusebox
+        </a>
+        <div class="wallet-pick"><span class="av">A</span><b style="font-weight:650">Atlas · ops agent</b><span class="muted num">0xF0b5…2a7C</span><svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3" stroke="#6b6a66" stroke-width="1.6" fill="none"/></svg></div>
+        <nav><a class="on">Panel</a><a>Decisions</a><a>Payees</a><a>Market</a><a>Settings</a></nav>
+        <div class="spacer"></div>
+        <span class="chain"><svg width="18" height="14" viewBox="0 0 64 50"><g fill="#1d1d1b"><rect x=".4" y=".6" width="16.3" height="16.3" rx="1.1"/><rect x="33" y=".6" width="16.3" height="16.3" rx="1.1"/><rect x="16.8" y="17" width="16.3" height="16.1" rx="1.1"/><rect x=".4" y="33.3" width="16.3" height="16.3" rx="1.1"/><rect x="33" y="33.3" width="16.3" height="16.3" rx="1.1"/><rect x="54.1" y=".6" width="9.2" height="16.3" rx="1.1" opacity=".5"/><rect x="54.1" y="33.3" width="9.2" height="16.3" rx="1.1" opacity=".5"/></g></svg>X Layer</span>
+        <a class="btn btn-line btn-sm">Freeze everything</a>
+      </header>
+
+      <div class="a-sum">
+        <div><div class="k">Wallet balance</div><div class="v num">412.500000 <small>USDT0</small></div><div class="s">Agent key 0x3C9a…E81f can only pay through the panel</div></div>
+        <div><div class="k">Spent today</div><div class="v num">45.25 <small>of 50.00</small></div><div class="meter"><i style="width:90.5%"></i></div></div>
+        <div><div class="k">Checks today</div><div class="v num">8 <small>of 100</small></div><div class="s num">5 allowed · 3 blocked (limit 20)</div></div>
+        <div><div class="k">Fee balance</div><div class="v num">1.289000 <small>USDT0</small></div><div class="s">About 286 more four-fuse checks</div></div>
+      </div>
+
+      <div class="a-body">
+        <div>
+          <div class="alert" style="position:relative">
+            <span class="ic"><svg width="22" height="22" viewBox="0 0 22 22" fill="none"><path d="M12.5 2L5 12.5h5.5L9 20l8-11h-5.5L12.5 2z" fill="#fff"/></svg></span>
+            <div>
+              <h3>Breaker blew at 14:02 UTC</h3>
+              <p>Atlas tried to send 2.500000 USDT0 to <span class="nw">0x9f3e…c41a</span>, who isn't one of your payees. Every payment stays blocked until you reset the breaker. It stopped one more at 14:09.</p>
+            </div>
+            <div class="acts"><a class="btn btn-line btn-sm">See the attempt</a><a class="btn btn-ink btn-sm">Reset breaker</a></div>
+            <span class="pin" style="top:-11px;right:-11px">3</span>
+          </div>
+
+          <div class="board">
+            <div class="board-head"><h2>Panel</h2><span>4 of 8 slots · fuses run left to right</span></div>
+            <div class="rail">
+              <div class="brk"><span class="brk-slot">1</span><span class="brk-window"></span><div class="brk-well"><div class="brk-lever"></div></div><span class="brk-name">Daily Cap</span><span class="brk-read num">4.75 left</span></div>
+              <div class="brk"><span class="brk-slot">2</span><span class="brk-window"></span><div class="brk-well"><div class="brk-lever"></div></div><span class="brk-name">Payee Guard</span><span class="brk-read">6 payees</span></div>
+              <div class="brk blown"><span class="brk-slot">3</span><span class="brk-window"></span><div class="brk-well"><div class="brk-lever"></div></div><span class="brk-name">Breaker</span><span class="brk-read">Blown</span><span class="pin" style="top:-11px;right:-11px">4</span></div>
+              <div class="brk"><span class="brk-slot">4</span><span class="brk-window"></span><div class="brk-well"><div class="brk-lever"></div></div><span class="brk-name">Two of Three</span><span class="brk-read num">over 20</span></div>
+              <div class="slot-empty"><span class="plus">+</span>Add a<br>fuse</div>
+              <div class="slot-empty" style="opacity:.55"><span class="plus">+</span></div>
+              <div class="slot-empty" style="opacity:.4"><span class="plus">+</span></div>
+              <div class="slot-empty" style="opacity:.25"><span class="plus">+</span></div>
+            </div>
+
+            <table class="sched">
+              <thead><tr><th>Slot</th><th>Fuse and what it checks</th><th>Now</th><th>Last decision</th><th>Designer</th><th>Fee</th><th>Earned from you</th></tr></thead>
+              <tbody>
+                <tr><td class="slotn">1</td><td><div class="fn">Daily Cap</div><div class="what">No more than 50.000000 USDT0 leaves in a UTC day, however the agent is asked.</div><div class="meta">108 gates · ~283k gas</div></td><td><span class="tag tag-on">On</span></td><td class="num">Passed · 14:09</td><td class="addr num">0x7A3d…91Ce</td><td class="num">0.001000</td><td class="num">0.192600</td></tr>
+                <tr><td class="slotn">2</td><td><div class="fn">Payee Guard</div><div class="what">Only your 6 saved payees. A new one gets at most 1.000000 USDT0 until it is 24&nbsp;hours old.</div><div class="meta">79 gates · ~211k gas</div></td><td><span class="tag tag-on">On</span></td><td class="num">Passed · 14:09</td><td class="addr num">0x7A3d…91Ce</td><td class="num">0.001000</td><td class="num">0.192600</td></tr>
+                <tr><td class="slotn">3</td><td><div class="fn">Breaker</div><div class="what">Trips on a payment to a stranger and stays tripped until you reset it.</div><div class="meta">11 gates, one of them memory · ~50k gas</div></td><td><span class="tag tag-blown">Blown</span></td><td class="num" style="color:var(--err)">Blew · 14:09</td><td class="addr num">0x7A3d…91Ce</td><td class="num">0.000500</td><td class="num">0.096300</td></tr>
+                <tr><td class="slotn">4</td><td><div class="fn">Two of Three</div><div class="what">Anything over 20.000000 USDT0 needs two of You, Ngozi and Sam.</div><div class="meta">46 gates · ~132k gas · on since 28 Nov</div></td><td><span class="tag tag-on">On</span></td><td class="num">Passed · 14:09</td><td class="addr num">0x7A3d…91Ce</td><td class="num">0.002000</td><td class="num">0.158400</td></tr>
+              </tbody>
+              <tfoot><tr><td></td><td colspan="5">214 decisions since 24 Nov. Designers earned <b class="num">0.639900 USDT0</b> from this wallet; Fusebox kept 10%, <span class="num">0.071100</span>.</td><td class="num"><b>0.639900</b></td></tr></tfoot>
+            </table>
+          </div>
+        </div>
+
+        <aside class="side">
+          <h2>Today</h2>
+          <div class="sub num">Thu 3 Dec · fees paid 0.036000 USDT0</div>
+          <ul class="feed">
+            <li class="new"><time class="num">14:09</time><span class="lev down"></span><div><div class="l1 num"><span class="v-no">Blocked</span> · 1.200000 to Weather API</div><div class="l2">Breaker still blown from 14:02. Every other fuse passed.</div><div class="l3">"Forecast pulls, December"</div></div></li>
+            <li><time class="num">14:02</time><span class="lev down"></span><div><div class="l1 num"><span class="v-no">Blocked</span> · 2.500000 to 0x9f3e…c41a</div><div class="l2">Payee Guard: not a saved payee. Breaker blew and latched.</div><div class="l3">"Urgent refund for a customer, per support ticket"</div></div></li>
+            <li><time class="num">13:10</time><span class="lev"></span><div><div class="l1 num"><span class="v-yes">Allowed</span> · 3.000000 to Polyglot Translate</div><div class="l3">"Docs translation, 12k words"</div></div></li>
+            <li><time class="num">12:30</time><span class="lev"></span><div><div class="l1 num"><span class="v-yes">Allowed</span> · 25.000000 to Render Farm Co</div><div class="l2">Over 20, signed off by Ngozi and Sam.</div><div class="l3">"GPU hours, invoice #318"</div></div></li>
+            <li><time class="num">11:52</time><span class="lev down"></span><div><div class="l1 num"><span class="v-no">Blocked</span> · 35.000000 to Render Farm Co</div><div class="l2">Daily Cap: would reach 52.25 of 50. Two of Three: no sign-offs yet.</div></div></li>
+            <li><time class="num">11:05</time><span class="lev"></span><div><div class="l1 num"><span class="v-yes">Allowed</span> · 4.400000 to Lumen Data</div></div></li>
+            <li><time class="num">10:40</time><span class="lev"></span><div><div class="l1 num"><span class="v-yes">Allowed</span> · 0.850000 to Weather API</div></div></li>
+            <li><time class="num">09:14</time><span class="lev"></span><div><div class="l1 num"><span class="v-yes">Allowed</span> · 12.000000 to Render Farm Co</div></div></li>
+          </ul>
+          <div class="budget num"><span>92 checks left today</span><span>17 blocks left</span></div>
+
+          <div class="market" style="position:relative">
+            <h3>Add a fuse</h3>
+            <p>Four slots are free. Fuses come from independent designers; you pay a fuse only when it checks a payment, and you approve any price rise first.</p>
+            <div class="next"><span>Next from designers: <b style="font-weight:600">Release after delivery</b></span><span class="tag tag-quiet">In design</span></div>
+            <div class="acts"><a class="btn btn-accent btn-sm">Browse the market</a><a class="btn btn-line btn-sm">Design one</a></div>
+            <span class="pin" style="top:-11px;right:-11px">5</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+    <div class="notes"><ol>
+      <li data-n="3"><span><b>Alert arrives with the trip.</b> When a Breaker event lands, the banner slides down from under the summary row (240 ms) and the page's summary meter pauses. "Reset breaker" asks for the owner signature in place, then the lever animates back up.</span></li>
+      <li data-n="4"><span><b>Lever state is the status.</b> Same trip animation as the landing, played once per real event. Hovering a module lifts it 2 px and highlights its row in the schedule below; clicking opens that fuse's history.</span></li>
+      <li data-n="5"><span><b>New decisions</b> slide into the top of "Today" (10 px, 500 ms); blocked ones carry a dropped lever. Empty slots on the rail open the market with that slot pre-selected.</span></li>
+    </ol></div>
+  </div>
+
+  <!-- ================= 3. MOBILE ================= -->
+  <div>
+    <div class="frame-label">3 · Agent wallet · 390</div>
+    <section class="frame phone">
+      <header class="m-top">
+        <a class="logo" href="#"><svg width="28" height="15" viewBox="0 0 34 18" fill="none"><rect x="1" y="1" width="32" height="16" rx="8" stroke="#1d1d1b" stroke-width="2"/><rect x="1" y="1" width="7" height="16" rx="3.5" fill="#1d1d1b"/><rect x="26" y="1" width="7" height="16" rx="3.5" fill="#1d1d1b"/><path d="M8 9h4l2-3 3 6 2-3h7" stroke="#0f6b5c" stroke-width="1.8" stroke-linejoin="round"/></svg>Fusebox</a>
+        <span class="m-wallet"><span class="av">A</span>Atlas<svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3" stroke="#6b6a66" stroke-width="1.6" fill="none"/></svg></span>
+      </header>
+      <div class="m-bal">
+        <div class="k">Wallet balance</div>
+        <div class="v num">412.500000 <small>USDT0</small></div>
+        <div class="meter"><i style="width:90.5%"></i></div>
+        <div class="row2 num"><span>Spent today 45.25 of 50.00</span><span>Fees left 1.289000</span></div>
+      </div>
+      <div class="m-alert">
+        <h3>Breaker blew at 14:02</h3>
+        <p>Atlas tried to send 2.500000 USDT0 to <span class="nw">0x9f3e…c41a</span>, who isn't a saved payee. Payments stay blocked until you reset.</p>
+        <div class="acts"><a class="btn btn-line btn-sm">See attempt</a><a class="btn btn-ink btn-sm">Reset breaker</a></div>
+      </div>
+
+      <div class="m-sec"><h2>Panel <span>4 of 8 slots</span></h2></div>
+      <div class="m-rail">
+        <div class="brk"><span class="brk-slot">1</span><span class="brk-window"></span><div class="brk-well"><div class="brk-lever"></div></div><span class="brk-name">Daily Cap</span><span class="brk-read num">4.75 left</span></div>
+        <div class="brk"><span class="brk-slot">2</span><span class="brk-window"></span><div class="brk-well"><div class="brk-lever"></div></div><span class="brk-name">Payee Guard</span><span class="brk-read">6 payees</span></div>
+        <div class="brk blown"><span class="brk-slot">3</span><span class="brk-window"></span><div class="brk-well"><div class="brk-lever"></div></div><span class="brk-name">Breaker</span><span class="brk-read">Blown</span></div>
+        <div class="brk"><span class="brk-slot">4</span><span class="brk-window"></span><div class="brk-well"><div class="brk-lever"></div></div><span class="brk-name">Two of Three</span><span class="brk-read num">over 20</span></div>
+        <div class="slot-empty"><span class="plus">+</span>Add</div>
+        <span class="pin" style="top:6px;right:8px">6</span>
+      </div>
+      <div class="m-sec" style="padding-top:6px">
+        <ul class="m-list">
+          <li><span class="fn">Daily Cap</span><span class="tag tag-on">On</span><span class="what">No more than 50.000000 USDT0 a day.</span><span class="meta num">Passed 14:09 · 0.001000 per check</span><span class="meta num">Designer 0x7A3d…91Ce · earned 0.192600 from you</span></li>
+          <li><span class="fn">Payee Guard</span><span class="tag tag-on">On</span><span class="what">Only your 6 saved payees. New ones get up to 1.000000 until they are 24&nbsp;hours old.</span><span class="meta num">Passed 14:09 · 0.001000 per check</span><span class="meta num">Designer 0x7A3d…91Ce · earned 0.192600 from you</span></li>
+          <li><span class="fn">Breaker</span><span class="tag tag-blown">Blown</span><span class="what">Trips on a stranger, stays tripped until you reset.</span><span class="meta num" style="color:var(--err)">Blew 14:09 · 0.000500 per check</span><span class="meta num">Designer 0x7A3d…91Ce · earned 0.096300 from you</span></li>
+          <li><span class="fn">Two of Three</span><span class="tag tag-on">On</span><span class="what">Over 20.000000 USDT0 needs two of You, Ngozi, Sam.</span><span class="meta num">Passed 14:09 · 0.002000 per check</span><span class="meta num">Designer 0x7A3d…91Ce · earned 0.158400 from you</span></li>
+        </ul>
+      </div>
+
+      <div class="m-sec"><h2>Today <span class="num">8 checks · 3 blocked</span></h2>
+        <ul class="m-feed">
+          <li><span class="lev down"></span><div><div class="l1 num">Blocked · 1.200000 to Weather API</div><div class="l2">Breaker still blown from 14:02.</div></div><time class="num">14:09</time></li>
+          <li><span class="lev down"></span><div><div class="l1 num">Blocked · 2.500000 to 0x9f3e…c41a</div><div class="l2">Not a saved payee. Breaker blew.</div></div><time class="num">14:02</time></li>
+          <li><span class="lev"></span><div><div class="l1 num">Allowed · 3.000000 to Polyglot</div></div><time class="num">13:10</time></li>
+          <li><span class="lev"></span><div><div class="l1 num">Allowed · 25.000000 to Render Farm</div><div class="l2">Signed off by Ngozi and Sam.</div></div><time class="num">12:30</time></li>
+          <li><span class="lev down"></span><div><div class="l1 num">Blocked · 35.000000 to Render Farm</div><div class="l2">Over the daily cap; no sign-offs.</div></div><time class="num">11:52</time></li>
+        </ul>
+      </div>
+
+      <div class="m-market">
+        <h3>Add a fuse</h3>
+        <p>Four slots free. Pay a fuse only when it checks a payment.</p>
+        <a class="btn btn-accent btn-sm">Browse the market</a>
+      </div>
+
+      <nav class="m-tabs">
+        <a class="on"><svg width="22" height="20" viewBox="0 0 22 20" fill="none"><rect x="1" y="1" width="20" height="18" rx="3" stroke="currentColor" stroke-width="1.8"/><rect x="5" y="5" width="3" height="10" rx="1" fill="currentColor"/><rect x="9.5" y="5" width="3" height="10" rx="1" fill="currentColor"/><rect x="14" y="5" width="3" height="10" rx="1" fill="currentColor"/></svg>Panel</a>
+        <a><svg width="22" height="20" viewBox="0 0 22 20" fill="none"><path d="M2 4h18M2 10h18M2 16h12" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Decisions</a>
+        <a><svg width="22" height="20" viewBox="0 0 22 20" fill="none"><rect x="2" y="2" width="8" height="7" rx="2" stroke="currentColor" stroke-width="1.8"/><rect x="12" y="2" width="8" height="7" rx="2" stroke="currentColor" stroke-width="1.8"/><rect x="2" y="11" width="8" height="7" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 11v7M12.5 14.5h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Market</a>
+        <a><svg width="22" height="20" viewBox="0 0 22 20" fill="none"><circle cx="11" cy="7" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M3 19c1-4 4.5-6 8-6s7 2 8 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Payees</a>
+      </nav>
+    </section>
+    <div class="notes" style="max-width:390px"><ol>
+      <li data-n="6"><span><b>Rail scrolls sideways</b> with snap per module; the fifth slot peeks to show there is more. A trip here also buzzes the phone once (haptic) when the app is open.</span></li>
+    </ol></div>
+  </div>
+  </div>
+</div>
+</body>
+</html>

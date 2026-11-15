@@ -1,0 +1,655 @@
+<!doctype html>
+<!--
+  Fusebox, design direction C: "Datasheet"
+  Fusebox presented the way chips are: a datasheet. The fuses are a device family with real specs, and the
+  day's decisions are drawn as a timing diagram, one waveform per fuse.
+
+  Brand token sources (read 2026-11-13 with headless Chrome):
+  - tapeout.net/old (TapeOut's original site, live computed styles):
+      panel #ece9e0, rules #d8d4c8, ink #1a1a1a, muted #6b6658 / #8a8578, navy button #22488a,
+      green #067a37, mint #d8f6e4, BEM yellow #f0b90b, button radius 4px, monospace for addresses.
+  - tapeout.net (current app): logo navy #192b53 (app icon SVG), --color-err #b42318, --color-err-soft #fdf1ef,
+      BEM soft gold #f7e7b8 and warm paper #fffaf0 (computed backgrounds), gold text #7a5a00.
+  - X Layer mark: official kit, github.com/okx/xlayer-docs/media-kit/XLayer-logo-kit.zip.
+  Type is not from either site: Newsreader + IBM Plex Sans Condensed, Google Fonts.
+  Not reachable: xlayer.tech (TLS name error over https, parked "/lander" page over http);
+  okx.com / web3.okx.com not attempted (geo-blocked here, per instructions).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fusebox Datasheet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400..700&family=IBM+Plex+Sans+Condensed:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sheet:#fffaf0; --desk:#ece9e0; --rule:#d8d4c8; --ink:#1a1a1a; --navy:#192b53; --navy2:#22488a;
+  --muted:#6b6658; --muted2:#8a8578; --pass:#067a37; --pass-soft:#d8f6e4;
+  --err:#b42318; --err-soft:#fdf1ef; --hl:#f7e7b8; --bem:#f0b90b; --bem-ink:#7a5a00;
+  --serif:"Newsreader", Georgia, serif; --cond:"IBM Plex Sans Condensed", "Arial Narrow", sans-serif; --mono:"IBM Plex Mono", ui-monospace, monospace;
+  --canvas:#c9c6bd; --canvas-ink:#2e2b25; --pin:#2563eb;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--canvas)}
+body{font-family:var(--cond);color:var(--ink);-webkit-font-smoothing:antialiased;font-variant-numeric:tabular-nums}
+.addr{font-family:var(--mono);font-size:.9em;letter-spacing:-.02em}
+.nw{white-space:nowrap}
+
+/* canvas */
+.canvas{padding:56px 64px 80px;width:max-content}
+.canvas-head{display:flex;align-items:baseline;gap:24px;margin-bottom:40px;color:var(--canvas-ink)}
+.canvas-head h1{font:600 40px/1 var(--serif);letter-spacing:-.01em}
+.canvas-head p{font:400 17px/1.45 system-ui,sans-serif;max-width:900px}
+.row{display:flex;gap:72px;align-items:flex-start}
+.frame-label{font:500 15px/1 system-ui,sans-serif;color:var(--canvas-ink);margin-bottom:14px}
+.frame{position:relative;background:var(--sheet);box-shadow:0 1px 0 rgba(0,0,0,.08),0 18px 50px rgba(0,0,0,.14);overflow:hidden}
+.notes{margin-top:22px;font:400 14px/1.5 system-ui,sans-serif;color:var(--canvas-ink);max-width:720px}
+.notes b{font-weight:600}
+.notes ol{list-style:none;display:grid;gap:8px}
+.notes li{display:grid;grid-template-columns:24px 1fr;gap:8px}
+.pin,.notes li::before{width:22px;height:22px;border-radius:50%;background:var(--pin);color:#fff;font:600 12px/22px system-ui,sans-serif;text-align:center}
+.notes li::before{content:attr(data-n)}
+.pin{position:absolute;z-index:20;box-shadow:0 0 0 3px rgba(255,255,255,.9)}
+
+/* shared */
+.mark{display:flex;align-items:center;gap:10px;font:600 26px/1 var(--serif);color:var(--navy);letter-spacing:-.01em}
+.btn{display:inline-flex;align-items:center;height:42px;padding:0 18px;border-radius:4px;font:600 16px/1 var(--cond);white-space:nowrap;border:1px solid transparent}
+.btn-navy{background:var(--navy);color:#fff}
+.btn-line{border-color:var(--navy);color:var(--navy)}
+.btn-sm{height:34px;padding:0 13px;font-size:14.5px}
+.secn{font:600 15px/1 var(--cond);color:var(--navy);margin-right:12px}
+h2.sec{font:600 30px/1.1 var(--serif);color:var(--navy);letter-spacing:-.01em;display:flex;align-items:baseline;border-bottom:2px solid var(--navy);padding-bottom:10px}
+.fig-cap{font:400 15px/1.45 var(--serif);color:var(--muted);margin-top:12px}
+.fig-cap b{font-weight:600;color:var(--ink);font-style:normal}
+.hl{background:var(--hl);padding:0 3px}
+.ok{color:var(--pass);font-weight:600}
+.no{color:var(--err);font-weight:600}
+
+/* ============ 1. landing ============ */
+.landing{width:1440px}
+.l-top{display:flex;align-items:center;gap:36px;height:76px;padding:0 64px;border-bottom:1px solid var(--rule)}
+.l-top nav{display:flex;gap:26px;font-size:16px;color:var(--muted)}
+.sp{flex:1}
+.docmeta{font-size:14.5px;color:var(--muted)}
+.l-hero{padding:72px 64px 64px;display:grid;grid-template-columns:1fr 560px;gap:64px;border-bottom:2px solid var(--navy)}
+.l-hero .kicker{font:500 16px/1 var(--cond);color:var(--muted);margin-bottom:22px;display:flex;gap:18px;align-items:center}
+.l-hero .kicker span+span::before{content:"";display:inline-block;width:1px;height:14px;background:var(--rule);margin-right:18px;vertical-align:-2px}
+.l-hero h1{font:500 76px/1.0 var(--serif);letter-spacing:-.025em;color:var(--navy);font-variation-settings:"opsz" 72}
+.l-hero h1 em{font-style:italic;font-weight:400}
+.l-hero .lede{font:400 20px/1.55 var(--serif);margin-top:28px;max-width:640px;color:#2b2925}
+.l-hero .ctas{display:flex;gap:10px;margin-top:32px}
+.feat{margin-top:44px;display:grid;grid-template-columns:1fr 1fr;gap:10px 40px;max-width:700px;list-style:none}
+.feat li{font-size:16.5px;line-height:1.4;padding-left:18px;position:relative}
+.feat li::before{content:"";position:absolute;left:0;top:9px;width:8px;height:2px;background:var(--navy)}
+.figure{border-top:1px solid var(--rule);padding-top:18px}
+.figure svg{display:block}
+.l-body{padding:56px 64px 72px}
+.cols3{display:grid;grid-template-columns:repeat(4,1fr);gap:36px;margin-top:28px}
+.cols3 h3{font:600 21px/1.25 var(--serif);color:var(--navy)}
+.cols3 h3 .n{font:600 15px var(--cond);margin-right:8px}
+.cols3 p{font:400 16.5px/1.55 var(--serif);margin-top:8px;color:#2b2925}
+.family{width:100%;border-collapse:collapse;margin-top:48px;font-size:15.5px}
+.family caption{text-align:left;font:600 22px var(--serif);color:var(--navy);padding-bottom:12px}
+.family th{background:var(--desk);text-align:left;font-weight:600;font-size:14px;padding:10px 14px;border-top:2px solid var(--navy);border-bottom:1px solid var(--rule);white-space:nowrap}
+.family td{padding:12px 14px;border-bottom:1px solid var(--rule);vertical-align:top}
+.family td.r,.family th.r{text-align:right}
+.family .nm{font:600 18px var(--serif);color:var(--navy)}
+.family .muted{color:var(--muted)}
+.lower2{display:grid;grid-template-columns:1fr 520px;gap:56px;margin-top:52px;align-items:start}
+.econ{font:400 18px/1.55 var(--serif)}
+.econ .big{font:500 44px/1.05 var(--serif);color:var(--navy);letter-spacing:-.02em;margin-bottom:14px}
+.econ p+p{margin-top:12px}
+
+/* ============ 2. app ============ */
+.app{width:1440px}
+.a-top{display:flex;align-items:center;gap:28px;height:64px;padding:0 40px;border-bottom:1px solid var(--rule)}
+.a-top .mark{font-size:22px}
+.a-top nav{display:flex;gap:4px;font-size:15.5px}
+.a-top nav a{padding:8px 12px;color:var(--muted);border-bottom:2px solid transparent}
+.a-top nav a.on{color:var(--navy);font-weight:600;border-bottom-color:var(--navy)}
+.chain{display:flex;align-items:center;gap:8px;font-size:14.5px;color:var(--muted)}
+.a-title{display:grid;grid-template-columns:1fr auto;gap:40px;padding:32px 40px 24px;align-items:end;border-bottom:2px solid var(--navy)}
+.a-title h1{font:500 46px/1 var(--serif);color:var(--navy);letter-spacing:-.02em}
+.a-title .meta{display:flex;gap:28px;margin-top:14px;font-size:14.5px;color:var(--muted)}
+.a-title .meta b{color:var(--ink);font-weight:500}
+.a-title .bal{text-align:right}
+.a-title .bal .k{font-size:14.5px;color:var(--muted)}
+.a-title .bal .v{font:500 50px/1 var(--serif);letter-spacing:-.02em;margin-top:6px}
+.a-title .bal .v small{font:500 18px var(--cond);color:var(--muted);letter-spacing:0;margin-left:6px}
+.notice{display:flex;align-items:center;gap:20px;padding:14px 40px;background:var(--hl);border-bottom:1px solid #ead7a0}
+.notice p{font:400 17px/1.45 var(--serif);flex:1}
+.notice b{font-weight:600}
+.a-grid{display:grid;grid-template-columns:1fr 440px}
+.a-main{padding:28px 40px 40px;border-right:1px solid var(--rule)}
+.a-side{padding:28px 32px 40px}
+.timing{margin-top:20px;position:relative}
+.log{width:100%;border-collapse:collapse;margin-top:28px;font-size:15px}
+.log th{background:var(--desk);text-align:left;font-weight:600;font-size:13.5px;padding:9px 10px;border-top:2px solid var(--navy);border-bottom:1px solid var(--rule);white-space:nowrap}
+.log td{padding:10px 10px;border-bottom:1px solid var(--rule);vertical-align:top;line-height:1.4}
+.log td.r,.log th.r{text-align:right}
+.log tr.stop td{background:rgba(247,231,184,.45)}
+.log .memo{font:italic 400 14.5px var(--serif);color:var(--muted)}
+.fuses{list-style:none;margin-top:6px}
+.fuses li{padding:16px 0;border-bottom:1px solid var(--rule)}
+.fuses .h{display:flex;justify-content:space-between;align-items:baseline}
+.fuses .nm{font:600 21px var(--serif);color:var(--navy)}
+.fuses .nm .n{font:600 14px var(--cond);color:var(--muted);margin-right:8px}
+.fuses .st{font-size:14px;font-weight:600;padding:2px 8px;border-radius:3px}
+.st-on{background:var(--pass-soft);color:var(--pass)}
+.st-blown{background:var(--err-soft);color:var(--err)}
+.fuses .what{font:400 16px/1.45 var(--serif);margin-top:5px;color:#2b2925}
+.fuses dl{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:4px 12px;margin-top:10px;font-size:14px}
+.fuses dt{color:var(--muted)}
+.fuses dd{text-align:left}
+.cat{margin-top:28px}
+.cat h3{font:600 22px var(--serif);color:var(--navy);border-bottom:2px solid var(--navy);padding-bottom:8px;display:flex;justify-content:space-between;align-items:baseline}
+.cat h3 span{font:500 14px var(--cond);color:var(--muted)}
+.cat table{width:100%;border-collapse:collapse;font-size:14.5px;margin-top:4px}
+.cat td{padding:10px 0;border-bottom:1px solid var(--rule)}
+.cat td.r{text-align:right;color:var(--muted)}
+.cat p{font:400 15.5px/1.5 var(--serif);color:#2b2925;margin-top:12px}
+.cat .acts{display:flex;gap:8px;margin-top:14px}
+
+/* ============ 3. mobile ============ */
+.phone{width:390px}
+.m-top{display:flex;align-items:center;justify-content:space-between;height:56px;padding:0 16px;border-bottom:1px solid var(--rule)}
+.m-top .mark{font-size:21px}
+.m-title{padding:18px 16px 16px;border-bottom:2px solid var(--navy)}
+.m-title .who{font:500 26px/1.1 var(--serif);color:var(--navy)}
+.m-title .k{font-size:14px;color:var(--muted);margin-top:14px}
+.m-title .v{font:500 40px/1 var(--serif);letter-spacing:-.02em;margin-top:4px}
+.m-title .v small{font:500 15px var(--cond);color:var(--muted);letter-spacing:0;margin-left:4px}
+.m-title .sub{display:flex;justify-content:space-between;font-size:14px;color:var(--muted);margin-top:10px}
+.m-notice{padding:14px 16px;background:var(--hl);border-bottom:1px solid #ead7a0}
+.m-notice p{font:400 16px/1.45 var(--serif)}
+.m-notice .btn{width:100%;justify-content:center;margin-top:12px}
+.m-sec{padding:22px 16px 6px}
+.m-sec h2{font:600 22px/1.1 var(--serif);color:var(--navy);border-bottom:2px solid var(--navy);padding-bottom:8px;display:flex;justify-content:space-between;align-items:baseline}
+.m-sec h2 span{font:500 13.5px var(--cond);color:var(--muted)}
+.m-fuses{list-style:none}
+.m-fuses li{padding:12px 0;border-bottom:1px solid var(--rule)}
+.m-fuses .h{display:flex;justify-content:space-between;align-items:baseline}
+.m-fuses .nm{font:600 18px var(--serif);color:var(--navy)}
+.m-fuses .st{font-size:13px;font-weight:600;padding:2px 7px;border-radius:3px}
+.m-fuses .what{font:400 15px/1.4 var(--serif);margin-top:3px}
+.m-fuses .meta{font-size:13.5px;color:var(--muted);margin-top:5px;line-height:1.45}
+.m-cat{margin:20px 16px 0;padding:16px 0 0;border-top:2px solid var(--navy)}
+.m-cat h3{font:600 20px var(--serif);color:var(--navy)}
+.m-cat p{font:400 15px/1.45 var(--serif);margin-top:4px}
+.m-cat .btn{width:100%;justify-content:center;margin-top:12px}
+.m-tabs{display:grid;grid-template-columns:repeat(4,1fr);height:62px;border-top:1px solid var(--rule);margin-top:24px;font-size:13px;color:var(--muted);background:var(--sheet)}
+.m-tabs a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.m-tabs a.on{color:var(--navy);font-weight:600}
+
+/* motion */
+@keyframes draw{to{stroke-dashoffset:0}}
+.wave{stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:draw 1.6s cubic-bezier(.4,0,.2,1) forwards}
+@keyframes sweep{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.sweep{transform-origin:left;transform-box:fill-box;animation:sweep .5s .9s cubic-bezier(.3,.7,.2,1) both}
+@keyframes curtain{from{transform:translateX(0)}to{transform:translateX(100%)}}
+.sweep-out{transform-box:fill-box;animation:curtain 2.2s .2s cubic-bezier(.45,0,.25,1) both}
+@media (prefers-reduced-motion: reduce){*{animation:none!important}.wave{stroke-dashoffset:0}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="canvas-head">
+    <h1>C · Datasheet</h1>
+    <p>Fusebox presented the way chips are: as a datasheet. The fuses are a device family with real specs, and the day's decisions are drawn as a timing diagram, one waveform per fuse. It's archival and exact, in TapeOut's own navy and BEM gold, and built to earn trust from the people who design circuits.</p>
+  </div>
+
+  <div class="row">
+  <!-- ================= 1. LANDING ================= -->
+  <div>
+    <div class="frame-label">1 · Landing hero + how it works · 1440</div>
+    <section class="frame landing">
+      <header class="l-top">
+        <span class="mark"><svg width="30" height="18" viewBox="0 0 30 18" fill="none"><path d="M0 9h6M24 9h6" stroke="#192b53" stroke-width="2"/><rect x="6" y="2" width="18" height="14" rx="2" stroke="#192b53" stroke-width="2"/><path d="M6 9h18" stroke="#192b53" stroke-width="1.5"/></svg>Fusebox</span>
+        <nav><a>How it works</a><a>The fuses</a><a>For designers</a><a>Docs</a></nav>
+        <span class="sp"></span>
+        <span class="docmeta">Guard circuits for AI agent wallets · X Layer · USDT0</span>
+        <a class="btn btn-navy btn-sm">Open app</a>
+      </header>
+
+      <div class="l-hero">
+        <div>
+          <div class="kicker"><span>Four fuses</span><span>11 to 108 gates each</span><span>Paid per decision</span></div>
+          <h1>Circuits that tell your agent <em>no</em>, and get paid for it.</h1>
+          <p class="lede">An AI agent's wallet in Fusebox can only pay through fuses: small logic circuits taped out on TapeOut and run on X Layer. Every payment is checked by every fuse. If one says no, nothing moves. Every fuse that checked it pays its designer a fee in USDT0.</p>
+          <div class="ctas"><a class="btn btn-navy">Set up a wallet</a><a class="btn btn-line">List a fuse you designed</a></div>
+          <ul class="feat">
+            <li>The agent chooses only payee, amount and reason; fuses read the rest from the wallet</li>
+            <li>Stack up to 8 fuses per wallet, in the order you choose</li>
+            <li>Blocked attempts are recorded on chain, with the fuse that stopped them</li>
+            <li>Designers keep 90% of each fee; the circuit's owner can sell the income</li>
+          </ul>
+        </div>
+        <div class="figure" style="position:relative">
+          <svg width="560" height="372" viewBox="0 0 560 372" role="img" aria-label="Typical application">
+<defs><marker id="ar" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L8 4L0 8z" fill="#192b53"/></marker><marker id="ag" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0L8 4L0 8z" fill="#7a5a00"/></marker></defs>
+<rect x="60" y="8" width="160" height="50" rx="3" fill="#fff" stroke="#192b53" stroke-width="1.5"/>
+<text x="140" y="30" style="font-family:var(--serif);font-size:17px;font-weight:600" fill="#192b53" text-anchor="middle" >AI agent</text>
+<text x="140" y="48" style="font-family:var(--cond);font-size:12.5px;font-weight:400" fill="#6b6658" text-anchor="middle" >payee, amount, reason</text>
+<rect x="20" y="84" width="320" height="226" rx="3" fill="none" stroke="#192b53" stroke-width="1" stroke-dasharray="5 4"/>
+<text x="32" y="104" style="font-family:var(--cond);font-size:13px;font-weight:600" fill="#192b53" text-anchor="start" >Fusebox wallet</text>
+<path d="M140 58V114" stroke="#192b53" stroke-width="1.5" marker-end="url(#ar)"/>
+<rect x="50" y="116" width="180" height="34" rx="2" fill="#fff" stroke="#192b53" stroke-width="1.5"/>
+<text x="62" y="138" style="font-family:var(--serif);font-size:15.5px;font-weight:600" fill="#192b53" text-anchor="start" >Daily Cap</text>
+<text x="220" y="138" style="font-family:var(--cond);font-size:12px;font-weight:400" fill="#6b6658" text-anchor="end" >108 gates</text>
+<path d="M230 133H372" stroke="#7a5a00" stroke-width="1.2" stroke-dasharray="3 3"/>
+<rect x="50" y="162" width="180" height="34" rx="2" fill="#fff" stroke="#192b53" stroke-width="1.5"/>
+<text x="62" y="184" style="font-family:var(--serif);font-size:15.5px;font-weight:600" fill="#192b53" text-anchor="start" >Payee Guard</text>
+<text x="220" y="184" style="font-family:var(--cond);font-size:12px;font-weight:400" fill="#6b6658" text-anchor="end" >79 gates</text>
+<path d="M230 179H372" stroke="#7a5a00" stroke-width="1.2" stroke-dasharray="3 3"/>
+<rect x="50" y="208" width="180" height="34" rx="2" fill="#fff" stroke="#192b53" stroke-width="1.5"/>
+<text x="62" y="230" style="font-family:var(--serif);font-size:15.5px;font-weight:600" fill="#192b53" text-anchor="start" >Breaker</text>
+<text x="220" y="230" style="font-family:var(--cond);font-size:12px;font-weight:400" fill="#6b6658" text-anchor="end" >11 gates</text>
+<path d="M230 225H372" stroke="#7a5a00" stroke-width="1.2" stroke-dasharray="3 3"/>
+<rect x="50" y="254" width="180" height="34" rx="2" fill="#fff" stroke="#192b53" stroke-width="1.5"/>
+<text x="62" y="276" style="font-family:var(--serif);font-size:15.5px;font-weight:600" fill="#192b53" text-anchor="start" >Two of Three</text>
+<text x="220" y="276" style="font-family:var(--cond);font-size:12px;font-weight:400" fill="#6b6658" text-anchor="end" >46 gates</text>
+<path d="M230 271H372" stroke="#7a5a00" stroke-width="1.2" stroke-dasharray="3 3"/>
+<path d="M140 150V162" stroke="#192b53" stroke-width="1.5"/>
+<path d="M140 196V208" stroke="#192b53" stroke-width="1.5"/>
+<path d="M140 242V254" stroke="#192b53" stroke-width="1.5"/>
+<path d="M140 288V320" stroke="#192b53" stroke-width="1.5" marker-end="url(#ar)"/>
+<rect x="60" y="322" width="160" height="46" rx="3" fill="#fff" stroke="#192b53" stroke-width="1.5"/>
+<text x="140" y="343" style="font-family:var(--serif);font-size:17px;font-weight:600" fill="#192b53" text-anchor="middle" >Payee</text>
+<text x="140" y="359" style="font-family:var(--cond);font-size:12.5px;font-weight:400" fill="#6b6658" text-anchor="middle" >paid only if all say yes</text>
+<path d="M372 133V271" stroke="#7a5a00" stroke-width="1.2"/>
+<text x="380" y="120" style="font-family:var(--cond);font-size:12.5px;font-weight:500" fill="#7a5a00" text-anchor="start" >fee per check</text>
+<path d="M372 172H398" stroke="#7a5a00" stroke-width="1.4" marker-end="url(#ag)"/>
+<path d="M372 248H398" stroke="#7a5a00" stroke-width="1.4" marker-end="url(#ag)"/>
+<rect x="400" y="146" width="156" height="52" rx="3" fill="#f7e7b8" stroke="#7a5a00" stroke-width="1.2"/>
+<text x="478" y="168" style="font-family:var(--serif);font-size:16px;font-weight:600" fill="#1a1a1a" text-anchor="middle" >Designers</text>
+<text x="478" y="187" style="font-family:var(--cond);font-size:12.5px;font-weight:500" fill="#7a5a00" text-anchor="middle" >90% of each fee</text>
+<rect x="400" y="224" width="156" height="48" rx="3" fill="#fff" stroke="#d8d4c8" stroke-width="1.2"/>
+<text x="478" y="244" style="font-family:var(--serif);font-size:15px;font-weight:600" fill="#1a1a1a" text-anchor="middle" >Fusebox</text>
+<text x="478" y="261" style="font-family:var(--cond);font-size:12.5px;font-weight:400" fill="#6b6658" text-anchor="middle" >10%, capped at 20%</text>
+</svg>
+          <p class="fig-cap"><b>Figure 1.</b> Typical application. The agent's request passes through each fuse in turn; the fee for every fuse that decided goes to its designer.</p>
+          <span class="pin" style="left:-34px;top:16px">1</span>
+        </div>
+      </div>
+
+      <div class="l-body">
+        <h2 class="sec"><span class="secn">2</span>How a payment is decided</h2>
+        <div class="cols3">
+          <div><h3><span class="n">2.1</span>The agent asks</h3><p>It names the payee, the amount and a reason. That is all it controls; it cannot touch a fuse, a cap or the payee list.</p></div>
+          <div><h3><span class="n">2.2</span>Every fuse checks</h3><p>The wallet turns the payment into a few bits (amount, spent today, payee saved or not) and asks each circuit for one bit back: yes or no.</p></div>
+          <div><h3><span class="n">2.3</span>All yes, or nothing</h3><p>One no and the payment stops. A Breaker that says no keeps saying it, until the owner resets it.</p></div>
+          <div><h3><span class="n">2.4</span>The designers are paid</h3><p>Each fuse that decided earns its fee, the no's included. Stopping a bad payment is the job.</p></div>
+        </div>
+
+        <table class="family">
+          <caption>Table 1. The fuse family</caption>
+          <thead><tr><th>Fuse</th><th>Says yes when</th><th class="r">Gates</th><th class="r">Gas per check</th><th class="r">Fee per check</th><th>Tested against</th></tr></thead>
+          <tbody>
+            <tr><td class="nm">Daily Cap</td><td>Today's spend plus this payment stays within your cap</td><td class="r">108</td><td class="r">~283,000</td><td class="r">0.001000</td><td>All 16,777,216 possible inputs</td></tr>
+            <tr><td class="nm">Payee Guard</td><td>The payee is saved, and old enough or the amount is small</td><td class="r">79</td><td class="r">~211,000</td><td class="r">0.001000</td><td>Each comparator in full, plus 4M random cases</td></tr>
+            <tr><td class="nm">Breaker</td><td>No payment has gone to a stranger since your last reset</td><td class="r">11<span class="muted">, 1 remembers</span></td><td class="r">~50,000</td><td class="r">0.000500</td><td>Every state and input pair</td></tr>
+            <tr><td class="nm">Two of Three</td><td>The amount is under your threshold, or two of three people signed</td><td class="r">46</td><td class="r">~132,000</td><td class="r">0.002000</td><td>All 524,288 possible inputs</td></tr>
+          </tbody>
+        </table>
+
+        <div class="lower2">
+          <div class="econ">
+            <div class="big">0.004500 USDT0 per payment</div>
+            <p>That is the fee for one payment checked by all four fuses in Table 1, plus about 0.000018 OKB of gas on X Layer. Designers keep 90%; Fusebox keeps 10%, and the contract caps its share at 20%.</p>
+            <p>Fees come from a balance you top up separately, so the agent's spending money and its safety budget never mix.</p>
+          </div>
+          <div class="figure" style="position:relative">
+            <svg width="520" height="226" viewBox="0 0 520 226" role="img" aria-label="Breaker timing">
+<rect x="276" y="26" width="58" height="166" fill="#f7e7b8" opacity=".7"/>
+<rect x="334" y="26" width="58" height="166" fill="#f7e7b8" opacity=".7"/>
+<rect x="392" y="26" width="58" height="166" fill="#f7e7b8" opacity=".7"/>
+<path d="M160 26V192" stroke="#d8d4c8" stroke-dasharray="2 4"/>
+<path d="M218 26V192" stroke="#d8d4c8" stroke-dasharray="2 4"/>
+<path d="M276 26V192" stroke="#d8d4c8" stroke-dasharray="2 4"/>
+<path d="M334 26V192" stroke="#d8d4c8" stroke-dasharray="2 4"/>
+<path d="M392 26V192" stroke="#d8d4c8" stroke-dasharray="2 4"/>
+<path d="M450 26V192" stroke="#d8d4c8" stroke-dasharray="2 4"/>
+<path d="M508 26V192" stroke="#d8d4c8" stroke-dasharray="2 4"/>
+<text x="189.0" y="16" style="font-family:var(--cond);font-size:12.5px;font-weight:500" fill="#1a1a1a" text-anchor="middle" >Payment 1</text>
+<text x="247.0" y="16" style="font-family:var(--cond);font-size:12.5px;font-weight:500" fill="#1a1a1a" text-anchor="middle" >2</text>
+<text x="305.0" y="16" style="font-family:var(--cond);font-size:12.5px;font-weight:500" fill="#1a1a1a" text-anchor="middle" >3</text>
+<text x="363.0" y="16" style="font-family:var(--cond);font-size:12.5px;font-weight:500" fill="#1a1a1a" text-anchor="middle" >4</text>
+<text x="421.0" y="16" style="font-family:var(--cond);font-size:12.5px;font-weight:500" fill="#1a1a1a" text-anchor="middle" >5</text>
+<text x="479.0" y="16" style="font-family:var(--cond);font-size:12.5px;font-weight:500" fill="#1a1a1a" text-anchor="middle" >6</text>
+<text x="0" y="62" style="font-family:var(--serif);font-size:15.5px;font-weight:600" fill="#192b53" text-anchor="start" >To a stranger</text>
+<path d="M160 70H286V44H324V70H508" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<text x="0" y="122" style="font-family:var(--serif);font-size:15.5px;font-weight:600" fill="#192b53" text-anchor="start" >Owner reset</text>
+<path d="M160 130H442V104H458V130H508" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<text x="0" y="182" style="font-family:var(--serif);font-size:15.5px;font-weight:600" fill="#192b53" text-anchor="start" >Breaker says yes</text>
+<path d="M160 164H218" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M218 164H276" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M276 190H334" stroke="#b42318" stroke-width="2.2" fill="none"/>
+<path d="M276 164V190" stroke="#192b53" stroke-width="1.2" fill="none"/>
+<path d="M334 190H392" stroke="#b42318" stroke-width="2.2" fill="none"/>
+<path d="M392 190H450" stroke="#b42318" stroke-width="2.2" fill="none"/>
+<path d="M450 164H508" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M450 190V164" stroke="#192b53" stroke-width="1.2" fill="none"/>
+<text x="363.0" y="214" style="font-family:var(--cond);font-size:12.5px;font-weight:500" fill="#b42318" text-anchor="middle" >refused, saved payees included</text>
+</svg>
+            <p class="fig-cap"><b>Figure 2.</b> The Breaker remembers. After one payment to a stranger it answers no to everything, saved payees included, until you reset it.</p>
+            <span class="pin" style="left:-34px;top:16px">2</span>
+          </div>
+        </div>
+      </div>
+    </section>
+    <div class="notes"><ol>
+      <li data-n="1"><span><b>Figure 1 assembles itself.</b> Lines draw from the agent outward (stroke-dashoffset, 900 ms), each fuse box stamps in as the line reaches it, then the fee arrows to the designers draw last in gold.</span></li>
+      <li data-n="2"><span><b>Waveforms trace on scroll.</b> Each trace draws left to right (1.6 s). The stranger pulse lands, and the output drops and stays low; the yellow band sweeps across the "blocked" beats behind it.</span></li>
+    </ol></div>
+  </div>
+
+  <!-- ================= 2. APP DESKTOP ================= -->
+  <div>
+    <div class="frame-label">2 · Agent wallet · 1440</div>
+    <section class="frame app">
+      <header class="a-top">
+        <span class="mark"><svg width="28" height="17" viewBox="0 0 30 18" fill="none"><path d="M0 9h6M24 9h6" stroke="#192b53" stroke-width="2"/><rect x="6" y="2" width="18" height="14" rx="2" stroke="#192b53" stroke-width="2"/><path d="M6 9h18" stroke="#192b53" stroke-width="1.5"/></svg>Fusebox</span>
+        <nav><a class="on">Wallet</a><a>Decisions</a><a>Payees</a><a>Catalogue</a><a>Settings</a></nav>
+        <span class="sp"></span>
+        <span class="chain"><svg width="18" height="14" viewBox="0 0 64 50"><g fill="#1a1a1a"><rect x=".4" y=".6" width="16.3" height="16.3" rx="1.1"/><rect x="33" y=".6" width="16.3" height="16.3" rx="1.1"/><rect x="16.8" y="17" width="16.3" height="16.1" rx="1.1"/><rect x=".4" y="33.3" width="16.3" height="16.3" rx="1.1"/><rect x="33" y="33.3" width="16.3" height="16.3" rx="1.1"/><rect x="54.1" y=".6" width="9.2" height="16.3" rx="1.1" opacity=".5"/><rect x="54.1" y="33.3" width="9.2" height="16.3" rx="1.1" opacity=".5"/></g></svg>X Layer</span>
+        <a class="btn btn-line btn-sm">Freeze wallet</a>
+      </header>
+      <div class="a-title">
+        <div>
+          <h1>Atlas, ops agent</h1>
+          <div class="meta"><span>Wallet <b class="addr">0xF0b5…2a7C</b></span><span>Agent key <b class="addr">0x3C9a…E81f</b></span><span>Since <b>24 Nov</b></span><span>Fee balance <b>1.289000 USDT0</b></span></div>
+        </div>
+        <div class="bal"><div class="k">Balance</div><div class="v">412.500000<small>USDT0</small></div></div>
+      </div>
+      <div class="notice" style="position:relative">
+        <p><b>Breaker blown at 14:02 UTC.</b> Atlas tried to pay 2.500000 USDT0 to <span class="addr nw">0x9f3e…c41a</span>, who is not a saved payee. Every payment is refused until you reset it; one more was refused at 14:09.</p>
+        <a class="btn btn-line btn-sm">Inspect 14:02</a><a class="btn btn-navy btn-sm">Reset breaker</a>
+        <span class="pin" style="right:16px;top:-11px">3</span>
+      </div>
+
+      <div class="a-grid">
+        <div class="a-main">
+          <h2 class="sec"><span class="secn">1</span>Today, decision by decision<span class="sp"></span><span style="font:500 14.5px var(--cond);color:var(--muted)">Thu 3 Dec · 8 checks · 5 paid · 3 refused · fees 0.036000</span></h2>
+          <div class="timing">
+            <svg width="920" height="392" viewBox="0 0 920 392" role="img" aria-label="Timing diagram of today's eight decisions">
+<rect x="402" y="36" width="84" height="356" fill="#f7e7b8" opacity=".7"/>
+<rect x="654" y="36" width="84" height="356" fill="#f7e7b8" opacity=".7"/>
+<rect x="738" y="36" width="84" height="356" fill="#f7e7b8" opacity=".7"/>
+<path d="M150 36V344" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 4"/>
+<path d="M234 36V344" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 4"/>
+<path d="M318 36V344" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 4"/>
+<path d="M402 36V344" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 4"/>
+<path d="M486 36V344" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 4"/>
+<path d="M570 36V344" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 4"/>
+<path d="M654 36V344" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 4"/>
+<path d="M738 36V344" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 4"/>
+<path d="M822 36V344" stroke="#d8d4c8" stroke-width="1" stroke-dasharray="2 4"/>
+<text x="192.0" y="24" style="font-family:var(--cond);font-size:14px;font-weight:500" fill="#1a1a1a" text-anchor="middle" >09:14</text>
+<text x="276.0" y="24" style="font-family:var(--cond);font-size:14px;font-weight:500" fill="#1a1a1a" text-anchor="middle" >10:40</text>
+<text x="360.0" y="24" style="font-family:var(--cond);font-size:14px;font-weight:500" fill="#1a1a1a" text-anchor="middle" >11:05</text>
+<text x="444.0" y="24" style="font-family:var(--cond);font-size:14px;font-weight:600" fill="#b42318" text-anchor="middle" >11:52</text>
+<text x="528.0" y="24" style="font-family:var(--cond);font-size:14px;font-weight:500" fill="#1a1a1a" text-anchor="middle" >12:30</text>
+<text x="612.0" y="24" style="font-family:var(--cond);font-size:14px;font-weight:500" fill="#1a1a1a" text-anchor="middle" >13:10</text>
+<text x="696.0" y="24" style="font-family:var(--cond);font-size:14px;font-weight:600" fill="#b42318" text-anchor="middle" >14:02</text>
+<text x="780.0" y="24" style="font-family:var(--cond);font-size:14px;font-weight:600" fill="#b42318" text-anchor="middle" >14:09</text>
+<text x="0" y="82" style="font-family:var(--serif);font-size:17px;font-weight:600" fill="#192b53" text-anchor="start" >Daily Cap</text>
+<text x="0" y="134" style="font-family:var(--serif);font-size:17px;font-weight:600" fill="#192b53" text-anchor="start" >Payee Guard</text>
+<text x="0" y="186" style="font-family:var(--serif);font-size:17px;font-weight:600" fill="#192b53" text-anchor="start" >Breaker</text>
+<text x="0" y="238" style="font-family:var(--serif);font-size:17px;font-weight:600" fill="#192b53" text-anchor="start" >Two of Three</text>
+<path d="M0 264H920" stroke="#192b53" stroke-width="1"/>
+<text x="0" y="306" style="font-family:var(--serif);font-size:17px;font-weight:700" fill="#1a1a1a" text-anchor="start" >Paid out</text>
+<g>
+<path d="M150 62H234" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M234 62H318" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M318 62H402" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M402 88H486" stroke="#b42318" stroke-width="2.2" fill="none"/>
+<path d="M402 62V88" stroke="#192b53" stroke-width="1.2" fill="none"/>
+<path d="M486 62H570" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M486 88V62" stroke="#192b53" stroke-width="1.2" fill="none"/>
+<path d="M570 62H654" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M654 62H738" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M738 62H822" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M150 114H234" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M234 114H318" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M318 114H402" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M402 114H486" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M486 114H570" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M570 114H654" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M654 140H738" stroke="#b42318" stroke-width="2.2" fill="none"/>
+<path d="M654 114V140" stroke="#192b53" stroke-width="1.2" fill="none"/>
+<path d="M738 114H822" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M738 140V114" stroke="#192b53" stroke-width="1.2" fill="none"/>
+<path d="M150 166H234" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M234 166H318" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M318 166H402" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M402 166H486" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M486 166H570" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M570 166H654" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M654 192H738" stroke="#b42318" stroke-width="2.2" fill="none"/>
+<path d="M654 166V192" stroke="#192b53" stroke-width="1.2" fill="none"/>
+<path d="M738 192H822" stroke="#b42318" stroke-width="2.2" fill="none"/>
+<path d="M822 192H840" stroke="#b42318" stroke-width="2.2" fill="none" stroke-dasharray="4 4"/>
+<path d="M150 218H234" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M234 218H318" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M318 218H402" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M402 244H486" stroke="#b42318" stroke-width="2.2" fill="none"/>
+<path d="M402 218V244" stroke="#192b53" stroke-width="1.2" fill="none"/>
+<path d="M486 218H570" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M486 244V218" stroke="#192b53" stroke-width="1.2" fill="none"/>
+<path d="M570 218H654" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M654 218H738" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M738 218H822" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M150 286H234" stroke="#192b53" stroke-width="3" fill="none"/>
+<path d="M234 286H318" stroke="#192b53" stroke-width="3" fill="none"/>
+<path d="M318 286H402" stroke="#192b53" stroke-width="3" fill="none"/>
+<path d="M402 312H486" stroke="#b42318" stroke-width="3" fill="none"/>
+<path d="M402 286V312" stroke="#192b53" stroke-width="1.2" fill="none"/>
+<path d="M486 286H570" stroke="#192b53" stroke-width="3" fill="none"/>
+<path d="M486 312V286" stroke="#192b53" stroke-width="1.2" fill="none"/>
+<path d="M570 286H654" stroke="#192b53" stroke-width="3" fill="none"/>
+<path d="M654 312H738" stroke="#b42318" stroke-width="3" fill="none"/>
+<path d="M654 286V312" stroke="#192b53" stroke-width="1.2" fill="none"/>
+<path d="M738 312H822" stroke="#b42318" stroke-width="3" fill="none"/>
+</g>
+<text x="846" y="196" style="font-family:var(--cond);font-size:12.5px;font-weight:500" fill="#b42318" text-anchor="start" >until reset</text>
+<rect class="sweep-out" data-still="2400" x="150" y="40" width="770" height="302" fill="#fffaf0"/>
+<text x="192.0" y="366" style="font-family:var(--cond);font-size:13.5px;font-weight:600" fill="#1a1a1a" text-anchor="middle" >12.000000</text>
+<text x="192.0" y="384" style="font-family:var(--cond);font-size:12px;font-weight:400" fill="#6b6658" text-anchor="middle" >Render Farm</text>
+<text x="276.0" y="366" style="font-family:var(--cond);font-size:13.5px;font-weight:600" fill="#1a1a1a" text-anchor="middle" >0.850000</text>
+<text x="276.0" y="384" style="font-family:var(--cond);font-size:12px;font-weight:400" fill="#6b6658" text-anchor="middle" >Weather API</text>
+<text x="360.0" y="366" style="font-family:var(--cond);font-size:13.5px;font-weight:600" fill="#1a1a1a" text-anchor="middle" >4.400000</text>
+<text x="360.0" y="384" style="font-family:var(--cond);font-size:12px;font-weight:400" fill="#6b6658" text-anchor="middle" >Lumen Data</text>
+<text x="444.0" y="366" style="font-family:var(--cond);font-size:13.5px;font-weight:600" fill="#1a1a1a" text-anchor="middle" >35.000000</text>
+<text x="444.0" y="384" style="font-family:var(--cond);font-size:12px;font-weight:400" fill="#6b6658" text-anchor="middle" >Render Farm</text>
+<text x="528.0" y="366" style="font-family:var(--cond);font-size:13.5px;font-weight:600" fill="#1a1a1a" text-anchor="middle" >25.000000</text>
+<text x="528.0" y="384" style="font-family:var(--cond);font-size:12px;font-weight:400" fill="#6b6658" text-anchor="middle" >Render Farm</text>
+<text x="612.0" y="366" style="font-family:var(--cond);font-size:13.5px;font-weight:600" fill="#1a1a1a" text-anchor="middle" >3.000000</text>
+<text x="612.0" y="384" style="font-family:var(--cond);font-size:12px;font-weight:400" fill="#6b6658" text-anchor="middle" >Polyglot</text>
+<text x="696.0" y="366" style="font-family:var(--cond);font-size:13.5px;font-weight:600" fill="#1a1a1a" text-anchor="middle" >2.500000</text>
+<text x="696.0" y="384" style="font-family:var(--cond);font-size:12px;font-weight:400" fill="#6b6658" text-anchor="middle" >0x9f3e…c41a</text>
+<text x="780.0" y="366" style="font-family:var(--cond);font-size:13.5px;font-weight:600" fill="#1a1a1a" text-anchor="middle" >1.200000</text>
+<text x="780.0" y="384" style="font-family:var(--cond);font-size:12px;font-weight:400" fill="#6b6658" text-anchor="middle" >Weather API</text>
+</svg>
+            <span class="pin" style="left:-30px;top:120px">4</span>
+          </div>
+          <p class="fig-cap"><b>Figure 1.</b> High is yes, low is no. A payment goes out only where all four lines are high. Shaded columns were refused.</p>
+          <table class="log">
+            <thead><tr><th>#</th><th>Time</th><th>To</th><th class="r">Amount</th><th>Result</th><th>Reason, from the fuses</th><th class="r">Fees</th></tr></thead>
+            <tbody>
+              <tr class="stop"><td>8</td><td>14:09</td><td>Weather API</td><td class="r">1.200000</td><td class="no">Refused</td><td>Breaker still blown from 14:02 <div class="memo">"Forecast pulls, December"</div></td><td class="r">0.004500</td></tr>
+              <tr class="stop"><td>7</td><td>14:02</td><td class="addr">0x9f3e…c41a</td><td class="r">2.500000</td><td class="no">Refused</td><td>Payee Guard: not a saved payee. Breaker blew. <div class="memo">"Urgent refund for a customer, per support ticket"</div></td><td class="r">0.004500</td></tr>
+              <tr><td>6</td><td>13:10</td><td>Polyglot Translate</td><td class="r">3.000000</td><td class="ok">Paid</td><td><div class="memo">"Docs translation, 12k words"</div></td><td class="r">0.004500</td></tr>
+              <tr><td>5</td><td>12:30</td><td>Render Farm Co</td><td class="r">25.000000</td><td class="ok">Paid</td><td>Two of Three: signed by Ngozi and Sam</td><td class="r">0.004500</td></tr>
+              <tr class="stop"><td>4</td><td>11:52</td><td>Render Farm Co</td><td class="r">35.000000</td><td class="no">Refused</td><td>Daily Cap: 52.25 of 50. Two of Three: unsigned.</td><td class="r">0.004500</td></tr>
+              <tr><td colspan="7" style="color:var(--muted)">3 earlier payments, all paid: 12.000000 to Render Farm Co, 0.850000 to Weather API, 4.400000 to Lumen Data</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <aside class="a-side">
+          <h2 class="sec" style="font-size:26px"><span class="secn">2</span>Fuses on this wallet<span class="sp"></span><span style="font:500 14px var(--cond);color:var(--muted)">4 of 8</span></h2>
+          <ul class="fuses">
+            <li><div class="h"><span class="nm"><span class="n">1</span>Daily Cap</span><span class="st st-on">Closed</span></div><p class="what">No more than 50.000000 USDT0 in a UTC day. 4.750000 left today.</p><dl><dt>Last</dt><dd>Yes, 14:09</dd><dt>Per check</dt><dd>0.001000</dd><dt>Designer</dt><dd class="addr">0x7A3d…91Ce</dd><dt>Earned</dt><dd>0.192600</dd></dl></li>
+            <li><div class="h"><span class="nm"><span class="n">2</span>Payee Guard</span><span class="st st-on">Closed</span></div><p class="what">Only your 6 saved payees. New ones get up to 1.000000 until 24 hours old.</p><dl><dt>Last</dt><dd>Yes, 14:09</dd><dt>Per check</dt><dd>0.001000</dd><dt>Designer</dt><dd class="addr">0x7A3d…91Ce</dd><dt>Earned</dt><dd>0.192600</dd></dl></li>
+            <li><div class="h"><span class="nm"><span class="n">3</span>Breaker</span><span class="st st-blown">Blown</span></div><p class="what">Trips on a payment to a stranger and stays tripped until you reset it.</p><dl><dt>Last</dt><dd class="no">No, 14:09</dd><dt>Per check</dt><dd>0.000500</dd><dt>Designer</dt><dd class="addr">0x7A3d…91Ce</dd><dt>Earned</dt><dd>0.096300</dd></dl></li>
+            <li><div class="h"><span class="nm"><span class="n">4</span>Two of Three</span><span class="st st-on">Closed</span></div><p class="what">Over 20.000000 USDT0 needs two of You, Ngozi and Sam.</p><dl><dt>Last</dt><dd>Yes, 14:09</dd><dt>Per check</dt><dd>0.002000</dd><dt>Designer</dt><dd class="addr">0x7A3d…91Ce</dd><dt>Earned</dt><dd>0.158400</dd></dl></li>
+          </ul>
+          <p style="font:400 15px/1.5 var(--serif);color:var(--muted);margin-top:12px">"Earned" is what each designer has made from this wallet: 0.639900 USDT0 over 214 decisions, after Fusebox's 10%.</p>
+          <div class="cat" style="position:relative">
+            <h3>Catalogue<span>add a fuse · 4 slots free</span></h3>
+            <table>
+              <tr><td>Daily Cap, Payee Guard, Breaker, Two of Three</td><td class="r">installed</td></tr>
+              <tr><td>Release after delivery</td><td class="r">in design</td></tr>
+            </table>
+            <p>Fuses are designed and listed by anyone who tapes out a circuit. You pay one only when it checks a payment, and a price rise waits for your approval.</p>
+            <div class="acts"><a class="btn btn-navy btn-sm">Open the catalogue</a><a class="btn btn-line btn-sm">List your circuit</a></div>
+            <span class="pin" style="left:-30px;top:-2px">5</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+    <div class="notes"><ol>
+      <li data-n="3"><span><b>The notice is a highlighter stroke.</b> When the Breaker blows, the yellow band sweeps in from the left (500 ms) like a marker across a printed line; on reset it fades back to paper.</span></li>
+      <li data-n="4"><span><b>Live timing diagram.</b> Each new decision extends every trace by one column from the right (300 ms per beat, the existing columns slide left). Hovering a column outlines the matching row in the log below; clicking a trace opens that fuse's own history.</span></li>
+      <li data-n="5"><span><b>Catalogue rows</b> open a fuse's own sheet: what it reads, its gate count, its test record and its fee history, before you add it.</span></li>
+    </ol></div>
+  </div>
+
+  <!-- ================= 3. MOBILE ================= -->
+  <div>
+    <div class="frame-label">3 · Agent wallet · 390</div>
+    <section class="frame phone">
+      <header class="m-top">
+        <span class="mark"><svg width="26" height="16" viewBox="0 0 30 18" fill="none"><path d="M0 9h6M24 9h6" stroke="#192b53" stroke-width="2"/><rect x="6" y="2" width="18" height="14" rx="2" stroke="#192b53" stroke-width="2"/><path d="M6 9h18" stroke="#192b53" stroke-width="1.5"/></svg>Fusebox</span>
+        <span style="font-size:14.5px;color:var(--muted)">Atlas ▾</span>
+      </header>
+      <div class="m-title">
+        <div class="who">Atlas, ops agent</div>
+        <div class="k">Balance</div>
+        <div class="v">412.500000<small>USDT0</small></div>
+        <div class="sub"><span>Spent today 45.25 of 50</span><span>Fees left 1.289000</span></div>
+      </div>
+      <div class="m-notice">
+        <p><b>Breaker blown at 14:02.</b> A payment to <span class="addr nw">0x9f3e…c41a</span>, not a saved payee. Everything is refused until you reset it.</p>
+        <a class="btn btn-navy">Reset breaker</a>
+      </div>
+      <div class="m-sec" style="position:relative">
+        <h2>Today <span>5 paid · 3 refused</span></h2>
+        <svg width="358" height="404" viewBox="0 0 358 404" role="img" aria-label="Today's decisions, time running down">
+<rect x="0" y="174" width="358" height="40" fill="#f7e7b8" opacity=".7"/>
+<rect x="0" y="294" width="358" height="40" fill="#f7e7b8" opacity=".7"/>
+<rect x="0" y="334" width="358" height="40" fill="#f7e7b8" opacity=".7"/>
+<text x="69.0" y="20" style="font-family:var(--cond);font-size:12.5px;font-weight:600" fill="#192b53" text-anchor="middle" >Daily</text>
+<text x="69.0" y="35" style="font-family:var(--cond);font-size:12.5px;font-weight:600" fill="#192b53" text-anchor="middle" >cap</text>
+<text x="119.0" y="20" style="font-family:var(--cond);font-size:12.5px;font-weight:600" fill="#192b53" text-anchor="middle" >Payee</text>
+<text x="119.0" y="35" style="font-family:var(--cond);font-size:12.5px;font-weight:600" fill="#192b53" text-anchor="middle" >guard</text>
+<text x="169.0" y="20" style="font-family:var(--cond);font-size:12.5px;font-weight:600" fill="#192b53" text-anchor="middle" >Breaker</text>
+<text x="219.0" y="20" style="font-family:var(--cond);font-size:12.5px;font-weight:600" fill="#192b53" text-anchor="middle" >Two of</text>
+<text x="219.0" y="35" style="font-family:var(--cond);font-size:12.5px;font-weight:600" fill="#192b53" text-anchor="middle" >three</text>
+<text x="270.0" y="20" style="font-family:var(--cond);font-size:12.5px;font-weight:600" fill="#1a1a1a" text-anchor="middle" >Paid</text>
+<text x="270.0" y="35" style="font-family:var(--cond);font-size:12.5px;font-weight:600" fill="#1a1a1a" text-anchor="middle" >out</text>
+<text x="358" y="20" style="font-family:var(--cond);font-size:12.5px;font-weight:500" fill="#6b6658" text-anchor="end" >Amount</text>
+<path d="M0 48H358" stroke="#192b53" stroke-width="1.5"/>
+<path d="M80 54V94" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M80 94V134" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M80 134V174" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M58 174V214" stroke="#b42318" stroke-width="2.2" fill="none"/>
+<path d="M80 174H58" stroke="#192b53" stroke-width="1.2"/>
+<path d="M80 214V254" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M58 214H80" stroke="#192b53" stroke-width="1.2"/>
+<path d="M80 254V294" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M80 294V334" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M80 334V374" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M130 54V94" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M130 94V134" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M130 134V174" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M130 174V214" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M130 214V254" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M130 254V294" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M108 294V334" stroke="#b42318" stroke-width="2.2" fill="none"/>
+<path d="M130 294H108" stroke="#192b53" stroke-width="1.2"/>
+<path d="M130 334V374" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M108 334H130" stroke="#192b53" stroke-width="1.2"/>
+<path d="M180 54V94" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M180 94V134" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M180 134V174" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M180 174V214" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M180 214V254" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M180 254V294" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M158 294V334" stroke="#b42318" stroke-width="2.2" fill="none"/>
+<path d="M180 294H158" stroke="#192b53" stroke-width="1.2"/>
+<path d="M158 334V374" stroke="#b42318" stroke-width="2.2" fill="none"/>
+<path d="M158 374v18" stroke="#b42318" stroke-width="2.2" stroke-dasharray="4 4"/>
+<path d="M230 54V94" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M230 94V134" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M230 134V174" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M208 174V214" stroke="#b42318" stroke-width="2.2" fill="none"/>
+<path d="M230 174H208" stroke="#192b53" stroke-width="1.2"/>
+<path d="M230 214V254" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M208 214H230" stroke="#192b53" stroke-width="1.2"/>
+<path d="M230 254V294" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M230 294V334" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M230 334V374" stroke="#192b53" stroke-width="2.2" fill="none"/>
+<path d="M282 54V94" stroke="#192b53" stroke-width="3" fill="none"/>
+<path d="M282 94V134" stroke="#192b53" stroke-width="3" fill="none"/>
+<path d="M282 134V174" stroke="#192b53" stroke-width="3" fill="none"/>
+<path d="M258 174V214" stroke="#b42318" stroke-width="3" fill="none"/>
+<path d="M282 174H258" stroke="#192b53" stroke-width="1.2"/>
+<path d="M282 214V254" stroke="#192b53" stroke-width="3" fill="none"/>
+<path d="M258 214H282" stroke="#192b53" stroke-width="1.2"/>
+<path d="M282 254V294" stroke="#192b53" stroke-width="3" fill="none"/>
+<path d="M258 294V334" stroke="#b42318" stroke-width="3" fill="none"/>
+<path d="M282 294H258" stroke="#192b53" stroke-width="1.2"/>
+<path d="M258 334V374" stroke="#b42318" stroke-width="3" fill="none"/>
+<text x="0" y="79" style="font-family:var(--cond);font-size:13px;font-weight:400" fill="#1a1a1a" text-anchor="start" >09:14</text>
+<text x="358" y="79" style="font-family:var(--cond);font-size:13px;font-weight:500" fill="#1a1a1a" text-anchor="end" >12.000000</text>
+<text x="0" y="119" style="font-family:var(--cond);font-size:13px;font-weight:400" fill="#1a1a1a" text-anchor="start" >10:40</text>
+<text x="358" y="119" style="font-family:var(--cond);font-size:13px;font-weight:500" fill="#1a1a1a" text-anchor="end" >0.850000</text>
+<text x="0" y="159" style="font-family:var(--cond);font-size:13px;font-weight:400" fill="#1a1a1a" text-anchor="start" >11:05</text>
+<text x="358" y="159" style="font-family:var(--cond);font-size:13px;font-weight:500" fill="#1a1a1a" text-anchor="end" >4.400000</text>
+<text x="0" y="199" style="font-family:var(--cond);font-size:13px;font-weight:600" fill="#b42318" text-anchor="start" >11:52</text>
+<text x="358" y="199" style="font-family:var(--cond);font-size:13px;font-weight:500" fill="#1a1a1a" text-anchor="end" >35.000000</text>
+<text x="0" y="239" style="font-family:var(--cond);font-size:13px;font-weight:400" fill="#1a1a1a" text-anchor="start" >12:30</text>
+<text x="358" y="239" style="font-family:var(--cond);font-size:13px;font-weight:500" fill="#1a1a1a" text-anchor="end" >25.000000</text>
+<text x="0" y="279" style="font-family:var(--cond);font-size:13px;font-weight:400" fill="#1a1a1a" text-anchor="start" >13:10</text>
+<text x="358" y="279" style="font-family:var(--cond);font-size:13px;font-weight:500" fill="#1a1a1a" text-anchor="end" >3.000000</text>
+<text x="0" y="319" style="font-family:var(--cond);font-size:13px;font-weight:600" fill="#b42318" text-anchor="start" >14:02</text>
+<text x="358" y="319" style="font-family:var(--cond);font-size:13px;font-weight:500" fill="#1a1a1a" text-anchor="end" >2.500000</text>
+<text x="0" y="359" style="font-family:var(--cond);font-size:13px;font-weight:600" fill="#b42318" text-anchor="start" >14:09</text>
+<text x="358" y="359" style="font-family:var(--cond);font-size:13px;font-weight:500" fill="#1a1a1a" text-anchor="end" >1.200000</text>
+<text x="148" y="400" style="font-family:var(--cond);font-size:11.5px;font-weight:500" fill="#b42318" text-anchor="start" >until reset</text>
+</svg>
+        <p class="fig-cap" style="font-size:14px;margin-top:4px">Time runs down. Each line sits right for yes, left for no; shaded rows were refused.</p>
+        <span class="pin" style="left:-6px;top:56px">6</span>
+      </div>
+      <div class="m-sec">
+        <h2>Fuses <span>4 of 8</span></h2>
+        <ul class="m-fuses">
+          <li><div class="h"><span class="nm">Daily Cap</span><span class="st st-on">Closed</span></div><p class="what">At most 50.000000 a day. 4.750000 left.</p><p class="meta">Yes at 14:09 · 0.001000 per check<br>Designer <span class="addr">0x7A3d…91Ce</span> · earned 0.192600</p></li>
+          <li><div class="h"><span class="nm">Payee Guard</span><span class="st st-on">Closed</span></div><p class="what">Your 6 saved payees only.</p><p class="meta">Yes at 14:09 · 0.001000 per check<br>Designer <span class="addr">0x7A3d…91Ce</span> · earned 0.192600</p></li>
+          <li><div class="h"><span class="nm">Breaker</span><span class="st st-blown">Blown</span></div><p class="what">Tripped on a stranger at 14:02.</p><p class="meta"><span class="no">No at 14:09</span> · 0.000500 per check<br>Designer <span class="addr">0x7A3d…91Ce</span> · earned 0.096300</p></li>
+          <li><div class="h"><span class="nm">Two of Three</span><span class="st st-on">Closed</span></div><p class="what">Over 20.000000 needs two of You, Ngozi, Sam.</p><p class="meta">Yes at 14:09 · 0.002000 per check<br>Designer <span class="addr">0x7A3d…91Ce</span> · earned 0.158400</p></li>
+        </ul>
+      </div>
+      <div class="m-cat">
+        <h3>Add a fuse</h3>
+        <p>Four slots free. You pay a fuse only when it checks a payment.</p>
+        <a class="btn btn-line">Open the catalogue</a>
+      </div>
+      <nav class="m-tabs">
+        <a class="on"><svg width="22" height="18" viewBox="0 0 22 18" fill="none"><path d="M1 13h5V5h5v8h5V5h5" stroke="currentColor" stroke-width="1.8" fill="none"/></svg>Wallet</a>
+        <a><svg width="22" height="18" viewBox="0 0 22 18" fill="none"><path d="M3 4h16M3 9h16M3 14h10" stroke="currentColor" stroke-width="1.8"/></svg>Decisions</a>
+        <a><svg width="22" height="18" viewBox="0 0 22 18" fill="none"><rect x="2" y="2" width="18" height="14" rx="1" stroke="currentColor" stroke-width="1.8"/><path d="M6 7h10M6 11h6" stroke="currentColor" stroke-width="1.8"/></svg>Catalogue</a>
+        <a><svg width="22" height="18" viewBox="0 0 22 18" fill="none"><circle cx="11" cy="6" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M3 18c1-4 4.5-6 8-6s7 2 8 6" stroke="currentColor" stroke-width="1.8"/></svg>Payees</a>
+      </nav>
+    </section>
+    <div class="notes" style="max-width:390px"><ol>
+      <li data-n="6"><span><b>The diagram turns on its side</b> on phones: time runs down, one column per fuse, so it never needs sideways scrolling. A new decision adds a row at the bottom and every trace extends down into it; the view keeps the latest row in sight.</span></li>
+    </ol></div>
+  </div>
+  </div>
+</div>
+</body>
+</html>

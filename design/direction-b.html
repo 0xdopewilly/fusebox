@@ -1,0 +1,510 @@
+<!doctype html>
+<!--
+  Fusebox, design direction B: "Live wire"
+  The wallet is one wire from the agent to the payee, with the fuses in series on it. Current (lime) reaches
+  the payee only if every fuse is closed; a blown fuse is a break in the line.
+
+  Brand token sources (read 2026-11-13):
+  - X Layer official logo kit, github.com/okx/xlayer-docs → media-kit/XLayer-logo-kit.zip
+      (XLayer_Icon_WhenLessThan40px_*.svg geometry; "X Layer_Guideline.pdf" rendered with pdf.js):
+      black #000000 page, white #ffffff mark, icon container #121212 (stated in the guideline),
+      lime #bbfe2f (pixel-sampled from the guideline's product example chip), light panel #f6f6f6 (sampled).
+  - oklink.com/xlayer (X Layer explorer, live computed styles via puppeteer):
+      header #000000, page #ffffff, surface #f9f9f9, dark surface #1a1a1a, lines #ebebeb / #dbdbdb / #3d3d3d,
+      muted #929292, secondary #6e6e6e, black pill buttons radius 100px, card radius 16px,
+      font "HarmonyOS Sans" (not on Google Fonts; Geist + Geist Mono stand in).
+  - tapeout.net app bundle: X Layer chain colour "#1d1d1b"; tapeout.net :root --color-err #b42318.
+  - Derived, not sourced: #ff6b57 (a lighter tint of #b42318 so red text reads on black).
+  Not reachable: xlayer.tech (TLS name error over https, parked "/lander" page over http);
+  okx.com / web3.okx.com not attempted (geo-blocked here, per instructions).
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fusebox Live Wire</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300..800&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --black:#000; --s1:#121212; --s2:#1a1a1a; --line:#3d3d3d; --line-hi:#6e6e6e;
+  --muted:#929292; --dim:#6e6e6e; --white:#fff; --paper:#f9f9f9; --paper-line:#ebebeb; --paper-line2:#dbdbdb;
+  --lime:#bbfe2f; --err:#b42318; --err-hi:#ff6b57; --xl:#1d1d1b;
+  --pill:100px; --card:16px;
+  --sans:"Geist", system-ui, sans-serif; --mono:"Geist Mono", ui-monospace, monospace;
+  --canvas:#cfcfcf; --canvas-ink:#2b2b2b; --pin:#2563eb;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--canvas)}
+body{font-family:var(--sans);-webkit-font-smoothing:antialiased;color:var(--white);font-variant-numeric:tabular-nums}
+.mono{font-variant-numeric:tabular-nums}
+.addr{font-family:var(--mono);font-size:.94em;letter-spacing:-.02em}
+.nw{white-space:nowrap}
+
+/* canvas */
+.canvas{padding:56px 64px 80px;width:max-content}
+.canvas-head{display:flex;align-items:baseline;gap:24px;margin-bottom:40px;color:var(--canvas-ink)}
+.canvas-head h1{font:700 40px/1 var(--sans);letter-spacing:-.03em}
+.canvas-head p{font-size:17px;max-width:900px;line-height:1.45}
+.row{display:flex;gap:72px;align-items:flex-start}
+.frame-label{font:500 15px/1 system-ui,sans-serif;color:var(--canvas-ink);margin-bottom:14px}
+.frame{position:relative;background:var(--black);box-shadow:0 18px 50px rgba(0,0,0,.25);overflow:hidden}
+.notes{margin-top:22px;font:400 14px/1.5 system-ui,sans-serif;color:var(--canvas-ink);max-width:720px}
+.notes b{font-weight:600}
+.notes ol{list-style:none;display:grid;gap:8px}
+.notes li{display:grid;grid-template-columns:24px 1fr;gap:8px}
+.pin,.notes li::before{width:22px;height:22px;border-radius:50%;background:var(--pin);color:#fff;font:600 12px/22px system-ui,sans-serif;text-align:center}
+.notes li::before{content:attr(data-n)}
+.pin{position:absolute;z-index:20;box-shadow:0 0 0 3px rgba(255,255,255,.9)}
+
+/* shared */
+.logo{display:flex;align-items:center;gap:10px;font:650 20px/1 var(--sans);letter-spacing:-.03em;color:var(--white)}
+.pillbtn{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 20px;border-radius:var(--pill);font:550 15.5px/1 var(--sans);white-space:nowrap;border:1px solid transparent}
+.pb-white{background:var(--white);color:var(--black)}
+.pb-lime{background:var(--lime);color:var(--black)}
+.pb-ghost{border-color:var(--line);color:var(--white)}
+.pb-black{background:var(--black);color:var(--white)}
+.pb-sm{height:36px;padding:0 15px;font-size:14.5px}
+.xl{display:inline-flex;align-items:center;gap:8px;font-size:14px;color:var(--muted)}
+
+/* the wire */
+.line{position:relative;display:grid;align-items:center}
+.wire{height:2px;background:var(--line);position:relative}
+.wire.live{background:var(--lime)}
+.wire.open{background:transparent;border-top:2px dashed var(--line)}
+.node{border:1px solid var(--line);border-radius:var(--card);padding:14px 16px;background:var(--s1);position:relative;z-index:2}
+.node .t{font-weight:600;font-size:16px}
+.node .s{font-size:13.5px;color:var(--muted);margin-top:3px}
+.fz{position:relative;z-index:2;border:1px solid var(--line);border-radius:var(--card);background:var(--s1);padding:14px 16px 13px}
+.fz .top{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.fz .nm{font-weight:600;font-size:16.5px;letter-spacing:-.01em}
+.fz .st{font-size:13.5px;font-weight:550;color:var(--lime)}
+.fz.blown{border-color:var(--err)}
+.fz.blown .st{color:var(--err-hi)}
+.fz svg{display:block;margin:12px 0 10px;width:100%;height:30px}
+.fz .gt{font-size:13px;color:var(--muted)}
+.slot{position:relative;z-index:2;border:1.5px dashed var(--line);border-radius:var(--card);padding:14px 16px;color:var(--muted);font-size:14.5px;line-height:1.35}
+.slot b{display:block;color:var(--white);font-weight:600;margin-bottom:3px}
+.pulse{position:absolute;height:4px;width:36px;border-radius:2px;background:var(--white);top:50%;margin-top:-2px;z-index:1}
+@keyframes run{from{transform:translateX(-140px)}to{transform:translateX(var(--run))}}
+
+/* ================= 1. landing ================= */
+.landing{width:1440px}
+.l-nav{height:80px;display:flex;align-items:center;gap:40px;padding:0 64px;border-bottom:1px solid #1f1f1f}
+.l-nav nav{display:flex;gap:28px;font-size:15.5px;color:var(--muted)}
+.sp{flex:1}
+.hero{padding:96px 64px 0}
+.hero-grid{display:grid;grid-template-columns:1fr 400px;gap:64px;align-items:end}
+.hero h1{font-size:118px;line-height:.92;font-weight:640;letter-spacing:-.055em}
+.hero h1 span{color:var(--lime)}
+.hero .lede{font-size:18.5px;line-height:1.5;color:#c9c9c9}
+.hero .ctas{display:flex;gap:10px;margin-top:28px}
+.hero-line{position:relative;margin:92px 0 0;padding:0 0 64px}
+.hero-line .line{grid-template-columns:24px 150px 1fr 206px 1fr 206px 1fr 206px 1fr 206px 1fr 150px 24px;padding:0}
+.hero-line .scenario{display:flex;gap:24px;align-items:center;padding:0 64px;margin-bottom:22px;font-size:15px;color:var(--muted)}
+.hero-line .scenario b{color:var(--white);font-weight:550}
+.hero-line .scenario .mono{color:var(--white)}
+.hero-line .cap{display:grid;grid-template-columns:24px 150px 1fr 206px 1fr 206px 1fr 206px 1fr 206px 1fr 150px 24px;margin-top:16px;font-size:13.5px;color:var(--muted);line-height:1.4}
+.verdict{display:inline-flex;align-items:center;gap:8px;height:30px;padding:0 12px;border-radius:var(--pill);font-size:14px;font-weight:550}
+.v-no{background:rgba(180,35,24,.18);color:var(--err-hi)}
+.v-yes{background:rgba(187,254,47,.12);color:var(--lime)}
+.how{background:var(--white);color:var(--black);padding:96px 64px}
+.how-grid{display:grid;grid-template-columns:480px 1fr;gap:80px}
+.how h2{font-size:64px;line-height:.96;font-weight:640;letter-spacing:-.045em}
+.how .intro{font-size:18px;line-height:1.5;color:#3d3d3d;margin-top:24px;max-width:420px}
+.steps{list-style:none;position:relative}
+.steps::before{content:"";position:absolute;left:19px;top:20px;bottom:20px;width:2px;background:var(--black)}
+.steps li{position:relative;display:grid;grid-template-columns:40px 1fr;gap:28px;padding:0 0 34px}
+.steps li:last-child{padding-bottom:0}
+.steps .k{width:40px;height:40px;border-radius:50%;background:var(--white);border:2px solid var(--black);display:grid;place-items:center;font:600 15px/1 var(--mono)}
+.steps li:nth-child(4) .k{background:var(--lime)}
+.steps h3{font-size:22px;font-weight:620;letter-spacing:-.02em;margin-top:6px}
+.steps p{font-size:16.5px;line-height:1.5;color:#3d3d3d;margin-top:6px;max-width:560px}
+.money{margin-top:72px;display:grid;grid-template-columns:repeat(3,1fr);border-top:2px solid var(--black)}
+.money>div{padding:24px 28px 0 0}
+.money .v{font:500 34px/1.1 var(--sans);letter-spacing:-.03em}
+.money .k{font-size:15px;color:#6e6e6e;margin-top:8px;line-height:1.45}
+
+/* ================= 2. app ================= */
+.app{width:1440px}
+.a-top{height:68px;display:flex;align-items:center;gap:26px;padding:0 40px;border-bottom:1px solid #1f1f1f}
+.a-top nav{display:flex;gap:2px;font-size:14.5px}
+.a-top nav a{padding:9px 14px;border-radius:var(--pill);color:var(--muted)}
+.a-top nav a.on{background:var(--s2);color:var(--white)}
+.wal{display:flex;align-items:center;gap:10px;font-size:14.5px;padding:0 6px 0 0}
+.wal .av{width:28px;height:28px;border-radius:8px;background:var(--white);color:var(--black);display:grid;place-items:center;font-weight:700;font-size:13px}
+.a-head{display:grid;grid-template-columns:1fr auto;gap:40px;padding:36px 40px 30px;align-items:end}
+.a-head .who{font-size:15px;color:var(--muted)}
+.a-head .bal{font:550 72px/1 var(--sans);letter-spacing:-.05em;margin-top:10px}
+.a-head .bal small{font:500 20px var(--sans);color:var(--muted);letter-spacing:0;margin-left:6px}
+.a-head .state{margin-top:16px;font-size:17px;color:#d9d9d9;line-height:1.45;max-width:760px}
+.a-head .state b{color:var(--err-hi);font-weight:600}
+.a-head .acts{display:flex;gap:10px}
+.facts{display:flex;gap:0;padding:0 40px;border-top:1px solid #1f1f1f;border-bottom:1px solid #1f1f1f}
+.facts>div{padding:16px 28px 16px 0;margin-right:28px;border-right:1px solid #1f1f1f;font-size:14px;color:var(--muted)}
+.facts>div:last-child{border-right:0}
+.facts b{display:block;color:var(--white);font:500 18px/1.2 var(--sans);margin-top:4px;letter-spacing:-.02em}
+.board{padding:34px 40px 8px}
+.board-h{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:20px}
+.board-h h2{font-size:22px;font-weight:620;letter-spacing:-.02em}
+.board-h span{font-size:14px;color:var(--muted)}
+.app .line{grid-template-columns:118px 1fr 210px 1fr 210px 1fr 210px 1fr 210px 1fr 140px 1fr 118px}
+.spec{display:grid;grid-template-columns:118px 1fr 210px 1fr 210px 1fr 210px 1fr 210px 1fr 140px 1fr 118px;margin-top:18px}
+.spec dl{font-size:13.5px;line-height:1.4}
+.spec .what{color:#d9d9d9;font-size:14px;line-height:1.45;min-height:62px}
+.spec .kv{display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid #1f1f1f;color:var(--muted)}
+.spec .kv span:last-child{color:var(--white)}
+.spec .kv .red{color:var(--err-hi)!important}
+.lower{display:grid;grid-template-columns:1fr 400px;gap:48px;padding:34px 40px 44px;border-top:1px solid #1f1f1f;margin-top:30px}
+.lower h2{font-size:22px;font-weight:620;letter-spacing:-.02em}
+.lower .sub{font-size:14px;color:var(--muted);margin-top:4px}
+.scope{position:relative;height:150px;margin-top:20px;border-top:1px solid #1f1f1f;border-bottom:1px solid #1f1f1f}
+.scope .axis{position:absolute;left:0;right:0;top:50%;height:1px;background:var(--line)}
+.scope .tick{position:absolute;width:3px;border-radius:2px}
+.scope .tick.up{bottom:50%;background:var(--lime)}
+.scope .tick.dn{top:50%;background:var(--err-hi)}
+.scope .lbl{position:absolute;bottom:-24px;font:400 12.5px var(--sans);color:var(--dim);transform:translateX(-50%)}
+.scope .call{position:absolute;font-size:12.5px;color:var(--muted);white-space:nowrap}
+.dtable{width:100%;border-collapse:collapse;margin-top:40px;font-size:14px}
+.dtable th{font-weight:450;color:var(--dim);text-align:left;padding:0 10px 10px 0;font-size:13px;white-space:nowrap}
+.dtable td{padding:12px 10px 12px 0;border-top:1px solid #1f1f1f;vertical-align:top}
+.dtable td.r,.dtable th.r{text-align:right;padding-right:0}
+.dtable .why{color:#c9c9c9;line-height:1.4}
+.dtable .memo{color:var(--dim);font-size:13px;margin-top:3px}
+.yes{color:var(--lime);font-weight:550}
+.no{color:var(--err-hi);font-weight:550}
+.segs{display:flex;gap:3px}
+.segs i{width:16px;height:8px;border-radius:2px;background:#2e3a12;border:1px solid #5d7f17}
+.segs i.x{background:transparent;border:1.5px solid var(--err-hi);position:relative}
+.segs i.x::after{content:"";position:absolute;left:-2px;right:-2px;top:2px;height:1.5px;background:var(--err-hi);transform:rotate(-24deg)}
+.mkt{border:1px solid var(--line);border-radius:var(--card);padding:20px;background:var(--s1)}
+.mkt h3{font-size:18px;font-weight:620}
+.mkt p{font-size:14.5px;color:#c9c9c9;line-height:1.45;margin-top:6px}
+.mkt ul{list-style:none;margin-top:14px}
+.mkt li{display:flex;justify-content:space-between;align-items:baseline;padding:10px 0;border-top:1px solid #262626;font-size:14.5px}
+.mkt li span:last-child{color:var(--muted);font-size:13.5px}
+.mkt .btns{display:flex;gap:8px;margin-top:16px}
+.earn{margin-top:28px}
+.earn .v{font:500 30px/1 var(--sans);letter-spacing:-.03em;margin-top:8px}
+.earn .bar{display:flex;gap:3px;height:10px;margin-top:14px}
+.earn .bar i{display:block;border-radius:2px}
+.earn .leg{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;margin-top:12px;font-size:13.5px;color:var(--muted)}
+.earn .leg span{display:flex;justify-content:space-between}
+.earn .leg b{color:var(--white);font:500 13.5px var(--sans)}
+
+/* ================= 3. mobile ================= */
+.phone{width:390px}
+.m-top{height:56px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;border-bottom:1px solid #1f1f1f}
+.m-top .logo{font-size:18px}
+.m-head{padding:20px 16px 18px}
+.m-head .who{font-size:14px;color:var(--muted)}
+.m-head .bal{font:550 42px/1 var(--sans);letter-spacing:-.05em;margin-top:8px}
+.m-head .bal small{font:500 15px var(--sans);color:var(--muted);letter-spacing:0;margin-left:4px}
+.m-head .state{font-size:15px;line-height:1.45;color:#d9d9d9;margin-top:14px}
+.m-head .state b{color:var(--err-hi);font-weight:600}
+.m-head .acts{display:flex;gap:8px;margin-top:16px}
+.m-head .acts .pillbtn{flex:1;justify-content:center}
+.m-facts{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid #1f1f1f;border-bottom:1px solid #1f1f1f}
+.m-facts div{padding:12px 16px;font-size:12.5px;color:var(--muted);border-right:1px solid #1f1f1f}
+.m-facts div:last-child{border-right:0}
+.m-facts b{display:block;color:var(--white);font:500 15px/1.2 var(--sans);margin-top:3px}
+.m-sec{padding:22px 16px 6px}
+.m-sec h2{font-size:18px;font-weight:620;letter-spacing:-.02em;display:flex;justify-content:space-between;align-items:baseline}
+.m-sec h2 span{font-size:13px;font-weight:400;color:var(--muted);letter-spacing:0}
+.vline{position:relative;margin-top:14px;padding-left:44px}
+.vline>*:not(.pin)::before{content:"";position:absolute;left:-25px;top:-11px;bottom:-11px;width:2px;background:var(--line)}
+.vline>.live::before{background:var(--lime)}
+.vline>.first::before{top:50%}
+.vline>.last::before{bottom:50%}
+.vline>.vfz.blown::before{bottom:50%;background:var(--lime)}
+.vline>.vfz.blown::after{content:"";position:absolute;left:-25px;top:50%;bottom:-11px;width:2px;background:var(--line)}
+.vline .sym,.vline .term{z-index:2}
+.vstop{position:relative;padding:12px 0}
+.vstop .end{display:flex;align-items:center;gap:10px;font-size:14.5px;font-weight:600}
+.vstop .end span{font-weight:400;color:var(--muted);font-size:13px}
+.vstop .term{position:absolute;left:-33px;z-index:2;top:50%;margin-top:-8px;width:18px;height:16px;border-radius:5px;background:var(--black);border:2px solid var(--lime)}
+.vstop .term.dead{border-color:var(--line)}
+.vfz{position:relative;border:1px solid var(--line);border-radius:14px;background:var(--s1);padding:12px 14px;margin:10px 0}
+.vfz.blown{border-color:var(--err)}
+.vfz .top{display:flex;justify-content:space-between;align-items:baseline}
+.vfz .nm{font-weight:600;font-size:15.5px}
+.vfz .st{font-size:13px;font-weight:550;color:var(--lime)}
+.vfz.blown .st{color:var(--err-hi)}
+.vfz .what{font-size:13.5px;color:#c9c9c9;line-height:1.4;margin-top:4px}
+.vfz .meta{display:flex;justify-content:space-between;font-size:12.5px;color:var(--muted);margin-top:8px;padding-top:8px;border-top:1px solid #262626}
+.vfz .meta b{color:var(--white);font:500 12.5px var(--sans)}
+.vfz .sym{position:absolute;left:-35px;top:50%;margin-top:-24px;width:20px;height:48px}
+.vslot{position:relative;border:1.5px dashed var(--line);border-radius:14px;padding:12px 14px;margin:10px 0;font-size:14px;color:var(--muted)}
+.vslot b{color:var(--white);font-weight:600}
+.m-dec{list-style:none;margin-top:8px}
+.m-dec li{display:grid;grid-template-columns:44px 1fr auto;gap:10px;padding:12px 0;border-top:1px solid #1f1f1f;font-size:14px}
+.m-dec time{color:var(--dim);font:400 13px var(--sans);padding-top:1px}
+.m-dec .why{color:var(--muted);font-size:13px;margin-top:2px;line-height:1.35}
+.m-dec .amt{font:500 13.5px var(--sans);text-align:right}
+.m-tabs{display:grid;grid-template-columns:repeat(4,1fr);height:62px;border-top:1px solid #1f1f1f;margin-top:24px;font-size:12px;color:var(--muted)}
+.m-tabs a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px}
+.m-tabs a.on{color:var(--white)}
+
+@media (prefers-reduced-motion: reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="canvas">
+  <div class="canvas-head">
+    <h1>B · Live wire</h1>
+    <p>The wallet is one wire from your agent to the payee, with the fuses in series on it. Lime is current: it reaches the payee only when every fuse is closed. A blown fuse is a visible break in the line. It's nocturnal and exact, in X Layer's black and white.</p>
+  </div>
+
+  <div class="row">
+  <!-- ================= 1. LANDING ================= -->
+  <div>
+    <div class="frame-label">1 · Landing hero + how it works · 1440</div>
+    <section class="frame landing">
+      <header class="l-nav">
+        <span class="logo"><svg width="30" height="16" viewBox="0 0 30 16" fill="none"><rect x="5" y="1" width="20" height="14" rx="3" stroke="#fff" stroke-width="2"/><path d="M0 8h30" stroke="#bbfe2f" stroke-width="2"/></svg>Fusebox</span>
+        <nav><a>How it works</a><a>Fuses</a><a>Designers</a><a>Docs</a></nav>
+        <span class="sp"></span>
+        <span class="xl"><svg width="20" height="16" viewBox="0 0 64 50"><g fill="#fff"><rect x=".4" y=".6" width="16.3" height="16.3" rx="1.1"/><rect x="33" y=".6" width="16.3" height="16.3" rx="1.1"/><rect x="16.8" y="17" width="16.3" height="16.1" rx="1.1"/><rect x=".4" y="33.3" width="16.3" height="16.3" rx="1.1"/><rect x="33" y="33.3" width="16.3" height="16.3" rx="1.1"/><rect x="54.1" y=".6" width="9.2" height="16.3" rx="1.1" opacity=".5"/><rect x="54.1" y="33.3" width="9.2" height="16.3" rx="1.1" opacity=".5"/></g></svg>Built on X Layer</span>
+        <a class="pillbtn pb-white pb-sm">Open app</a>
+      </header>
+
+      <div class="hero">
+        <div class="hero-grid">
+          <h1>Your agent pays.<br><span>Circuits decide.</span></h1>
+          <div>
+            <p class="lede">Fusebox wires an AI agent's wallet through small logic circuits on X Layer. A payment reaches the payee only if it gets through every fuse on the line. Each fuse that checks it pays its designer in USDT0, even when the answer is no.</p>
+            <div class="ctas"><a class="pillbtn pb-lime">Wire up a wallet</a><a class="pillbtn pb-ghost">Sell a fuse</a></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-line">
+        <div class="scenario"><span class="mono">14:02 UTC</span><span>Atlas tries to send <b class="mono">2.500000 USDT0</b> to <b class="addr">0x9f3e…c41a</b>, a stranger</span><span class="sp"></span><span class="verdict v-no">Stopped. Nothing moved.</span></div>
+        <div class="line">
+          <span class="wire live"></span>
+          <div class="node"><div class="t">Atlas</div><div class="s">AI agent</div></div>
+          <span class="wire live"></span>
+          <div class="fz"><div class="top"><span class="nm">Daily Cap</span><span class="st">Closed</span></div><svg viewBox="0 0 170 30" preserveAspectRatio="none"><rect x="22" y="3" width="126" height="24" rx="12" fill="none" stroke="#6e6e6e"/><path d="M0 15H170" stroke="#bbfe2f" stroke-width="2"/></svg><div class="gt">108 gates</div></div>
+          <span class="wire live"></span>
+          <div class="fz blown"><div class="top"><span class="nm">Payee Guard</span><span class="st">Blew</span></div><svg viewBox="0 0 170 30" preserveAspectRatio="none"><rect x="22" y="3" width="126" height="24" rx="12" fill="none" stroke="#b42318"/><path d="M0 15H72l6-6" stroke="#bbfe2f" stroke-width="2" fill="none"/><path d="M92 21l6-6H170" stroke="#3d3d3d" stroke-width="2" fill="none"/></svg><div class="gt">Not a saved payee</div></div>
+          <span class="wire"></span>
+          <div class="fz blown"><div class="top"><span class="nm">Breaker</span><span class="st">Blown</span></div><svg viewBox="0 0 170 30" preserveAspectRatio="none"><rect x="22" y="3" width="126" height="24" rx="12" fill="none" stroke="#b42318"/><path d="M0 15H72l6-6" stroke="#3d3d3d" stroke-width="2" fill="none"/><path d="M92 21l6-6H170" stroke="#3d3d3d" stroke-width="2" fill="none"/></svg><div class="gt">11 gates, remembers</div></div>
+          <span class="wire"></span>
+          <div class="fz"><div class="top"><span class="nm">Two of Three</span><span class="st" style="color:var(--muted)">Closed</span></div><svg viewBox="0 0 170 30" preserveAspectRatio="none"><rect x="22" y="3" width="126" height="24" rx="12" fill="none" stroke="#6e6e6e"/><path d="M0 15H170" stroke="#3d3d3d" stroke-width="2"/></svg><div class="gt">46 gates</div></div>
+          <span class="wire"></span>
+          <div class="node" style="border-style:dashed"><div class="t" style="color:var(--muted)">Payee</div><div class="s">0.000000 received</div></div>
+          <span class="wire"></span>
+          <span class="pulse" data-still="1200" style="left:0;--run:640px;animation:run 2.4s cubic-bezier(.5,0,.2,1) infinite"></span>
+          <span class="pin" style="left:520px;top:-14px">1</span>
+        </div>
+        <div class="cap">
+          <span></span><span></span><span></span>
+          <span>Up to 50 USDT0 a day</span><span></span>
+          <span>Only payees you saved</span><span></span>
+          <span>Trips on a stranger until you reset it</span><span></span>
+          <span>Over 20 USDT0 needs 2 of 3 people</span>
+        </div>
+      </div>
+
+      <section class="how">
+        <div class="how-grid">
+          <div>
+            <h2>No yes,<br>no transfer.</h2>
+            <p class="intro">Every payment is put to every fuse on the line, in order. The agent can only say who, how much and why; everything a fuse reads comes from the wallet itself.</p>
+          </div>
+          <ol class="steps">
+            <li><span class="pin" style="left:-34px;top:8px">2</span><span class="k">1</span><div><h3>The agent asks to pay</h3><p>Payee, amount, a one-line reason. That is the agent's whole say. It cannot change a fuse, a cap or a payee.</p></div></li>
+            <li><span class="k">2</span><div><h3>Each fuse checks it on X Layer</h3><p>Each fuse is a circuit of 11 to 108 logic gates, taped out on TapeOut. It answers yes or no in one call.</p></div></li>
+            <li><span class="k">3</span><div><h3>Every yes, or nothing moves</h3><p>One no and the payment stops. The wallet records which fuse said no and why, on chain.</p></div></li>
+            <li><span class="k">4</span><div><h3>The designers are paid</h3><p>Each fuse that decided earns its fee in USDT0, the no's included. A circuit that stops a scam has done its job.</p></div></li>
+          </ol>
+        </div>
+        <div class="money">
+          <div><div class="v">0.004500 USDT0</div><div class="k">Fees for one payment checked by Daily Cap, Payee Guard, Breaker and Two of Three</div></div>
+          <div><div class="v">90 / 10</div><div class="k">Designers keep 90% of every fee. Fusebox keeps 10%, and can never take more than 20%.</div></div>
+          <div><div class="v">≈ 0.000018 OKB</div><div class="k">Gas for that check on X Layer, about 904,000 gas for all four fuses together</div></div>
+        </div>
+      </section>
+    </section>
+    <div class="notes"><ol>
+      <li data-n="1"><span><b>Current runs the wire.</b> A short white pulse of current runs along the lime wire from the agent (2.4 s, ease-out) and stops dead at the first blown fuse; the fuse's inner wire snaps (the two ends kink up, 160 ms) and the rest of the line greys. The scenario then flips to a saved payee and the pulse reaches the payee node, which counts up "2.500000 received".</span></li>
+      <li data-n="2"><span><b>Steps follow the wire.</b> The black spine draws downward as you scroll, filling each step's ring when it passes; the last ring fills lime.</span></li>
+    </ol></div>
+  </div>
+
+  <!-- ================= 2. APP DESKTOP ================= -->
+  <div>
+    <div class="frame-label">2 · Agent wallet · 1440</div>
+    <section class="frame app">
+      <header class="a-top">
+        <span class="logo"><svg width="30" height="16" viewBox="0 0 30 16" fill="none"><rect x="5" y="1" width="20" height="14" rx="3" stroke="#fff" stroke-width="2"/><path d="M0 8h30" stroke="#bbfe2f" stroke-width="2"/></svg>Fusebox</span>
+        <span class="wal"><span class="av">A</span><b style="font-weight:600">Atlas</b><span class="mono" style="color:var(--muted)">0xF0b5…2a7C</span><svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3" stroke="#929292" stroke-width="1.6" fill="none"/></svg></span>
+        <nav><a class="on">Line</a><a>Decisions</a><a>Payees</a><a>Market</a><a>Settings</a></nav>
+        <span class="sp"></span>
+        <span class="xl"><svg width="18" height="14" viewBox="0 0 64 50"><g fill="#fff"><rect x=".4" y=".6" width="16.3" height="16.3" rx="1.1"/><rect x="33" y=".6" width="16.3" height="16.3" rx="1.1"/><rect x="16.8" y="17" width="16.3" height="16.1" rx="1.1"/><rect x=".4" y="33.3" width="16.3" height="16.3" rx="1.1"/><rect x="33" y="33.3" width="16.3" height="16.3" rx="1.1"/><rect x="54.1" y=".6" width="9.2" height="16.3" rx="1.1" opacity=".5"/><rect x="54.1" y="33.3" width="9.2" height="16.3" rx="1.1" opacity=".5"/></g></svg>X Layer</span>
+        <a class="pillbtn pb-ghost pb-sm">Freeze</a>
+      </header>
+
+      <div class="a-head">
+        <div>
+          <div class="who">Atlas · ops agent · wallet balance</div>
+          <div class="bal">412.500000<small>USDT0</small></div>
+          <p class="state"><b>Line open since 14:02.</b> The Breaker blew when Atlas tried to pay 2.500000 USDT0 to <span class="addr nw">0x9f3e…c41a</span>, who isn't a saved payee. Nothing can be paid until you reset it.</p>
+        </div>
+        <div class="acts"><a class="pillbtn pb-ghost">See the attempt</a><a class="pillbtn pb-lime">Reset breaker</a></div>
+      </div>
+      <div class="facts">
+        <div>Spent today<b>45.250000 / 50</b></div>
+        <div>Checks today<b>8 / 100</b></div>
+        <div>Blocked today<b>3 / 20</b></div>
+        <div>Fees paid today<b>0.036000</b></div>
+        <div>Fee balance<b>1.289000</b></div>
+        <div>Agent key<b class="addr" style="font-size:16.5px">0x3C9a…E81f</b></div>
+      </div>
+
+      <section class="board">
+        <div class="board-h"><h2>The line</h2><span>4 fuses of 8 · a payment runs left to right</span></div>
+        <div class="line">
+          <div class="node"><div class="t">Atlas</div><div class="s">agent key</div></div>
+          <span class="wire live"></span>
+          <div class="fz"><div class="top"><span class="nm">Daily Cap</span><span class="st">Closed</span></div><svg viewBox="0 0 170 30" preserveAspectRatio="none"><rect x="22" y="3" width="126" height="24" rx="12" fill="none" stroke="#6e6e6e"/><path d="M0 15H170" stroke="#bbfe2f" stroke-width="2"/></svg><div class="gt">4.750000 left today</div></div>
+          <span class="wire live"></span>
+          <div class="fz"><div class="top"><span class="nm">Payee Guard</span><span class="st">Closed</span></div><svg viewBox="0 0 170 30" preserveAspectRatio="none"><rect x="22" y="3" width="126" height="24" rx="12" fill="none" stroke="#6e6e6e"/><path d="M0 15H170" stroke="#bbfe2f" stroke-width="2"/></svg><div class="gt">6 saved payees</div></div>
+          <span class="wire live"></span>
+          <div class="fz blown"><div class="top"><span class="nm">Breaker</span><span class="st">Blown</span></div><svg viewBox="0 0 170 30" preserveAspectRatio="none"><rect x="22" y="3" width="126" height="24" rx="12" fill="none" stroke="#b42318"/><path d="M0 15H72l6-6" stroke="#bbfe2f" stroke-width="2" fill="none"/><path d="M92 21l6-6H170" stroke="#3d3d3d" stroke-width="2" fill="none"/></svg><div class="gt">since 14:02 · you reset</div><span class="pin" style="right:-11px;top:-11px">3</span></div>
+          <span class="wire"></span>
+          <div class="fz"><div class="top"><span class="nm">Two of Three</span><span class="st" style="color:var(--muted)">Closed</span></div><svg viewBox="0 0 170 30" preserveAspectRatio="none"><rect x="22" y="3" width="126" height="24" rx="12" fill="none" stroke="#6e6e6e"/><path d="M0 15H170" stroke="#3d3d3d" stroke-width="2"/></svg><div class="gt">over 20.000000 needs 2</div></div>
+          <span class="wire open"></span>
+          <div class="slot"><b>+ Splice a fuse</b>4 slots free</div>
+          <span class="wire open"></span>
+          <div class="node" style="border-style:dashed"><div class="t" style="color:var(--muted)">Payees</div><div class="s">6 saved</div></div>
+        </div>
+        <div class="spec">
+          <span></span><span></span>
+          <dl><div class="what">No more than 50.000000 USDT0 a UTC day.</div><div class="kv"><span>Last</span><span>Passed 14:09</span></div><div class="kv"><span>Designer</span><span class="addr">0x7A3d…91Ce</span></div><div class="kv"><span>Per check</span><span class="mono">0.001000</span></div><div class="kv"><span>Earned from you</span><span class="mono">0.192600</span></div><div class="kv"><span>Size</span><span>108 gates · 283k gas</span></div></dl>
+          <span></span>
+          <dl><div class="what">Saved payees only. New ones get up to 1.000000 until 24 hours old.</div><div class="kv"><span>Last</span><span>Passed 14:09</span></div><div class="kv"><span>Designer</span><span class="addr">0x7A3d…91Ce</span></div><div class="kv"><span>Per check</span><span class="mono">0.001000</span></div><div class="kv"><span>Earned from you</span><span class="mono">0.192600</span></div><div class="kv"><span>Size</span><span>79 gates · 211k gas</span></div></dl>
+          <span></span>
+          <dl><div class="what">Trips on a payment to a stranger. Stays open until you reset it.</div><div class="kv"><span>Last</span><span class="red">Blew 14:09</span></div><div class="kv"><span>Designer</span><span class="addr">0x7A3d…91Ce</span></div><div class="kv"><span>Per check</span><span class="mono">0.000500</span></div><div class="kv"><span>Earned from you</span><span class="mono">0.096300</span></div><div class="kv"><span>Size</span><span>11 gates · 50k gas</span></div></dl>
+          <span></span>
+          <dl><div class="what">Over 20.000000 needs two of You, Ngozi and Sam.</div><div class="kv"><span>Last</span><span>Passed 14:09</span></div><div class="kv"><span>Designer</span><span class="addr">0x7A3d…91Ce</span></div><div class="kv"><span>Per check</span><span class="mono">0.002000</span></div><div class="kv"><span>Earned from you</span><span class="mono">0.158400</span></div><div class="kv"><span>Size</span><span>46 gates · 132k gas</span></div></dl>
+        </div>
+      </section>
+
+      <section class="lower">
+        <div>
+          <h2>Decisions today</h2>
+          <div class="sub">Thu 3 Dec, UTC · up is paid, down is stopped, height is the amount</div>
+          <div class="scope" style="position:relative">
+            <span class="axis"></span>
+            <!-- window 08:00–16:00 = 480 min over 100% -->
+            <span class="tick up" style="left:24.6%;height:42px"></span>
+            <span class="tick up" style="left:34.6%;height:12px"></span>
+            <span class="tick up" style="left:44%;height:22px"></span>
+            <span class="tick dn" style="left:53.2%;height:62px"></span>
+            <span class="tick up" style="left:62.5%;height:58px"></span>
+            <span class="tick up" style="left:72.9%;height:18px"></span>
+            <span class="tick dn" style="left:84.8%;height:16px"></span>
+            <span class="tick dn" style="left:86.25%;height:10px"></span>
+            <span class="call" style="left:54.2%;top:118px">35.000000 · cap + sign-offs</span>
+            <span class="call" style="left:63.5%;top:6px">25.000000 · signed by 2</span>
+            <span class="call" style="left:87.3%;top:86px">breaker</span>
+            <span class="lbl" style="left:0;transform:none">08:00</span><span class="lbl" style="left:25%">10:00</span><span class="lbl" style="left:50%">12:00</span><span class="lbl" style="left:75%">14:00</span><span class="lbl" style="left:auto;right:0;transform:none">16:00</span>
+            <span class="pin" style="left:-34px;top:62px">4</span>
+          </div>
+          <table class="dtable">
+            <thead><tr><th>Time</th><th>Result</th><th>Amount</th><th>To</th><th>Why</th><th>Fuses 1–4</th><th class="r">Fees</th></tr></thead>
+            <tbody>
+              <tr><td class="mono">14:09</td><td class="no">Stopped</td><td class="mono">1.200000</td><td>Weather API</td><td><div class="why">Breaker still open from 14:02</div><div class="memo">"Forecast pulls, December"</div></td><td><span class="segs"><i></i><i></i><i class="x"></i><i></i></span></td><td class="mono r">0.004500</td></tr>
+              <tr><td class="mono">14:02</td><td class="no">Stopped</td><td class="mono">2.500000</td><td class="addr">0x9f3e…c41a</td><td><div class="why">Not a saved payee; Breaker tripped</div><div class="memo">"Urgent refund for a customer, per support ticket"</div></td><td><span class="segs"><i></i><i class="x"></i><i class="x"></i><i></i></span></td><td class="mono r">0.004500</td></tr>
+              <tr><td class="mono">13:10</td><td class="yes">Paid</td><td class="mono">3.000000</td><td>Polyglot Translate</td><td><div class="memo" style="margin:0">"Docs translation, 12k words"</div></td><td><span class="segs"><i></i><i></i><i></i><i></i></span></td><td class="mono r">0.004500</td></tr>
+              <tr><td class="mono">12:30</td><td class="yes">Paid</td><td class="mono">25.000000</td><td>Render Farm Co</td><td><div class="why">Signed off by Ngozi and Sam</div></td><td><span class="segs"><i></i><i></i><i></i><i></i></span></td><td class="mono r">0.004500</td></tr>
+              <tr><td class="mono">11:52</td><td class="no">Stopped</td><td class="mono">35.000000</td><td>Render Farm Co</td><td><div class="why">Would reach 52.25 of 50 today; over 20 with no sign-offs</div></td><td><span class="segs"><i class="x"></i><i></i><i></i><i class="x"></i></span></td><td class="mono r">0.004500</td></tr>
+              <tr><td class="mono">11:05</td><td class="yes">Paid</td><td class="mono">4.400000</td><td>Lumen Data</td><td></td><td><span class="segs"><i></i><i></i><i></i><i></i></span></td><td class="mono r">0.004500</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <aside>
+          <div class="mkt" style="position:relative">
+            <h3>Splice in a fuse</h3>
+            <p>Four slots are free on this line. Fuses are sold by their designers; you pay one only when it checks a payment.</p>
+            <ul>
+              <li><span>All four listed fuses</span><span>on your line</span></li>
+              <li><span>Release after delivery</span><span>in design</span></li>
+            </ul>
+            <div class="btns"><a class="pillbtn pb-white pb-sm">Open the market</a><a class="pillbtn pb-ghost pb-sm">Design a fuse</a></div>
+            <span class="pin" style="right:-11px;top:-11px">5</span>
+          </div>
+          <div class="earn">
+            <div class="sub">Paid to designers by this wallet since 24 Nov</div>
+            <div class="v">0.639900 USDT0</div>
+            <div class="bar"><i style="flex:1926;background:#fff"></i><i style="flex:1926;background:#929292"></i><i style="flex:963;background:#6e6e6e"></i><i style="flex:1584;background:#bbfe2f"></i></div>
+            <div class="leg"><span>Daily Cap<b>0.192600</b></span><span>Payee Guard<b>0.192600</b></span><span>Breaker<b>0.096300</b></span><span>Two of Three<b>0.158400</b></span></div>
+            <div class="sub" style="margin-top:14px">214 decisions. Fusebox's 10%: <span class="mono">0.071100</span></div>
+          </div>
+        </aside>
+      </section>
+    </section>
+    <div class="notes"><ol>
+      <li data-n="3"><span><b>Live state of the line.</b> Wire up to the break stays lime; after it, grey. On reset the inner wire of the Breaker re-joins (ends straighten, 200 ms) and lime floods right to the payees node (350 ms). Hover a fuse to light its column of facts below.</span></li>
+      <li data-n="4"><span><b>The day as a scope trace.</b> Each new decision draws its tick from the axis (up lime, down red, 300 ms) at the right edge while the window slides left. Hovering a tick highlights its row in the table.</span></li>
+      <li data-n="5"><span><b>Splice.</b> Dragging a fuse from the market onto the dashed segment opens a gap in the wire where it will sit, before the owner confirms.</span></li>
+    </ol></div>
+  </div>
+
+  <!-- ================= 3. MOBILE ================= -->
+  <div>
+    <div class="frame-label">3 · Agent wallet · 390</div>
+    <section class="frame phone">
+      <header class="m-top">
+        <span class="logo"><svg width="26" height="14" viewBox="0 0 30 16" fill="none"><rect x="5" y="1" width="20" height="14" rx="3" stroke="#fff" stroke-width="2"/><path d="M0 8h30" stroke="#bbfe2f" stroke-width="2"/></svg>Fusebox</span>
+        <span class="wal" style="font-size:14px"><span class="av" style="width:24px;height:24px;font-size:12px">A</span>Atlas<svg width="12" height="12" viewBox="0 0 12 12"><path d="M3 4.5l3 3 3-3" stroke="#929292" stroke-width="1.6" fill="none"/></svg></span>
+      </header>
+      <div class="m-head">
+        <div class="who">Wallet balance</div>
+        <div class="bal">412.500000<small>USDT0</small></div>
+        <p class="state"><b>Line open since 14:02.</b> The Breaker blew on a payment to <span class="addr nw">0x9f3e…c41a</span>, a stranger. Nothing can be paid until you reset it.</p>
+        <div class="acts"><a class="pillbtn pb-ghost pb-sm">See attempt</a><a class="pillbtn pb-lime pb-sm">Reset breaker</a></div>
+      </div>
+      <div class="m-facts"><div>Spent today<b>45.25/50</b></div><div>Checks<b>8/100</b></div><div>Fee balance<b>1.289000</b></div></div>
+
+      <div class="m-sec">
+        <h2>The line <span>top to bottom</span></h2>
+        <div class="vline">
+                    <div class="vstop live first"><span class="term"></span><div class="end">Atlas <span>agent key 0x3C9a…E81f</span></div></div>
+          <div class="vfz live"><svg class="sym" viewBox="0 0 20 48"><rect x="2" y="6" width="16" height="36" rx="8" fill="#000" stroke="#6e6e6e"/><path d="M10 0V48" stroke="#bbfe2f" stroke-width="2"/></svg><div class="top"><span class="nm">Daily Cap</span><span class="st">Closed</span></div><div class="what">No more than 50.000000 a day. 4.750000 left.</div><div class="meta"><span>Passed 14:09 · 0x7A3d…91Ce</span><span>earned <b>0.192600</b></span></div></div>
+          <div class="vfz live"><svg class="sym" viewBox="0 0 20 48"><rect x="2" y="6" width="16" height="36" rx="8" fill="#000" stroke="#6e6e6e"/><path d="M10 0V48" stroke="#bbfe2f" stroke-width="2"/></svg><div class="top"><span class="nm">Payee Guard</span><span class="st">Closed</span></div><div class="what">Your 6 saved payees only.</div><div class="meta"><span>Passed 14:09 · 0x7A3d…91Ce</span><span>earned <b>0.192600</b></span></div></div>
+          <div class="vfz blown"><svg class="sym" viewBox="0 0 20 48"><rect x="2" y="6" width="16" height="36" rx="8" fill="#000" stroke="#b42318"/><path d="M10 0V20l-5 4" stroke="#bbfe2f" stroke-width="2" fill="none"/><path d="M15 26l-5 4V48" stroke="#3d3d3d" stroke-width="2" fill="none"/></svg><span class="pin" style="right:-10px;top:-10px">6</span><div class="top"><span class="nm">Breaker</span><span class="st">Blown 14:02</span></div><div class="what">Tripped on a stranger. Only you can reset it.</div><div class="meta"><span>Blew 14:09 · 0x7A3d…91Ce</span><span>earned <b>0.096300</b></span></div></div>
+          <div class="vfz"><svg class="sym" viewBox="0 0 20 48"><rect x="2" y="6" width="16" height="36" rx="8" fill="#000" stroke="#6e6e6e"/><path d="M10 0V48" stroke="#3d3d3d" stroke-width="2"/></svg><div class="top"><span class="nm">Two of Three</span><span class="st" style="color:var(--muted)">Closed</span></div><div class="what">Over 20.000000 needs two of You, Ngozi, Sam.</div><div class="meta"><span>Passed 14:09 · 0x7A3d…91Ce</span><span>earned <b>0.158400</b></span></div></div>
+          <div class="vslot"><b>+ Splice a fuse</b> · 4 slots free</div>
+          <div class="vstop last"><span class="term dead"></span><div class="end" style="color:var(--muted)">Payees <span>6 saved</span></div></div>
+          
+        </div>
+      </div>
+
+      <div class="m-sec">
+        <h2>Today <span>5 paid · 3 stopped</span></h2>
+        <ul class="m-dec">
+          <li><time>14:09</time><div><span class="no">Stopped</span> · Weather API<div class="why">Breaker still open</div></div><span class="amt">1.200000</span></li>
+          <li><time>14:02</time><div><span class="no">Stopped</span> · <span class="addr">0x9f3e…c41a</span><div class="why">Not a saved payee; Breaker tripped</div></div><span class="amt">2.500000</span></li>
+          <li><time>13:10</time><div><span class="yes">Paid</span> · Polyglot Translate</div><span class="amt">3.000000</span></li>
+          <li><time>12:30</time><div><span class="yes">Paid</span> · Render Farm Co<div class="why">Signed off by Ngozi and Sam</div></div><span class="amt">25.000000</span></li>
+          <li><time>11:52</time><div><span class="no">Stopped</span> · Render Farm Co<div class="why">Over the day's cap; no sign-offs</div></div><span class="amt">35.000000</span></li>
+        </ul>
+      </div>
+      <nav class="m-tabs">
+        <a class="on"><svg width="24" height="18" viewBox="0 0 24 18" fill="none"><path d="M0 9h24" stroke="currentColor" stroke-width="1.8"/><rect x="6" y="4" width="12" height="10" rx="5" stroke="currentColor" stroke-width="1.8" fill="#000"/></svg>Line</a>
+        <a><svg width="24" height="18" viewBox="0 0 24 18" fill="none"><path d="M1 9h22M5 9V3M10 9V13M15 9V5M19 9V14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Decisions</a>
+        <a><svg width="24" height="18" viewBox="0 0 24 18" fill="none"><path d="M0 9h7M17 9h7" stroke="currentColor" stroke-width="1.8"/><rect x="7" y="4" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.8" stroke-dasharray="3 2"/></svg>Market</a>
+        <a><svg width="24" height="18" viewBox="0 0 24 18" fill="none"><circle cx="12" cy="6" r="4" stroke="currentColor" stroke-width="1.8"/><path d="M4 18c1-4 4.5-6 8-6s7 2 8 6" stroke="currentColor" stroke-width="1.8"/></svg>Payees</a>
+      </nav>
+    </section>
+    <div class="notes" style="max-width:390px"><ol>
+      <li data-n="6"><span><b>The wire turns vertical</b> on phones and runs down the left edge. The lime fill drains downward from the agent to the first break; pull-to-refresh sends a pulse down the line.</span></li>
+    </ol></div>
+  </div>
+  </div>
+</div>
+</body>
+</html>
