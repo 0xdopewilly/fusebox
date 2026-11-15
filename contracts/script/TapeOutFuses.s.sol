@@ -11,15 +11,16 @@ import {XLayer} from "./XLayer.sol";
 /// @notice Buys transistors, tapes out the four shipped fuses and lists them in the registry.
 ///         The broadcaster becomes the designer (circuit NFT owner, fee recipient).
 ///
-///         Env: REGISTRY (required), PROCESSOR (default OrderGuard), FEE (USDT0 base units per decision,
-///         default 1000 = 0.001 USDT0), METADATA_BASE (default "ipfs://fusebox/").
+///         Env: REGISTRY (required), PROCESSOR (default OrderGuard), FEE (one USDT0 fee in base units for every
+///         fuse; unset = the per-fuse defaults below), METADATA_BASE (default "ipfs://fusebox/").
+///         Default fees per decision: Daily Cap 0.001, Payee Guard 0.001, Breaker 0.0005, Two of Three 0.002 USDT0.
 ///         Circuit ids are read from the TapedOut return value; check them against the events in the receipts.
 contract TapeOutFuses is Script {
     function run() external returns (uint256[] memory fuseIds) {
         require(block.chainid == XLayer.CHAIN_ID, "not X Layer");
         FuseRegistry registry = FuseRegistry(vm.envAddress("REGISTRY"));
         ITapeoutProcessor processor = ITapeoutProcessor(vm.envOr("PROCESSOR", XLayer.ORDERGUARD_PROCESSOR));
-        uint96 fee = uint96(vm.envOr("FEE", uint256(1_000)));
+        uint256 flat = vm.envOr("FEE", uint256(0));
         string memory base = vm.envOr("METADATA_BASE", string("ipfs://fusebox/"));
         require(registry.isTrustedProcessor(address(processor)), "processor not trusted by registry");
 
@@ -47,9 +48,17 @@ contract TapeOutFuses is Script {
         for (uint256 k; k < FuseFixtures.COUNT; ++k) {
             FuseFixtures.Fixture memory f = FuseFixtures.fixture(k);
             uint256 id = processor.tapeout{value: tapeFee}(f.netlist, f.nIn, f.nOut);
+            uint96 fee = flat > 0 ? uint96(flat) : defaultFee(f.key);
             fuseIds[k] = registry.list(address(processor), id, f.socket, f.netlistHash, fee, string.concat(base, f.key));
             console.log(string.concat(f.key, ": circuit id / fuse id"), id, fuseIds[k]);
         }
         vm.stopBroadcast();
+    }
+
+    function defaultFee(string memory key) internal pure returns (uint96) {
+        bytes32 h = keccak256(bytes(key));
+        if (h == keccak256("breaker")) return 500;
+        if (h == keccak256("approval-2of3")) return 2_000;
+        return 1_000; // daily-cap, payee-guard
     }
 }
