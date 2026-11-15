@@ -70,9 +70,9 @@
 .tbl tr { transition: background-color 0.4s; }
 .tbl tbody tr:hover { background: rgba(255, 255, 255, 0.025); }
 .tbl tr.new { background: rgba(187, 254, 47, 0.08); }
-.tbl .res { font: 600 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
-.tbl .res.ok { color: var(--lime); }
-.tbl .res.no { color: var(--red); }
+.tbl .res, .dcard .res { font: 600 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.tbl .res.ok, .dcard .res.ok { color: var(--lime); }
+.tbl .res.no, .dcard .res.no { color: var(--red); }
 .tbl .num { font-family: var(--mono); font-size: 13px; text-align: right; white-space: nowrap; }
 .tbl .memo { color: var(--soft); }
 .tbl .memo small { display: block; color: var(--dim); font: 500 10.5px var(--mono); margin-top: 4px; letter-spacing: 0.04em; }
