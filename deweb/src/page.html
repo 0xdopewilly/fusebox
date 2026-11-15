@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fusebox · on-chain edition</title>
+<meta name="description" content="Fusebox, stored byte for byte on X Layer in the container of TapeOut circuit #15 and served by TapeKit. Every number is read live from the chain.">
+<style>/*CSS*/</style>
+</head>
+<body>
+<div class="grid" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+
+<header class="bar">
+  <div class="cell logo"><svg width="30" height="14" viewBox="0 0 30 14" aria-hidden="true"><rect x=".5" y="1.5" width="6" height="11" fill="#f2f2ee"/><rect x="23.5" y="1.5" width="6" height="11" fill="#f2f2ee"/><rect x="6.5" y="3.5" width="17" height="7" fill="none" stroke="#f2f2ee"/><path d="M6.5 7h4.5l1.6-2.6 2 5.2 1.6-2.6h7.3" fill="none" stroke="#bbfe2f" stroke-width="1.4"/></svg>Fusebox</div>
+  <div class="cell m mute">On-chain edition<br><span class="lime">15.2.272.tape</span></div>
+  <div class="cell m mute">Stored on X Layer<br>Container of circuit #15</div>
+  <div class="cell m mute"><span class="dot live" id="bdot"></span> Block <span id="block" style="color:var(--ink)">…</span><br>Chain 196</div>
+  <div class="end"><span class="chip m">No server</span><a class="m verify" href="/.tape/status">Verify this page</a></div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="eyebrow m"><span class="lime">[01]</span> No server, no DNS, no build step. Just X Layer.</div>
+    <h1 class="disp">Your agent pays.<br><span class="lime">[Circuits]</span> decide.</h1>
+    <div class="hl">
+    <p class="lede">Fusebox wires an AI agent's wallet through small logic circuits taped out on TapeOut. A payment reaches the payee only if every fuse holds. <b>This copy of Fusebox has no server.</b> Its bytes live on X Layer in the container of circuit #15, TapeKit serves them, and your browser reads every number below straight from the chain.</p>
+    <div class="tags m"><span class="tag"><span class="dot"></span>Served by TapeKit</span><span class="tag">DeWEB · 15.2.272.tape</span><span class="tag">Read-only · No wallet needed</span></div>
+    </div>
+    <div class="fuse-art" aria-hidden="true">
+      <img src="__IMG_INTACT__" width="1539" height="729" alt="">
+      <div class="call m c2">This page<em id="ctr">Container 0x7af0…8BDB3</em></div>
+      <div class="call m c1">Fuse #15<em>Daily Cap · 24 inputs</em></div>
+    </div>
+  </section>
+
+  <section class="strip" id="strip">
+    <div class="first m"><span><span class="dot live"></span> Live on X Layer</span><span class="mute" id="asof">Reading the chain…</span></div>
+    <div><b data-k="decisions">—</b><span class="lab m">Fuse decisions on Atlas</span></div>
+    <div><b data-k="blocked" class="red">—</b><span class="lab m">Payments stopped</span></div>
+    <div><b data-k="earned">—</b><span class="lab m">USDT0 earned by designers</span></div>
+    <div><b data-k="fuses">—</b><span class="lab m">Fuses in the registry</span></div>
+    <div><b data-k="circuits" class="lime" style="font-size:24px">—</b><span class="lab m">TapeOut circuits on Atlas</span></div>
+  </section>
+
+  <section class="sec" id="try">
+    <div class="head">
+      <div class="n m rv">[02] Try to scam it</div>
+      <h2 class="disp rv" style="--i:1">Scam <span class="lime">[Atlas]</span>.</h2>
+      <p class="rv" style="--i:2">Atlas is a live Fusebox wallet on X Layer with four fuses. Pick a trick an invoice scammer would use, and your browser asks Atlas's <code class="m lime">check()</code> what its fuses would do. It's a read-only call: no wallet, no gas, nothing moves.</p>
+    </div>
+    <div class="try">
+      <div class="left">
+        <div class="tricks" id="tricks"></div>
+        <div class="fields">
+          <div class="field"><label class="m" for="to">Pay to</label><input id="to" spellcheck="false" autocomplete="off" placeholder="0x…"></div>
+          <div class="field"><label class="m" for="amount">Amount, USDT0</label><input id="amount" inputmode="decimal" autocomplete="off"></div>
+        </div>
+        <p class="memo" id="memo"></p>
+        <button class="run" id="run"><span id="runl">Run it through Atlas's fuses</span><span class="k">→</span></button>
+        <p class="err m" id="err" hidden></p>
+      </div>
+      <div class="right">
+        <div class="panel" id="panel">
+          <div class="ph m"><span>Atlas · check()</span><span id="pblock">Waiting</span></div>
+          <div class="art"><img class="intact" src="__IMG_INTACT__" width="1539" height="729" alt=""><img class="blown" src="__IMG_BLOWN__" width="1539" height="729" alt=""></div>
+          <div class="verdict idle" id="verdict">Pick a trick.</div>
+          <div class="why" id="why"></div>
+          <div class="pf m" id="pf">Each fuse is a NAND circuit on TapeOut's OrderGuard processor. The wallet runs them all in one call.</div>
+        </div>
+        <div class="gap-note" id="gap" hidden><b>No fuse on this line checks for duplicate invoices.</b> That's an honest gap and an opening: anyone can design a duplicate-invoice fuse, tape it out on TapeOut and earn a fee every time a wallet uses it.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="fuses">
+    <div class="head">
+      <div class="n m rv">[03] The circuits</div>
+      <h2 class="disp rv" style="--i:1">Four fuses, <span class="lime">[four netlists]</span>.</h2>
+      <p class="rv" style="--i:2">Each fuse is a circuit someone taped out on TapeOut. The wiring below is each circuit's real netlist, read from the processor as this page loaded: lime is a NAND gate, white is a one-bit latch.</p>
+    </div>
+    <div class="fuses" id="fcards"></div>
+  </section>
+
+  <section class="sec" id="contracts">
+    <div class="head">
+      <div class="n m rv">[04] The contracts</div>
+      <h2 class="disp rv" style="--i:1">Every <span class="lime">[address]</span>.</h2>
+      <p class="rv" style="--i:2">All on X Layer mainnet, chain 196. The registry, factory and Atlas have verified source on Sourcify. This page links nowhere off-chain, so copy an address into any explorer.</p>
+    </div>
+    <div class="table" id="table"></div>
+  </section>
+
+  <footer class="foot">
+    <div class="lines m">
+      <div class="mute">The full app, with wallets you can wire up<b>fusebox-xlayer.vercel.app</b></div>
+      <div class="mute">Give your agent a Fusebox wallet<b>npx -y fusebox-mcp</b></div>
+      <div class="mute">Source, MIT<b>github.com/0xdopewilly/fusebox</b></div>
+    </div>
+    <div class="word" aria-hidden="true">Fusebox</div>
+  </footer>
+</main>
+<script>/*JS*/</script>
+</body>
+</html>

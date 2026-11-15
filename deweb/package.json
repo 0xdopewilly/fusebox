@@ -1,0 +1,15 @@
+{
+  "name": "fusebox-deweb",
+  "private": true,
+  "type": "module",
+  "description": "Fusebox's on-chain edition: one self-contained page stored on X Layer in the container of TapeOut circuit #15, served by TapeKit.",
+  "scripts": {
+    "build": "node build.mjs",
+    "publish:fork": "node publish.mjs --rpc http://127.0.0.1:8547 --unlocked",
+    "publish:mainnet": "node publish.mjs --rpc https://rpc.xlayer.tech"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.12",
+    "viem": "2.57.12"
+  }
+}
