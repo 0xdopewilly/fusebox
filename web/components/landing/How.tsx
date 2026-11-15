@@ -146,6 +146,11 @@ export default function How() {
       gsap.timeline({ scrollTrigger: { trigger: q(".body"), start: "top 96px", end: "+=2600", pin: true, scrub: 0.6, anticipatePin: 1, onUpdate: (s) => setStep(s.progress) } }).add(tl);
     });
     mm.add("(max-width: 899px)", () => {
+      // phones: the line is wider than the screen, so the view pans with the current, fuse by fuse
+      const wl = q<HTMLElement>(".wireline");
+      const at = (xSvg: number) => () => Math.max(0, (xSvg / 880) * wl.scrollWidth - wl.clientWidth / 2);
+      const pan = (xSvg: number, t: number, d = 0.3) => tl.to(wl, { scrollLeft: at(xSvg), duration: d, ease: "power2.inOut" }, t);
+      pan(XS[0] + FW / 2, 0.95); pan(BREAK, 1.3); pan(XS[2] + FW / 2, 1.95, 0.25); pan(X1 - NODE / 2, 2.25, 0.35); pan(XS[3] + FW / 2, 2.95, 0.3); pan(0, 3.55, 0.4);
       tl.pause(0);
       tl.eventCallback("onUpdate", () => { renderStatus(tl.time()); setStep(tl.progress()); });
       gsap.timeline({ scrollTrigger: { trigger: q(".panel"), start: "top 70%", once: true } }).add(() => { tl.timeScale(0.55).play(); });

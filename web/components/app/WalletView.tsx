@@ -142,7 +142,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
 
       <div className="blockhead" data-b><h2 className="disp">Decisions</h2><span className="m mute">{a.counts.decisions} on-chain · {a.counts.allowed} paid · {a.counts.blocked} stopped</span></div>
       <div data-b><Scope rows={a.decisions} /></div>
-      <div style={{ overflowX: "auto" }} data-b>
+      <div className="dtable" style={{ overflowX: "auto" }} data-b>
         <table className="tbl decisions">
           <thead><tr><th>#</th><th className="hide-s">Time (UTC)</th><th>Result</th><th style={{ textAlign: "right" }}>Amount</th><th>To · what the agent said</th><th>Fuses</th><th className="hide-s" style={{ textAlign: "right" }}>Fees</th><th className="hide-s">Tx</th></tr></thead>
           <tbody>
@@ -160,6 +160,28 @@ export default function WalletView({ address, from }: { address?: string; from?:
             ))}
           </tbody>
         </table>
+      </div>
+      {/* phones: each decision as a card instead of a squeezed table */}
+      <div className="dcards" data-b>
+        {a.decisions.map((r) => {
+          const needs2of3 = !r.allowed && a.fuses.some((x, i) => x.key === "approval-2of3" && r.status[i] === "blew");
+          const blew = a.fuses.filter((_, i) => r.status[i] !== "pass").map((f) => f.name);
+          return (
+            <div key={r.id} className={`dcard ${r.allowed ? "ok" : "no"}${fresh.has(r.id) ? " new" : ""}`}>
+              <div className="dc-top m"><span className="mute">#{r.id} · {new Date(r.time * 1000).toISOString().slice(5, 16).replace("T", " ")} UTC</span><span className={`res ${r.allowed ? "ok" : "no"}`}>{r.allowed ? "Paid" : "Stopped"}</span></div>
+              <div className="dc-amt"><b>{fmt(r.amount)}</b><span className="m mute">USDT0 → {short(r.to)} · {isPayee(r.to) ? "saved payee" : "stranger"}</span></div>
+              <p className="dc-memo">“{r.memo}”</p>
+              <div className="dc-foot m">
+                <span className="sq">{r.status.map((s, i) => <i key={i} className={s} title={`${a.fuses[i]?.name ?? "fuse"}: ${s}`} />)}</span>
+                <span className="mute">{r.allowed ? "All fuses held" : `${blew.join(", ")} blew`}</span>
+              </div>
+              <div className="dc-links m">
+                <a href={`${OKLINK}/tx/${r.tx}`} target="_blank" rel="noreferrer">Transaction ↗</a>
+                {needs2of3 && <Link className="lime" href={`/app/approve?wallet=${a.wallet}&to=${r.to}&amount=${r.amount}`}>Approve it →</Link>}
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <div className="side2" data-b>

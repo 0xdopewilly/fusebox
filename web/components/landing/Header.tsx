@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { gsap, useGSAP, introDone } from "@/lib/gsap";
 import Digits from "@/components/fx/Digits";
+import SiteMenu from "./SiteMenu";
 
 function useBlock() {
   const [block, setBlock] = useState<number | null>(null);
@@ -39,6 +40,7 @@ const NavLink = ({ href, label }: { href: string; label: string }) => (
 export default function Header() {
   const ref = useRef<HTMLElement>(null);
   const block = useBlock();
+  const [menu, setMenu] = useState(false);
 
   useGSAP(() => {
     const el = ref.current!;
@@ -72,10 +74,13 @@ export default function Header() {
       <nav className="m" style={{ gridColumn: "5 / 7" }} data-h>
         <NavLink href="#how" label="How" />
         <NavLink href="#fuses" label="Fuses" />
+        <NavLink href="#who" label="Who" />
         <NavLink href="#designers" label="Designers" />
-        <NavLink href="#build" label="Docs" />
+        <NavLink href="/docs" label="Docs" />
         <a className="btn lime" href="/app" data-cursor="Enter"><span className="roll"><span>Open app</span><span aria-hidden="true">Open app</span></span> <span className="k">↗</span></a>
+        <button className="menu-btn m" onClick={() => setMenu(true)} aria-label="Open the menu" aria-expanded={menu}><span>Menu</span><i /><i /></button>
       </nav>
+      <SiteMenu open={menu} onClose={() => setMenu(false)} />
     </header>
   );
 }

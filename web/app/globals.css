@@ -376,7 +376,8 @@ html.js .hero [data-in], html.js .hero .bigword { opacity: 0; animation: fx-fall
   .req { grid-template-columns: 1fr 1fr; }
   .req > div:nth-child(3) { grid-column: 1 / 3; border-left: 0; border-top: 1px solid var(--hair2); }
   .req b { font-size: 21px; }
-  .wireline { overflow-x: auto; }
+  .wireline { overflow-x: auto; scrollbar-width: none; }
+  .wireline::-webkit-scrollbar { display: none; }
   .wireline svg { min-width: 720px; }
   .payouts { grid-template-columns: 1fr 1fr; }
   .payouts > div:nth-child(3) { border-left: 0; }
@@ -432,3 +433,67 @@ html[data-intro="skip"] .intro { display: none; }
   .lp-cell { padding: 16px 0 16px 12px; } .lp-cell:nth-child(odd) { border-left: 0; padding-left: 0; } .lp-cell:nth-child(n+3) { border-top: 1px solid var(--hair2); }
   .lp-cell b { font-size: 24px; }
 }
+
+/* ---------- site menu (phones): sections hang off one lime wire ---------- */
+.menu-btn { display: none; }
+html.menu-open, html.menu-open body { overflow: hidden; }
+.sm { position: fixed; inset: 0; z-index: 300; background: #000; display: flex; flex-direction: column; color: var(--ink); }
+.sm::before { content: ""; position: absolute; inset: 0 16px; background: linear-gradient(90deg, var(--hair) 1px, transparent 1px) 0 0 / 50% 100%; pointer-events: none; border-right: 1px solid var(--hair); }
+.sm-top { position: relative; height: 60px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--hair2); }
+.sm-top .logo { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 800; font-variation-settings: "wdth" 110; font-size: 18px; letter-spacing: -0.01em; }
+.sm-x { display: inline-flex; align-items: center; gap: 12px; height: 38px; padding: 0 4px 0 12px; color: var(--soft); }
+.sm-x i { position: relative; width: 18px; height: 18px; }
+.sm-x i::before, .sm-x i::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1.5px; background: var(--lime); transform: rotate(45deg); }
+.sm-x i::after { transform: rotate(-45deg); }
+.sm-body { position: relative; flex: 1; overflow-y: auto; padding: 26px 16px 18px 48px; }
+.sm-wire { position: absolute; left: 25px; top: 38px; bottom: 30px; width: 1px; background: var(--lime); box-shadow: 0 0 8px rgba(187, 254, 47, 0.45); }
+.sm-item { position: relative; display: grid; grid-template-columns: 30px 1fr; align-items: baseline; padding: 13px 0; border-bottom: 1px solid var(--hair); }
+.sm-item .node { position: absolute; left: -28px; top: 22px; width: 9px; height: 9px; background: #000; border: 1px solid var(--lime); }
+.sm-item:active .node, .sm-item:hover .node { background: var(--lime); }
+.sm-item .n { color: var(--lime); }
+.sm-item .t b { display: block; font-family: var(--display); font-weight: 800; font-variation-settings: "wdth" 104; text-transform: uppercase; font-size: clamp(28px, 8.4vw, 40px); letter-spacing: -0.035em; line-height: 0.95; }
+.sm-item .t small { display: block; margin-top: 6px; color: var(--mute); font-size: 13.5px; }
+.sm-pages { margin-top: 16px; }
+.sm-page { display: flex; align-items: center; justify-content: space-between; padding: 15px 0; color: var(--soft); font-size: 12px; }
+.sm-page .node { top: 50%; margin-top: -5px; border-color: var(--hair3); }
+.sm-page .k { color: var(--dim); font-size: 15px; }
+.sm-foot { position: relative; padding: 14px 16px calc(18px + env(safe-area-inset-bottom)); border-top: 1px solid var(--hair2); background: #000; }
+.sm-cta { width: 100%; height: 56px; justify-content: space-between; font-size: 13px; }
+.sm-meta { display: flex; justify-content: space-between; margin-top: 14px; }
+.sm-meta .live { margin-right: 8px; }
+@media (max-width: 900px) {
+  .top nav { gap: 10px; }
+  .top nav .btn { height: 38px; margin-left: 0; padding: 0 12px; }
+  .menu-btn { display: inline-flex; align-items: center; gap: 10px; height: 38px; padding: 0 12px; border: 1px solid var(--hair3); color: var(--ink); position: relative; }
+  .menu-btn i { display: block; width: 16px; height: 1.5px; background: var(--ink); position: absolute; right: 12px; }
+  .menu-btn i:nth-of-type(1) { top: 15px; } .menu-btn i:nth-of-type(2) { top: 21px; width: 10px; background: var(--lime); }
+  .menu-btn span { padding-right: 24px; }
+}
+@media (max-width: 440px) {
+  .top .logo sup { display: none; }
+  .menu-btn span, .top .menu-btn span { font-size: 0; padding-right: 0; }
+  .menu-btn { width: 42px; padding: 0; justify-content: center; }
+  .menu-btn i { right: 13px; }
+}
+@media (max-width: 360px) { .top nav .btn .k, .sitebar nav .btn .k { display: none; } }
+
+/* ---------- inner-page header (docs, 404) ---------- */
+.sitebar { position: sticky; top: 0; z-index: 50; height: 68px; display: flex; align-items: center; justify-content: space-between; padding: 0 var(--pad); background: rgba(0, 0, 0, 0.82); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--hair); }
+.sitebar .logo { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 800; font-variation-settings: "wdth" 110; font-size: 19px; letter-spacing: -0.01em; }
+.sitebar nav { display: flex; align-items: center; gap: 22px; }
+.sitebar nav .btn { height: 36px; }
+.sitebar .navlink.on span:first-child { color: var(--lime); }
+@media (max-width: 900px) {
+  .sitebar { height: 60px; padding: 0 16px; }
+  .sitebar nav { gap: 10px; }
+  .sitebar nav .navlink { display: none; }
+  .sitebar nav .btn { height: 38px; padding: 0 12px; }
+}
+
+/* ---------- 404 ---------- */
+.nf { position: relative; z-index: 4; padding: 64px 0 120px; min-height: calc(100svh - 68px); }
+.nf h1 { font-size: clamp(64px, 11vw, 168px); margin-top: 18px; }
+.nf img { display: block; width: min(720px, 100%); height: auto; image-rendering: pixelated; margin: 24px 0 8px -10px; mix-blend-mode: lighten; }
+.nf p { font-size: 18px; line-height: 1.55; color: var(--soft); max-width: 560px; }
+.nf-links { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+@media (max-width: 900px) { .nf { padding-top: 40px; } .nf p { font-size: 16px; } .nf-links .btn { width: 100%; justify-content: space-between; } }
