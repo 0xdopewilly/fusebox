@@ -1,6 +1,6 @@
 "use client";
 import { useRef } from "react";
-import { gsap, SplitText, useGSAP, reduced } from "@/lib/gsap";
+import { gsap, SplitText, useGSAP, reduced, whenNear } from "@/lib/gsap";
 import Reg from "./Reg";
 
 /** Falling truth-table bits; the ones near the pointer light up lime. */
@@ -48,30 +48,35 @@ function startRain(canvas: HTMLCanvasElement, host: HTMLElement) {
 
 export default function Closing() {
   const root = useRef<HTMLElement>(null);
-  useGSAP(() => {
-    const el = root.current!;
-    const stop = startRain(el.querySelector<HTMLCanvasElement>(".rain")!, el);
-    const hot = el.querySelector<HTMLElement>(".word-hot")!;
-    const spot = (e: PointerEvent) => { const r = hot.getBoundingClientRect(); hot.style.setProperty("--mx", `${e.clientX - r.left}px`); hot.style.setProperty("--my", `${e.clientY - r.top}px`); };
-    el.addEventListener("pointermove", spot);
-    if (!reduced()) {
-      const h = SplitText.create(el.querySelector("h2 .txt")!, { type: "chars", charsClass: "char" });
-      const tl = gsap.timeline({ scrollTrigger: { trigger: el, start: "top 65%" } });
-      tl.from(h.chars, { yPercent: 120, rotate: 6, duration: 1.1, stagger: 0.035, ease: "snap" })
-        .from(el.querySelector("h2 .dot"), { scale: 0, duration: 0.6, ease: "back.out(3)" }, 0.5)
-        .from(el.querySelectorAll(".row2 > *"), { y: 30, autoAlpha: 0, duration: 1, stagger: 0.1 }, 0.4)
-        .from(el.querySelectorAll(".foot > div"), { y: 20, autoAlpha: 0, duration: 0.9, stagger: 0.07 }, 0.6)
-        .from(el.querySelector(".bigword"), { yPercent: 40, duration: 1.6 }, 0.3);
-      gsap.set(el.querySelector("h2"), { overflow: "clip" });
-    }
-    return () => { stop(); el.removeEventListener("pointermove", spot); };
+  useGSAP((_, contextSafe) => {
+    // below the fold: set this section up only as it nears the viewport, so hydration stays light
+    let undo: void | (() => void);
+    const cancel = whenNear(root.current, contextSafe!(() => { undo = (() => {
+      const el = root.current!;
+      const stop = startRain(el.querySelector<HTMLCanvasElement>(".rain")!, el);
+      const hot = el.querySelector<HTMLElement>(".word-hot")!;
+      const spot = (e: PointerEvent) => { const r = hot.getBoundingClientRect(); hot.style.setProperty("--mx", `${e.clientX - r.left}px`); hot.style.setProperty("--my", `${e.clientY - r.top}px`); };
+      el.addEventListener("pointermove", spot);
+      if (!reduced()) {
+        const h = SplitText.create(el.querySelector("h2 .txt")!, { type: "chars", charsClass: "char", aria: "none" }); // the h2 carries the label
+        const tl = gsap.timeline({ scrollTrigger: { trigger: el, start: "top 65%" } });
+        tl.from(h.chars, { yPercent: 120, rotate: 6, duration: 1.1, stagger: 0.035, ease: "snap" })
+          .from(el.querySelector("h2 .dot"), { scale: 0, duration: 0.6, ease: "back.out(3)" }, 0.5)
+          .from(el.querySelectorAll(".row2 > *"), { y: 30, autoAlpha: 0, duration: 1, stagger: 0.1 }, 0.4)
+          .from(el.querySelectorAll(".foot > div"), { y: 20, autoAlpha: 0, duration: 0.9, stagger: 0.07 }, 0.6)
+          .from(el.querySelector(".bigword"), { yPercent: 40, duration: 1.6 }, 0.3);
+        gsap.set(el.querySelector("h2"), { overflow: "clip" });
+      }
+      return () => { stop(); el.removeEventListener("pointermove", spot); };
+    })(); }));
+    return () => { cancel(); if (typeof undo === "function") undo(); };
   }, []);
   return (
     <section className="cta reg" ref={root}>
       <Reg />
       <div className="wrap">
         <div className="m" style={{ marginBottom: 34 }}><span className="lime" data-scr>[08]</span> <span className="mute" data-scr>Get started</span></div>
-        <h2 className="disp"><span className="txt">Wire it up</span><span className="dot" /></h2>
+        <h2 className="disp" aria-label="Wire it up"><span className="txt" aria-hidden="true">Wire it up</span><span className="dot" aria-hidden="true" /></h2>
         <div className="row2">
           <p>Give your agent a wallet with fuses on X Layer, or tape out a fuse of your own and earn from every decision it makes.</p>
           <div className="ctas">

@@ -60,6 +60,7 @@ export default function ApproveView() {
         <h1 className="disp" data-a>Two of <span className="lime">[three]</span>.</h1>
         <p data-a>Above its threshold, a wallet with the Two of Three fuse pays only what two of its three approvers have signed off: this exact payee, this exact amount. Approvals expire {Math.round(ttl / 3600)} hours after the first one.</p>
       </section>
+      <h2 className="sr">Approve a payment</h2>
       <section className="wz">
         <div className="wz-main" data-a>
           <div className="wz-sec">
@@ -77,10 +78,10 @@ export default function ApproveView() {
                 </div>
               )}
               <div className="fields m" style={{ marginTop: 0 }}>
-                <div className="field"><label>Wallet</label><input value={wallet} onChange={(e) => setWallet(e.target.value)} spellCheck={false} /></div>
+                <div className="field"><label>Wallet</label><input aria-label="Wallet" value={wallet} onChange={(e) => setWallet(e.target.value)} spellCheck={false} /></div>
                 <div className="prow">
-                  <div className="field" style={{ flex: 2 }}><label>Pay to</label><input value={to} onChange={(e) => setTo(e.target.value)} placeholder="0x…" spellCheck={false} /></div>
-                  <div className="field"><label>Amount, USDT0</label><input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" /></div>
+                  <div className="field" style={{ flex: 2 }}><label>Pay to</label><input aria-label="Pay to" value={to} onChange={(e) => setTo(e.target.value)} placeholder="0x…" spellCheck={false} /></div>
+                  <div className="field"><label>Amount, USDT0</label><input aria-label="Amount, USDT0" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" /></div>
                 </div>
                 {threshold !== null && amt && Number(amount) <= threshold && <div className="hint2">{amount} USDT0 is under this wallet&apos;s {threshold} USDT0 threshold, so Two of Three already lets it through.</div>}
                 {two < 0 && data && <div className="hint2">This wallet has no Two of Three fuse.</div>}
@@ -88,7 +89,7 @@ export default function ApproveView() {
             </div>
           </div>
         </div>
-        <aside className="wz-side" data-a>
+        <div className="wz-side" data-a>
           <div className="summary">
             <div className="sh2 m"><span className="mute">Approvals</span><span className={count >= 2 ? "lime" : "mute"}>{count} of 2 needed</span></div>
             <div className="rows">
@@ -106,7 +107,7 @@ export default function ApproveView() {
               {count >= 2 && <div className="done-card"><h4>Cleared.</h4><p style={{ color: "var(--soft)", fontSize: 14, lineHeight: 1.5 }}>Two approvers signed this exact payment. When the agent retries it, Two of Three holds, and the other fuses still decide.</p></div>}
             </div>
           </div>
-        </aside>
+        </div>
       </section>
     </div>
   );

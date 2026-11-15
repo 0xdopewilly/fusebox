@@ -1,6 +1,6 @@
 "use client";
 import { useRef } from "react";
-import { gsap, SplitText, useGSAP, reduced } from "@/lib/gsap";
+import { gsap, SplitText, useGSAP, reduced, whenNear } from "@/lib/gsap";
 import Reg from "./Reg";
 
 const WHO = [
@@ -11,16 +11,21 @@ const WHO = [
 
 export default function Users() {
   const root = useRef<HTMLElement>(null);
-  useGSAP(() => {
-    const el = root.current!;
-    if (reduced()) return;
-    const h = SplitText.create(el.querySelector("h2")!, { type: "lines", linesClass: "line-mask", mask: "lines" });
-    gsap.from(h.lines, { yPercent: 105, duration: 1.2, stagger: 0.08, scrollTrigger: { trigger: el.querySelector(".body"), start: "top 75%" } });
-    gsap.from(el.querySelectorAll(".card"), { y: 34, autoAlpha: 0, duration: 0.9, stagger: 0.12, scrollTrigger: { trigger: el.querySelector(".cards"), start: "top 80%" } });
-    const tl = gsap.timeline({ scrollTrigger: { trigger: el.querySelector(".earn"), start: "top 78%" } });
-    tl.from(el.querySelectorAll(".earn .node"), { autoAlpha: 0, scale: 0.92, transformOrigin: "50% 50%", duration: 0.6, stagger: 0.18 })
-      .from(el.querySelectorAll(".earn .wire"), { drawSVG: "0%", duration: 0.9, ease: "power2.inOut", stagger: 0.1 }, 0.2)
-      .from(el.querySelectorAll(".earn .pulse"), { autoAlpha: 0, duration: 0.3 }, 1);
+  useGSAP((_, contextSafe) => {
+    // below the fold: set this section up only as it nears the viewport, so hydration stays light
+    let undo: void | (() => void);
+    const cancel = whenNear(root.current, contextSafe!(() => { undo = (() => {
+      const el = root.current!;
+      if (reduced()) return;
+      const h = SplitText.create(el.querySelector("h2")!, { type: "lines", linesClass: "line-mask", mask: "lines" });
+      gsap.from(h.lines, { yPercent: 105, duration: 1.2, stagger: 0.08, scrollTrigger: { trigger: el.querySelector(".body"), start: "top 75%" } });
+      gsap.from(el.querySelectorAll(".card"), { y: 34, autoAlpha: 0, duration: 0.9, stagger: 0.12, scrollTrigger: { trigger: el.querySelector(".cards"), start: "top 80%" } });
+      const tl = gsap.timeline({ scrollTrigger: { trigger: el.querySelector(".earn"), start: "top 78%" } });
+      tl.from(el.querySelectorAll(".earn .node"), { autoAlpha: 0, scale: 0.92, transformOrigin: "50% 50%", duration: 0.6, stagger: 0.18 })
+        .from(el.querySelectorAll(".earn .wire"), { drawSVG: "0%", duration: 0.9, ease: "power2.inOut", stagger: 0.1 }, 0.2)
+        .from(el.querySelectorAll(".earn .pulse"), { autoAlpha: 0, duration: 0.3 }, 1);
+    })(); }));
+    return () => { cancel(); if (typeof undo === "function") undo(); };
   }, []);
   return (
     <section className="users reg" ref={root} id="who">

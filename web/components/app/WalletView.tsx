@@ -82,6 +82,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
   return (
     <div className="page" ref={root}>
       <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
+      <h1 className="sr">{a.isAtlas ? "Atlas, the public Fusebox demo wallet" : `Fusebox wallet ${short(a.wallet)}`}</h1>
       <section className="w-hero">
         <div className="who" data-b>
           <div className="m">{a.isAtlas ? <><span className="lime">[Atlas]</span> <span className="mute">ops agent · public demo wallet · owner {short(a.owner)}</span></> : <><span className="lime">[Fusebox wallet]</span> <span className="mute">owner {short(a.owner)} · agent {short(a.agent)}</span></>}</div>
@@ -143,7 +144,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
 
       <div className="blockhead" data-b><h2 className="disp">Decisions</h2><span className="m mute">{a.counts.decisions} on-chain · {a.counts.allowed} paid · {a.counts.blocked} stopped</span></div>
       <div data-b><Scope rows={a.decisions} /></div>
-      <div className="dtable" style={{ overflowX: "auto" }} data-b>
+      <div className="dtable" style={{ overflowX: "auto" }} data-b tabIndex={0} role="region" aria-label="Decisions table">
         <table className="tbl decisions">
           <thead><tr><th>#</th><th className="hide-s">Time (UTC)</th><th>Result</th><th style={{ textAlign: "right" }}>Amount</th><th>To · what the agent said</th><th>Fuses</th><th className="hide-s" style={{ textAlign: "right" }}>Fees</th><th className="hide-s">Tx</th></tr></thead>
           <tbody>

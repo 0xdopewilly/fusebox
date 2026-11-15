@@ -13,7 +13,7 @@
 :root {
 --bg: #000; --panel: #0b0b0b; --panel2: #121212;
 --hair: rgba(255, 255, 255, 0.07); --hair2: rgba(255, 255, 255, 0.13); --hair3: rgba(255, 255, 255, 0.26);
---ink: #f2f2ee; --soft: #c9c9c4; --mute: #8d8d89; --dim: #585855;
+--ink: #f2f2ee; --soft: #c9c9c4; --mute: #9d9d98; --dim: #80807c;
 --lime: #bbfe2f; --lime-ink: #0c1400; --olive: #293b0d; --red: #ff5232;
 --display: "Archivo", system-ui, sans-serif; --sans: "Geist", system-ui, sans-serif; --mono: "Geist Mono", ui-monospace, monospace;
 --pad: 32px; --ease: cubic-bezier(0.16, 1, 0.3, 1);
@@ -22,6 +22,7 @@
 html { background: var(--bg); color-scheme: dark; scroll-behavior: smooth; }
 body { background: var(--bg); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; overflow-x: clip; }
 a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
 button, input { font: inherit; color: inherit; background: none; border: 0; }
 button { cursor: pointer; }
 ::selection { background: var(--lime); color: var(--lime-ink); }
@@ -147,6 +148,7 @@ background: var(--lime); color: var(--lime-ink); font-family: var(--mono); font-
 .foot .lines > div { padding: 22px 14px 26px 0; }
 .foot .lines > div + div { padding-left: 14px; border-left: 1px solid var(--hair); }
 .foot .lines b { display: block; margin-top: 8px; font-family: var(--mono); font-weight: 500; font-size: 14px; color: var(--ink); text-transform: none; letter-spacing: 0; word-break: break-all; }
+.word::before { content: "Fusebox"; }
 .word { font-family: var(--display); font-weight: 800; text-transform: uppercase; font-size: 22.5vw; letter-spacing: -0.05em; line-height: 0.78; color: #111; margin: 40px calc(var(--pad) * -1) 0; white-space: nowrap; user-select: none; overflow: hidden; }
 .rv { opacity: 0; transform: translateY(22px); transition: opacity 0.9s var(--ease), transform 0.9s var(--ease); transition-delay: calc(var(--i, 0) * 70ms); }
 .rv.in { opacity: 1; transform: none; }
@@ -278,7 +280,7 @@ background: var(--lime); color: var(--lime-ink); font-family: var(--mono); font-
       <div class="mute">Give your agent a Fusebox wallet<b>npx -y fusebox-mcp</b></div>
       <div class="mute">Source, MIT<b>github.com/0xdopewilly/fusebox</b></div>
     </div>
-    <div class="word" aria-hidden="true">Fusebox</div>
+    <div class="word" aria-hidden="true"></div>
   </footer>
 </main>
 <script>(()=>{var p=(e,t)=>()=>(e&&(t=e(e=0)),t);function Vt(e,t){return e.exec(t)?.groups}var Wt=p(()=>{});function de(e){let t=e.type;if(Gt.test(e.type)&&"components"in e){t="(";let n=e.components.length;for(let i=0;i<n;i++){let s=e.components[i];t+=de(s),i<n-1&&(t+=", ")}let r=Vt(Gt,e.type);return t+=`)${r?.array||""}`,de({...e,type:t})}return"indexed"in e&&e.indexed&&(t=`${t} indexed`),e.name?`${t} ${e.name}`:t}var Gt,Xt=p(()=>{Wt();Gt=/^tuple(?<array>(\[(\d*)\])*)$/});function _(e){let t="",n=e.length;for(let r=0;r<n;r++){let i=e[r];t+=de(i),r!==n-1&&(t+=", ")}return t}var qt=p(()=>{Xt()});function qe(e){return e.type==="function"?`function ${e.name}(${_(e.inputs)})${e.stateMutability&&e.stateMutability!=="nonpayable"?` ${e.stateMutability}`:""}${e.outputs?.length?` returns (${_(e.outputs)})`:""}`:e.type==="event"?`event ${e.name}(${_(e.inputs)})`:e.type==="error"?`error ${e.name}(${_(e.inputs)})`:e.type==="constructor"?`constructor(${_(e.inputs)})${e.stateMutability==="payable"?" payable":""}`:e.type==="fallback"?`fallback() external${e.stateMutability==="payable"?" payable":""}`:"receive() external payable"}var Kt=p(()=>{qt()});var Yt=p(()=>{Kt()});function Z(e,{includeName:t=!1}={}){if(e.type!=="function"&&e.type!=="event"&&e.type!=="error")throw new me(e.type);return`${e.name}(${ye(e.inputs,{includeName:t})})`}function ye(e,{includeName:t=!1}={}){return e?e.map(n=>xr(n,{includeName:t})).join(t?", ":","):""}function xr(e,{includeName:t}){return e.type.startsWith("tuple")?`(${ye(e.components,{includeName:t})})${e.type.slice(5)}`:e.type+(t&&e.name?` ${e.name}`:"")}var Ke=p(()=>{H()});function E(e,{even:t=!1,strict:n=!0}={}){return!e||typeof e!="string"||t&&e.length%2!==0?!1:n?/^0x[0-9a-fA-F]*$/.test(e):e.startsWith("0x")}var j=p(()=>{});function h(e){return E(e,{strict:!1})?Math.ceil((e.length-2)/2):e.length}var V=p(()=>{j()});var Ye,Zt=p(()=>{Ye="2.57.12"});function Jt(e,t){return t?.(e)?e:e&&typeof e=="object"&&"cause"in e&&e.cause!==void 0?Jt(e.cause,t):t?null:e}var Ze,d,M=p(()=>{Zt();Ze={getDocsUrl:({docsBaseUrl:e,docsPath:t="",docsSlug:n})=>t?`${e??"https://viem.sh"}${t}${n?`#${n}`:""}`:void 0,version:`viem@${Ye}`},d=class e extends Error{constructor(t,n={}){let r=n.cause instanceof e?n.cause.details:n.cause?.message?n.cause.message:n.details,i=n.cause instanceof e&&n.cause.docsPath||n.docsPath,s=Ze.getDocsUrl?.({...n,docsPath:i}),o=[t||"An error occurred.","",...n.metaMessages?[...n.metaMessages,""]:[],...s?[`Docs: ${s}`]:[],...r?[`Details: ${r}`]:[],...Ze.version?[`Version: ${Ze.version}`]:[]].join(`

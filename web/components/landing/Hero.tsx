@@ -57,7 +57,7 @@ export default function Hero() {
     // ---- entrance ----
     const h1 = el.querySelector("h1")!;
     const lines = SplitText.create(h1, { type: "lines,chars", linesClass: "line-mask", charsClass: "char", mask: "lines" });
-    const sub = SplitText.create(el.querySelector(".sub p")!, { type: "lines", linesClass: "line-mask", mask: "lines" });
+    const sub = SplitText.create(el.querySelector(".sub p")!, { type: "lines", linesClass: "line-mask", mask: "lines", aria: "none" }); // lines keep whole words, so it reads as written
     const circuits = Array.from(h1.querySelectorAll(".lime .char"));
     const brackets = circuits.filter((c) => c.textContent === "[" || c.textContent === "]");
     const facts = Array.from(el.querySelectorAll<HTMLElement>(".facts b"));

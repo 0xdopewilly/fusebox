@@ -10,7 +10,7 @@ export default function SiteHeader({ active }: { active?: "docs" }) {
   return (
     <header className="sitebar">
       <Link className="logo" href="/"><Logo />FUSEBOX</Link>
-      <nav className="m">
+      <nav className="m" aria-label="Site">
         <Link className="navlink" href="/#how"><span>How</span><span aria-hidden="true">How</span></Link>
         <Link className="navlink" href="/#fuses"><span>Fuses</span><span aria-hidden="true">Fuses</span></Link>
         <Link className="navlink" href="/#who"><span>Who</span><span aria-hidden="true">Who</span></Link>

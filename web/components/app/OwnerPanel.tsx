@@ -31,12 +31,12 @@ export default function OwnerPanel({ data }: { data: Atlas }) {
         </div>
         <div>
           <p>Save a payee. Payee Guard still holds them to the trial amount until their cooling-off ends.</p>
-          <input value={payee} onChange={(e) => setPayee(e.target.value)} placeholder="0x…" spellCheck={false} />
+          <input aria-label="Payee address to save" value={payee} onChange={(e) => setPayee(e.target.value)} placeholder="0x…" spellCheck={false} />
           <button className="btn" disabled={q.running || !isAddress(payee.trim(), { strict: false })} onClick={() => one("Save payee", () => write({ ...W, functionName: "addPayee", args: [getAddress(payee.trim().toLowerCase())] }))}>Save payee</button>
         </div>
         <div>
           <p>Fee balance: {Number(data.feeBalance).toFixed(4)} USDT0. Withdraw any of it back to you.</p>
-          <input value={amt} onChange={(e) => setAmt(e.target.value)} placeholder="USDT0" inputMode="decimal" />
+          <input aria-label="USDT0 to withdraw" value={amt} onChange={(e) => setAmt(e.target.value)} placeholder="USDT0" inputMode="decimal" />
           <button className="btn" disabled={q.running || !(Number(amt) > 0) || Number(amt) > Number(data.feeBalance)} onClick={() => one("Withdraw fees", () => write({ ...W, functionName: "withdrawFeeBalance", args: [parseUnits(amt, 6), account] }))}>Withdraw</button>
         </div>
         <div>

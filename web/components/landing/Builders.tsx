@@ -1,6 +1,6 @@
 "use client";
 import { useRef, useState } from "react";
-import { gsap, ScrollTrigger, useGSAP, reduced } from "@/lib/gsap";
+import { gsap, ScrollTrigger, useGSAP, reduced, whenNear } from "@/lib/gsap";
 import Reg from "./Reg";
 
 type Seg = [string, string?];
@@ -75,15 +75,20 @@ export default function Builders() {
     typed.current = tl;
   };
 
-  useGSAP(() => {
-    const el = root.current!;
-    gsap.from(el.querySelector("h2"), { y: 40, autoAlpha: 0, duration: 1.1, scrollTrigger: { trigger: el.querySelector(".body"), start: "top 75%" } });
-    gsap.from(el.querySelectorAll(".dev li"), { x: -20, autoAlpha: 0, duration: 0.8, stagger: 0.08, scrollTrigger: { trigger: el.querySelector(".dev ul"), start: "top 80%" } });
-    gsap.from(el.querySelector(".code"), { y: 60, autoAlpha: 0, duration: 1.2, scrollTrigger: { trigger: el.querySelector(".code"), start: "top 85%" } });
-    if (reduced()) return;
-    el.querySelectorAll<HTMLElement>(".ln .t").forEach((t) => gsap.set(t, { width: 0 }));
-    gsap.set(el.querySelectorAll(".out > div"), { autoAlpha: 0 });
-    ScrollTrigger.create({ trigger: el.querySelector(".code"), start: "top 70%", once: true, onEnter: () => { seen.current = true; type(); } });
+  useGSAP((_, contextSafe) => {
+    // below the fold: set this section up only as it nears the viewport, so hydration stays light
+    let undo: void | (() => void);
+    const cancel = whenNear(root.current, contextSafe!(() => { undo = (() => {
+      const el = root.current!;
+      gsap.from(el.querySelector("h2"), { y: 40, autoAlpha: 0, duration: 1.1, scrollTrigger: { trigger: el.querySelector(".body"), start: "top 75%" } });
+      gsap.from(el.querySelectorAll(".dev li"), { x: -20, autoAlpha: 0, duration: 0.8, stagger: 0.08, scrollTrigger: { trigger: el.querySelector(".dev ul"), start: "top 80%" } });
+      gsap.from(el.querySelector(".code"), { y: 60, autoAlpha: 0, duration: 1.2, scrollTrigger: { trigger: el.querySelector(".code"), start: "top 85%" } });
+      if (reduced()) return;
+      el.querySelectorAll<HTMLElement>(".ln .t").forEach((t) => gsap.set(t, { width: 0 }));
+      gsap.set(el.querySelectorAll(".out > div"), { autoAlpha: 0 });
+      ScrollTrigger.create({ trigger: el.querySelector(".code"), start: "top 70%", once: true, onEnter: () => { seen.current = true; type(); } });
+    })(); }));
+    return () => { cancel(); if (typeof undo === "function") undo(); };
   }, []);
 
   useGSAP(() => {

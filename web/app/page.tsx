@@ -17,7 +17,7 @@ export default function Home() {
       <Intro />
       <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
       <Header />
-      <main>
+      <main id="main">
         <Hero />
         <LiveProof />
         <Problem />

@@ -7,7 +7,7 @@ export default function Code({ label, children }: { label?: string; children: st
   return (
     <div className="code-b">
       <div className="code-h m"><span>{label ?? "code"}</span><button onClick={() => { navigator.clipboard?.writeText(children.trim()); setOk(true); setTimeout(() => setOk(false), 1400); }}>{ok ? "Copied" : "Copy"}</button></div>
-      <pre><code>{children.trim()}</code></pre>
+      <pre tabIndex={0} aria-label={`${label ?? "Code"}, scrollable`}><code>{children.trim()}</code></pre>
     </div>
   );
 }

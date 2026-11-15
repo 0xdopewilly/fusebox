@@ -25,11 +25,11 @@ type Key = (typeof FUSES)[number]["key"];
 interface Ctx { wallet?: Address; block?: number }
 const clamp = (v: string) => Math.max(0, Math.min(254, Math.floor(Number(v) || 0)));
 
-function Toggle({ on, flip }: { on: boolean; flip: () => void }) {
-  return <span className={`tg${on ? " on" : ""}`} role="checkbox" aria-checked={on} tabIndex={0} onClick={flip} onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); flip(); } }} data-cursor={on ? "Remove" : "Add"} />;
+function Toggle({ on, flip, name }: { on: boolean; flip: () => void; name: string }) {
+  return <span className={`tg${on ? " on" : ""}`} role="checkbox" aria-checked={on} aria-label={`Splice in ${name}`} tabIndex={0} onClick={flip} onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); flip(); } }} data-cursor={on ? "Remove" : "Add"} />;
 }
 function Field({ label, v, set, suffix }: { label: string; v: string; set: (s: string) => void; suffix?: string }) {
-  return <div className="field m"><label>{label}{suffix ? ` (${suffix})` : ""}</label><input value={v} onChange={(e) => set(e.target.value)} inputMode="decimal" /></div>;
+  return <div className="field m"><label>{label}{suffix ? ` (${suffix})` : ""}</label><input aria-label={suffix ? `${label} (${suffix})` : label} value={v} onChange={(e) => set(e.target.value)} inputMode="decimal" /></div>;
 }
 
 export default function NewWalletView() {
@@ -41,7 +41,7 @@ export default function NewWalletView() {
   const [approvers, setApprovers] = useState(["", "", ""]);
   const [payees, setPayees] = useState<string[]>([""]);
   const [deposit, setDeposit] = useState("0.1"); const [float, setFloat] = useState("0");
-  const side = useRef<HTMLElement>(null);
+  const side = useRef<HTMLDivElement>(null);
   const [sideSeen, setSideSeen] = useState(false);
   useEffect(() => {
     const el = side.current; if (!el) return;
@@ -122,6 +122,7 @@ export default function NewWalletView() {
         <h1 className="disp" data-a>Wire up a <span className="lime">[wallet]</span>.</h1>
         <p data-a>Your agent gets a key that can only pay through the fuses you pick. You stay the owner: you set the limits, save payees, and reset a blown fuse. Everything runs on X Layer mainnet.</p>
       </section>
+      <h2 className="sr">Set up your wallet</h2>
       <section className="wz">
         <div className="wz-main" data-a>
           <div className={`wz-sec${account ? "" : " off"}`}>
@@ -141,7 +142,7 @@ export default function NewWalletView() {
             <div>
               <h3>Name the agent</h3>
               <p className="lead">The address your AI agent signs with. It can do exactly one thing: ask this wallet to pay, through every fuse. It can&apos;t change a fuse, a limit or a payee.</p>
-              <div className="field m"><label>Agent address</label><input value={agent} onChange={(e) => setAgent(e.target.value)} placeholder="0x…" spellCheck={false} /></div>
+              <div className="field m"><label>Agent address</label><input aria-label="Agent address" value={agent} onChange={(e) => setAgent(e.target.value)} placeholder="0x…" spellCheck={false} /></div>
             </div>
           </div>
           <div className="wz-sec">
@@ -151,7 +152,7 @@ export default function NewWalletView() {
               <p className="lead">Each fuse is a TapeOut circuit on X Layer. A payment needs a yes from every fuse you splice in, and each check pays the fuse&apos;s designer.</p>
               {FUSES.map((f) => (
                 <div className="fopt" key={f.key}>
-                  <Toggle on={on[f.key]} flip={() => toggle(f.key)} />
+                  <Toggle on={on[f.key]} flip={() => toggle(f.key)} name={f.name} />
                   <div>
                     <h4>{f.name}<small>{Number(f.fee) / 1e6} USDT0 / check</small></h4>
                     <p>{f.say}</p>
@@ -161,7 +162,7 @@ export default function NewWalletView() {
                       <>
                         <div className="prow"><Field label="Approvals above" suffix="USDT0" v={thr} set={setThr} /></div>
                         <div className="addr-list m" style={{ marginTop: 12 }}>
-                          {approvers.map((a, i) => <div className="ar field" key={i}><input value={a} onChange={(e) => setApprovers(approvers.map((x, k) => (k === i ? e.target.value : x)))} placeholder={`Approver ${i + 1} · 0x…`} spellCheck={false} /></div>)}
+                          {approvers.map((a, i) => <div className="ar field" key={i}><input aria-label={`Approver ${i + 1} address`} value={a} onChange={(e) => setApprovers(approvers.map((x, k) => (k === i ? e.target.value : x)))} placeholder={`Approver ${i + 1} · 0x…`} spellCheck={false} /></div>)}
                         </div>
                       </>
                     )}
@@ -174,7 +175,7 @@ export default function NewWalletView() {
                   <h4>Saved payees</h4>
                   <p>Who Payee Guard and the Breaker treat as known. You can add more later.</p>
                   <div className="addr-list m">
-                    {payees.map((p, i) => <div className="ar field" key={i}><input value={p} onChange={(e) => setPayees(payees.map((x, k) => (k === i ? e.target.value : x)))} placeholder="0x…" spellCheck={false} /><button onClick={() => setPayees(payees.filter((_, k) => k !== i))} aria-label="Remove">✕</button></div>)}
+                    {payees.map((p, i) => <div className="ar field" key={i}><input aria-label={`Saved payee ${i + 1} address`} value={p} onChange={(e) => setPayees(payees.map((x, k) => (k === i ? e.target.value : x)))} placeholder="0x…" spellCheck={false} /><button onClick={() => setPayees(payees.filter((_, k) => k !== i))} aria-label={`Remove saved payee ${i + 1}`}>✕</button></div>)}
                     <button className="linkbtn" onClick={() => setPayees([...payees, ""])}>+ Add a payee</button>
                   </div>
                 </div>
@@ -193,7 +194,7 @@ export default function NewWalletView() {
             </div>
           </div>
         </div>
-        <aside className="wz-side" data-a ref={side}>
+        <div className="wz-side" data-a ref={side}>
           <div className="summary">
             <div className="sh2 m"><span className="mute">Your wallet</span><span className="lime">{Object.values(on).filter(Boolean).length} fuses</span></div>
             <div className="rows">
@@ -231,7 +232,7 @@ export default function NewWalletView() {
               {!made && <p className="m mute" style={{ marginTop: 12, lineHeight: 1.6 }}>Each step is one transaction you sign. Gas on X Layer is a tiny fraction of a cent.</p>}
             </div>
           </div>
-        </aside>
+        </div>
       </section>
       {/* phones: the summary is at the end of a long form, so its action rides above the dock until you reach it */}
       {!made?.wallet && !sideSeen && (

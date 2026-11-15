@@ -68,9 +68,9 @@ export default function TryView() {
             ))}
           </div>
           <div className="fields m">
-            <div className="field"><label>Pay to</label><input value={to} onChange={(e) => { setTo(e.target.value); setTrick(null); }} spellCheck={false} /><div className="hint2">{to.toLowerCase() === supplier.toLowerCase() ? "Atlas's saved supplier (Kano Cotton)" : "Not a saved payee"}</div></div>
-            <div className="field"><label>Amount, USDT0</label><input value={amount} onChange={(e) => { setAmount(e.target.value); setTrick(null); }} inputMode="decimal" /></div>
-            <div className="field"><label>What the agent was told</label><textarea rows={3} value={memo} onChange={(e) => { setMemo(e.target.value); setTrick(null); }} /><div className="hint2">The fuses never read this. However convincing the story, they only see the payee, the amount and the wallet&apos;s state.</div></div>
+            <div className="field"><label>Pay to</label><input aria-label="Pay to" value={to} onChange={(e) => { setTo(e.target.value); setTrick(null); }} spellCheck={false} /><div className="hint2">{to.toLowerCase() === supplier.toLowerCase() ? "Atlas's saved supplier (Kano Cotton)" : "Not a saved payee"}</div></div>
+            <div className="field"><label>Amount, USDT0</label><input aria-label="Amount, USDT0" value={amount} onChange={(e) => { setAmount(e.target.value); setTrick(null); }} inputMode="decimal" /></div>
+            <div className="field"><label>What the agent was told</label><textarea aria-label="What the agent was told" rows={3} value={memo} onChange={(e) => { setMemo(e.target.value); setTrick(null); }} /><div className="hint2">The fuses never read this. However convincing the story, they only see the payee, the amount and the wallet&apos;s state.</div></div>
             {data?.source === "snapshot" && <div className="gap-note" style={{ marginTop: 4 }}><b>Live checks open at launch.</b> This preview shows the mainnet-fork rehearsal; the moment Fusebox&apos;s contracts go live on X Layer, every run here becomes a real check() call.</div>}
             <button className="btn lime run" onClick={go} disabled={busy || data?.source === "snapshot"} data-cursor="Run it">{busy ? "Asking X Layer…" : <><span className="roll"><span>Run it through the fuses</span><span aria-hidden="true">Run it through the fuses</span></span> <span className="k">→</span></>}</button>
             {err && <div className="err m">{err}</div>}

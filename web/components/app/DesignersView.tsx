@@ -22,6 +22,7 @@ export default function DesignersView() {
         <h1 className="disp" data-a>Sell a <span className="lime">[fuse]</span>.</h1>
         <p data-a>A fuse is a product. Tape out a circuit once, list it, and it pays you {data ? `${100 - data.protocolBps / 100}%` : "90%"} of its fee every time a wallet runs a payment through it.</p>
       </section>
+      <h2 className="sr">How to sell a fuse</h2>
       <section data-a>
         {STEPS.map(([h, p], i) => (
           <div className="fz" key={h} style={{ minHeight: 0 }}>
@@ -33,7 +34,7 @@ export default function DesignersView() {
       </section>
       <div className="blockhead" data-a><h2 className="disp">Earnings</h2><span className="m mute">read from the registry · {data ? `protocol keeps ${data.protocolBps / 100}%, earned ${fmt(data.protocolEarned)} USDT0` : ""}</span></div>
       {!data ? <Loading label="Reading the fuse registry" error={error} /> : (
-        <div style={{ overflowX: "auto" }} data-a>
+        <div style={{ overflowX: "auto" }} data-a tabIndex={0} role="region" aria-label="Earnings table">
           <table className="tbl">
             <thead><tr><th>Designer</th><th style={{ textAlign: "right" }}>Fuses</th><th style={{ textAlign: "right" }}>Decisions</th><th style={{ textAlign: "right" }}>Lifetime earned</th><th style={{ textAlign: "right" }}>Claimable now</th></tr></thead>
             <tbody>

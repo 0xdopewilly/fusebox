@@ -69,19 +69,19 @@ export default function DesignerTools({ market }: { market: Market | null }) {
             <p className="lead">Enter the processor and circuit id. Fusebox reads the circuit from TapeOut, matches it to a socket by its inputs, and lists it with your fee. Wallets can install it straight away.</p>
             <div className="fields m" style={{ marginTop: 0 }}>
               <div className="prow">
-                <div className="field" style={{ flex: 2 }}><label>Processor</label><input value={proc} onChange={(e) => setProc(e.target.value)} spellCheck={false} /></div>
-                <div className="field"><label>Circuit id</label><input value={cid} onChange={(e) => setCid(e.target.value)} inputMode="numeric" placeholder="e.g. 19" /></div>
+                <div className="field" style={{ flex: 2 }}><label>Processor</label><input aria-label="Processor" value={proc} onChange={(e) => setProc(e.target.value)} spellCheck={false} /></div>
+                <div className="field"><label>Circuit id</label><input aria-label="Circuit id" value={cid} onChange={(e) => setCid(e.target.value)} inputMode="numeric" placeholder="e.g. 19" /></div>
               </div>
               {info && <div className="hint2">Owner {short(info.owner)} · {info.nIn} inputs · {info.gates} gates{info.nState ? ` · ${info.nState} state bits` : ""} · {socket ? `fits the ${socket[1]} socket` : "no matching socket"} · netlist {info.hash.slice(0, 10)}…</div>}
               <div className="prow">
-                <div className="field"><label>Fee per check, USDT0</label><input value={fee} onChange={(e) => setFee(e.target.value)} inputMode="decimal" /></div>
-                <div className="field" style={{ flex: 2 }}><label>Metadata URI (optional)</label><input value={uri} onChange={(e) => setUri(e.target.value)} placeholder="ipfs://… or https://…" /></div>
+                <div className="field"><label>Fee per check, USDT0</label><input aria-label="Fee per check, USDT0" value={fee} onChange={(e) => setFee(e.target.value)} inputMode="decimal" /></div>
+                <div className="field" style={{ flex: 2 }}><label>Metadata URI (optional)</label><input aria-label="Metadata URI (optional)" value={uri} onChange={(e) => setUri(e.target.value)} placeholder="ipfs://… or https://…" /></div>
               </div>
             </div>
           </div>
         </div>
       </div>
-      <aside className="wz-side">
+      <div className="wz-side">
         <div className="summary">
           <div className="sh2 m"><span className="mute">Designer</span><span className="lime">{account ? short(account) : "not connected"}</span></div>
           <div className="go">
@@ -90,7 +90,7 @@ export default function DesignerTools({ market }: { market: Market | null }) {
             {last && <p className="m mute" style={{ marginTop: 10 }}>{last.label}: {last.state === "done" ? "done" : last.state === "error" ? last.error : last.state === "skip" ? "not needed" : "sign in your wallet…"}{last.hash ? <> · <a className="lime" href={`${OKLINK}/tx/${last.hash}`} target="_blank" rel="noreferrer">tx ↗</a></> : null}</p>}
           </div>
         </div>
-      </aside>
+      </div>
     </section>
   );
 }

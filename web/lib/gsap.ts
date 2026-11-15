@@ -23,4 +23,19 @@ export function introDone(): Promise<void> {
   return w.__fuseboxIntro ?? Promise.resolve();
 }
 
+/** Runs `fn` once `el` comes within `margin` of the viewport, then refreshes ScrollTrigger so later sections measure the
+ *  final layout. Sections below the fold use it so hydration doesn't pay for every animation on the page at once. */
+let refreshQueued = false;
+export function whenNear(el: Element | null, fn: () => void, margin = "120% 0px"): () => void {
+  if (!el || typeof IntersectionObserver === "undefined") { fn(); return () => {}; }
+  let done = false;
+  const io = new IntersectionObserver((es) => {
+    if (done || !es.some((e) => e.isIntersecting)) return;
+    done = true; io.disconnect(); fn();
+    if (!refreshQueued) { refreshQueued = true; requestAnimationFrame(() => { refreshQueued = false; ScrollTrigger.refresh(); }); }
+  }, { rootMargin: margin });
+  io.observe(el);
+  return () => io.disconnect();
+}
+
 export { gsap, ScrollTrigger, SplitText, useGSAP };

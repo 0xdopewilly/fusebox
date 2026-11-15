@@ -7,7 +7,7 @@
 :root {
   --bg: #000; --panel: #0b0b0b; --panel2: #121212;
   --hair: rgba(255, 255, 255, 0.07); --hair2: rgba(255, 255, 255, 0.13); --hair3: rgba(255, 255, 255, 0.26);
-  --ink: #f2f2ee; --soft: #c9c9c4; --mute: #8d8d89; --dim: #585855;
+  --ink: #f2f2ee; --soft: #c9c9c4; --mute: #9d9d98; --dim: #80807c;
   --lime: #bbfe2f; --lime-ink: #0c1400; --olive: #293b0d; --red: #ff5232;
   --display: "Archivo", system-ui, sans-serif; --sans: "Geist", system-ui, sans-serif; --mono: "Geist Mono", ui-monospace, monospace;
   --pad: 32px; --ease: cubic-bezier(0.16, 1, 0.3, 1);
@@ -16,6 +16,7 @@
 html { background: var(--bg); color-scheme: dark; scroll-behavior: smooth; }
 body { background: var(--bg); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; overflow-x: clip; }
 a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
 button, input { font: inherit; color: inherit; background: none; border: 0; }
 button { cursor: pointer; }
 ::selection { background: var(--lime); color: var(--lime-ink); }
@@ -161,6 +162,7 @@ button { cursor: pointer; }
 .foot .lines > div { padding: 22px 14px 26px 0; }
 .foot .lines > div + div { padding-left: 14px; border-left: 1px solid var(--hair); }
 .foot .lines b { display: block; margin-top: 8px; font-family: var(--mono); font-weight: 500; font-size: 14px; color: var(--ink); text-transform: none; letter-spacing: 0; word-break: break-all; }
+.word::before { content: "Fusebox"; }
 .word { font-family: var(--display); font-weight: 800; text-transform: uppercase; font-size: 22.5vw; letter-spacing: -0.05em; line-height: 0.78; color: #111; margin: 40px calc(var(--pad) * -1) 0; white-space: nowrap; user-select: none; overflow: hidden; }
 
 /* reveal on scroll */

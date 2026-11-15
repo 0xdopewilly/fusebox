@@ -25,7 +25,9 @@
 .w-hero .who .addr button:hover { color: var(--lime); }
 .bal { display: flex; align-items: baseline; gap: 14px; margin-top: 26px; }
 .bal b { font-family: var(--display); font-weight: 800; font-variation-settings: "wdth" 104; font-size: clamp(64px, 8vw, 120px); letter-spacing: -0.045em; line-height: 0.85; }
-.bal span { color: var(--mute); }
+.bal span { color: var(--mute); white-space: nowrap; }
+/* phones: the label sits under the number, so the count-up can never re-wrap it and shift the page (CLS) */
+@media (max-width: 900px) { .bal { flex-direction: column; align-items: flex-start; gap: 10px; } }
 .state-line { margin-top: 22px; display: flex; align-items: center; gap: 10px; font-size: 15px; color: var(--soft); }
 .state-line i { width: 8px; height: 8px; background: var(--lime); box-shadow: 0 0 0 4px rgba(187, 254, 47, 0.15); animation: pulse 1.6s steps(2) infinite; }
 .state-line.bad i { background: var(--red); box-shadow: 0 0 0 4px rgba(255, 82, 50, 0.18); }

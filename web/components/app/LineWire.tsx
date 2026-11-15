@@ -6,7 +6,7 @@ export type WireStatus = "idle" | "checking" | "pass" | "blew" | "latched";
 export interface WireFuse { name: string; meta: string }
 
 const LABEL: Record<WireStatus, [string, string]> = {
-  idle: ["WAITING", "#585855"], checking: ["CHECKING", "#f2f2ee"], pass: ["HOLDS", "#bbfe2f"], blew: ["BLEW", "#ff5232"], latched: ["BLOWN", "#ff5232"],
+  idle: ["WAITING", "#80807c"], checking: ["CHECKING", "#f2f2ee"], pass: ["HOLDS", "#bbfe2f"], blew: ["BLEW", "#ff5232"], latched: ["BLOWN", "#ff5232"],
 };
 const FW = 126; // cartridge length along the wire
 

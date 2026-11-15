@@ -26,6 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js');try{if(sessionStorage.getItem('fx-intro'))document.documentElement.dataset.intro='skip'}catch(e){}" }} />
       </head>
       <body>
+        <a className="skip" href="#main">Skip to content</a>
         <SmoothScroll />
         <Cursor />
         {children}

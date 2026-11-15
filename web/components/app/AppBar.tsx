@@ -33,7 +33,7 @@ export default function AppBar() {
     <header className="appbar">
       <Link className="logo" href="/" data-cursor="Home"><Logo />FUSEBOX</Link>
       <span className="m slash">/ app</span>
-      <nav className="tabs-nav m" ref={nav}>
+      <nav className="tabs-nav m" ref={nav} aria-label="App sections">
         {TABS.map(([h, l, sh]) => <Link key={h} href={h} className={active(h) ? "on" : ""}><span className="lg">{l}</span><span className="sh">{sh}</span></Link>)}
         <span className="ink" style={{ left: 0, width: 0 }} />
       </nav>

@@ -2,7 +2,8 @@
 /** Odometer digits: each digit is a 0-9 column that rolls to its value. */
 export default function Digits({ value }: { value: string }) {
   return (
-    <span className="digits" aria-label={value}>
+    <span className="digits">
+      <span className="sr">{value}</span>
       {value.split("").map((ch, i) =>
         /\d/.test(ch) ? (
           <span className="digit" key={i} aria-hidden="true">

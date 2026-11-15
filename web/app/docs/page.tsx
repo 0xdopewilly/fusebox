@@ -9,6 +9,8 @@ import dep from "@/lib/deployments/mainnet.json";
 export const metadata: Metadata = {
   title: "Docs · Fusebox",
   description: "How Fusebox works: wallets for AI agents whose payments must pass logic circuits taped out on TapeOut. Quickstart, the four fuses, the wallet API, MCP tools, selling a fuse, and every contract on X Layer.",
+  openGraph: { title: "Fusebox docs · Build with Fusebox", description: "Quickstart, the four fuses, the wallet API, MCP tools, selling a fuse, and every contract on X Layer.", url: "/docs" },
+  twitter: { title: "Fusebox docs · Build with Fusebox", description: "Quickstart, the four fuses, the wallet API, MCP tools, selling a fuse, and every contract on X Layer." },
 };
 
 const OKLINK = "https://www.oklink.com/xlayer";
@@ -32,7 +34,7 @@ export default function DocsPage() {
     <>
       <SiteHeader active="docs" />
       <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
-      <main className="docs wrap">
+      <main className="docs wrap" id="main">
         <header className="docs-hero">
           <div className="m"><span className="lime">[Docs]</span> <span className="mute">Fusebox on X Layer · chain 196</span></div>
           <h1 className="disp">Build with <span className="lime">[Fusebox]</span>.</h1>
@@ -86,7 +88,7 @@ export default function DocsPage() {
                 <li><b>One no stops the payment.</b> The decision is recorded either way, with every fuse&apos;s inputs and verdict, the fee and the memo. A blown Breaker stays blown until the owner resets it.</li>
                 <li><b>Designers are paid</b> from the wallet&apos;s prepaid fee balance, and only if every fuse held does the token move.</li>
               </ol>
-              <div className="tbl-w"><table>
+              <div className="tbl-w" tabIndex={0} role="region" aria-label="Fuse statuses table"><table>
                 <thead><tr><th>Status</th><th>Meaning</th><th>Charged?</th></tr></thead>
                 <tbody>
                   <tr><td><span className="pill ok">PASS</span></td><td>The circuit output 1.</td><td>Yes</td></tr>
@@ -101,7 +103,7 @@ export default function DocsPage() {
             <section id="fuses">
               <h2>The four fuses</h2>
               <p>A <b>socket</b> is the contract between the wallet and a circuit: the wallet derives the bits, the circuit decides. Bits are packed least-significant first (TAP-02 §5). Amounts are rounded up to the install&apos;s unit and saturate at 255, while owner limits stop at 254, so a saturated amount can never pass.</p>
-              <div className="tbl-w"><table>
+              <div className="tbl-w" tabIndex={0} role="region" aria-label="The four fuses table"><table>
                 <thead><tr><th>Fuse</th><th>Circuit</th><th>Inputs</th><th>Says no when</th><th>Fee</th></tr></thead>
                 <tbody>
                   <tr><td><b>Daily Cap</b></td><td>#15 · 108 NAND</td><td>24: amount, spent today, cap</td><td>The payment would pass today&apos;s cap (UTC day)</td><td>0.001</td></tr>
@@ -141,7 +143,7 @@ const amount = parseUnits("2.5", 6);
 // dry run: which fuse would say no? status[i]: 0 PASS · 1 BLEW · 2 FAILED · 3 UNTRUSTED
 const [allowed, status] = await pub.readContract({ address: WALLET, abi: fuseboxWalletAbi, functionName: "check", args: [USDT0, payee, amount] });
 if (allowed) await agent.writeContract({ address: WALLET, abi: fuseboxWalletAbi, functionName: "pay", args: [USDT0, payee, amount, "Invoice INV-7795"] });`}</Code>
-              <div className="tbl-w"><table>
+              <div className="tbl-w" tabIndex={0} role="region" aria-label="Who can call what table"><table>
                 <thead><tr><th>Who</th><th>Can call</th></tr></thead>
                 <tbody>
                   <tr><td><b>Agent</b></td><td><code>pay</code>, <code>freeze</code></td></tr>
@@ -154,7 +156,7 @@ if (allowed) await agent.writeContract({ address: WALLET, abi: fuseboxWalletAbi,
 
             <section id="mcp">
               <h2>MCP tools</h2>
-              <div className="tbl-w"><table>
+              <div className="tbl-w" tabIndex={0} role="region" aria-label="MCP tools table"><table>
                 <thead><tr><th>Tool</th><th>What it does</th></tr></thead>
                 <tbody>
                   <tr><td><code>fusebox_check</code></td><td>Dry-runs a payment against every fuse and returns each verdict with its reason. Free and read-only.</td></tr>
@@ -162,7 +164,7 @@ if (allowed) await agent.writeContract({ address: WALLET, abi: fuseboxWalletAbi,
                   <tr><td><code>fusebox_status</code></td><td>The wallet&apos;s balance, fee balance, fuses (and whether any is blown), today&apos;s spend and decision counts.</td></tr>
                 </tbody>
               </table></div>
-              <div className="tbl-w"><table>
+              <div className="tbl-w" tabIndex={0} role="region" aria-label="MCP settings table"><table>
                 <thead><tr><th>Variable</th><th>Default</th><th>Meaning</th></tr></thead>
                 <tbody>
                   <tr><td><code>FUSEBOX_WALLET</code></td><td>Atlas</td><td>The wallet the agent pays from</td></tr>
@@ -186,7 +188,7 @@ if (allowed) await agent.writeContract({ address: WALLET, abi: fuseboxWalletAbi,
             <section id="contracts">
               <h2>Contracts</h2>
               <p>X Layer mainnet, chain 196. The registry, factory and Atlas have verified source on <a href={`https://repo.sourcify.dev/196/${dep.registry}`} target="_blank" rel="noreferrer">Sourcify</a> (exact match).</p>
-              <div className="tbl-w"><table className="addrs">
+              <div className="tbl-w" tabIndex={0} role="region" aria-label="Contract addresses table"><table className="addrs">
                 <tbody>
                   <tr><td><b>FuseRegistry</b></td><td><A a={dep.registry} label={dep.registry} /></td></tr>
                   <tr><td><b>FuseboxFactory</b></td><td><A a={dep.factory} label={dep.factory} /></td></tr>

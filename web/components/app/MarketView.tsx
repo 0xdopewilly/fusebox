@@ -22,12 +22,12 @@ export default function MarketView() {
   useGSAP(() => {
     if (!data || reduced()) return;
     root.current!.querySelectorAll<HTMLElement>(".fz").forEach((row, k) => {
-      const gates = row.querySelectorAll<SVGElement>(".gate"), wires = row.querySelectorAll<SVGPathElement>(".wire");
+      const gates = row.querySelectorAll<SVGElement>(".gate");
       const dep = (n: Element) => Number(n.getAttribute("data-depth"));
-      gsap.timeline({ delay: 0.15 + k * 0.12 })
-        .from(row, { y: 30, autoAlpha: 0, duration: 0.8 })
-        .from(wires, { drawSVG: "0%", duration: 0.5, stagger: (i) => dep(wires[i]) * 0.03 }, 0.1)
-        .from(gates, { scale: 0, transformOrigin: "50% 50%", duration: 0.3, ease: "back.out(3)", stagger: (i) => dep(gates[i]) * 0.03 }, 0.15);
+      // one clip sweep per schematic reads as the signal flowing left to right, without measuring hundreds of paths
+      const sch = row.querySelector(".sch svg, .sch canvas");
+      const tl = gsap.timeline({ delay: 0.15 + k * 0.12 }).from(row, { y: 30, autoAlpha: 0, duration: 0.8 });
+      if (sch) tl.fromTo(sch, { clipPath: "inset(0 100% 0 0)" }, { clipPath: "inset(0 0% 0 0)", duration: 1.1, ease: "power2.inOut" }, 0.15);
       row.addEventListener("mouseenter", () => gsap.fromTo(gates, { fill: "#bbfe2f" }, { fill: "#fff", duration: 0.09, yoyo: true, repeat: 1, stagger: (i) => dep(gates[i]) * 0.04, overwrite: true }));
     });
   }, { dependencies: [!!data] });
@@ -48,6 +48,7 @@ export default function MarketView() {
             <div>Protocol earned<b>{Number(data.protocolEarned).toFixed(5)}<small>USDT0</small></b></div>
             <div>Processor<b style={{ fontSize: 16, marginTop: 14 }}>{data.fuses[0] ? short(data.fuses[0].processor) : "—"}</b></div>
           </section>
+          <h2 className="sr">Listed fuses</h2>
           <div style={{ marginTop: 40 }}>
             {data.fuses.map((f, i) => {
               const layout = LAYERS.find((l) => l.key === f.key);

@@ -39,6 +39,7 @@ export default function MineView() {
         <h1 className="disp" data-a>My <span className="lime">[wallets]</span>.</h1>
         <p data-a>Every Fusebox wallet your connected address owns, read from the factory on X Layer.</p>
       </section>
+      <h2 className="sr">Your wallets</h2>
       {!account ? (
         <div className="empty-card" data-a>
           <div className="m lime">Not connected</div>

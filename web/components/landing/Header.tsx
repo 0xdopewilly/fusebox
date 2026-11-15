@@ -71,7 +71,7 @@ export default function Header() {
       <div className="tcol m mute" data-h><span className="scr">Circuit fuses</span><br /><span className="scr">for AI agent wallets</span></div>
       <div className="tcol m mute" data-h><span className="scr">X Layer · chain 196</span><br /><span className="scr">Taped out on TapeOut</span></div>
       <div className="tcol m mute" data-h><span className="live" />Block {block ? <Digits value={b} /> : <span style={{ color: "#f2f2ee" }}>{b}</span>}<br />X Layer mainnet · live</div>
-      <nav className="m" style={{ gridColumn: "5 / 7" }} data-h>
+      <nav className="m" style={{ gridColumn: "5 / 7" }} data-h aria-label="Site">
         <NavLink href="#how" label="How" />
         <NavLink href="#fuses" label="Fuses" />
         <NavLink href="#who" label="Who" />

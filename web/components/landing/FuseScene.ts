@@ -49,6 +49,8 @@ export class FuseScene {
   private opts: FuseSceneOpts;
   private W = 1; private H = 1; private DPR = 1; private PX = 3;
   private fixedT: number | null;
+  /** WebGL drawn on the CPU (SwiftShader, llvmpipe: no GPU, VMs, audit tools): render lighter so the page stays responsive */
+  private soft = false;
   reveal = { v: 0 };
 
   constructor(private canvas: HTMLCanvasElement, opts: FuseSceneOpts = {}) {
@@ -57,6 +59,11 @@ export class FuseScene {
     this.fixedT = q !== null ? Number(q) : null;
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: true, powerPreference: "high-performance", preserveDrawingBuffer: this.fixedT !== null });
     this.renderer.setClearColor(0x000000, 0);
+    try {
+      const gl = this.renderer.getContext();
+      const dbg = gl.getExtension("WEBGL_debug_renderer_info");
+      this.soft = /swiftshader|llvmpipe|softpipe|software|basic render/i.test(String(dbg ? gl.getParameter(dbg.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)));
+    } catch { /* keep defaults */ }
     this.rt = new THREE.WebGLRenderTarget(4, 4);
     this.cam = new THREE.PerspectiveCamera(22, 1, 0.1, 100);
     this.scene.background = new THREE.Color(0x000000);
@@ -113,7 +120,7 @@ export class FuseScene {
   resize() {
     const r = this.canvas.getBoundingClientRect();
     this.W = Math.max(1, r.width); this.H = Math.max(1, r.height);
-    this.DPR = Math.min(window.devicePixelRatio || 1, 2);
+    this.DPR = this.soft ? 1 : Math.min(window.devicePixelRatio || 1, 2);
     this.PX = 3 * this.DPR;
     this.renderer.setPixelRatio(this.DPR);
     this.renderer.setSize(this.W, this.H, false);
@@ -185,7 +192,13 @@ export class FuseScene {
   start() {
     if (this.running) return;
     this.running = true;
-    const loop = () => { if (!this.running) return; this.render(this.time()); this.raf = requestAnimationFrame(loop); };
+    // on a GPU every frame; drawn on the CPU, about 10 a second (the motion keeps its timing, it's just steppier)
+    let last = 0;
+    const loop = (now: number) => {
+      if (!this.running) return;
+      if (!this.soft || now - last > 95) { last = now; this.render(this.time()); }
+      this.raf = requestAnimationFrame(loop);
+    };
     this.raf = requestAnimationFrame(loop);
   }
   stop() { this.running = false; cancelAnimationFrame(this.raf); }
