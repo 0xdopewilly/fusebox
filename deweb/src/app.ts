@@ -267,6 +267,22 @@ function observe() {
   document.querySelectorAll(".rv:not(.in)").forEach((el) => io!.observe(el));
 }
 
+// ------------------------------------------------------------------ preview mode
+// The same file can be opened anywhere. Only on TapeKit (tape:// or a tapekit.org subdomain) is it the on-chain copy,
+// so everywhere else it says plainly that it's a preview of the DeWEB edition.
+const ON_CHAIN = location.protocol === "tape:" || /(^|\.)tapekit\.org$/.test(location.hostname) || /\.tape$/.test(location.hostname);
+if (!ON_CHAIN) {
+  const set = (id: string, html: string) => { const el = document.getElementById(id); if (el) el.innerHTML = html; };
+  set("b1", 'DeWEB edition · preview<br><span class="lime">Built for 15.2.272.tape</span>');
+  set("b2", "No backend<br>Reads X Layer directly");
+  set("eyebrow", '<span class="lime">[01]</span> The DeWEB edition. No backend: your browser reads X Layer itself.');
+  set("lede", "Fusebox wires an AI agent's wallet through small logic circuits taped out on TapeOut. A payment reaches the payee only if every fuse holds. <b>This is Fusebox's DeWEB edition, built to live on X Layer in the container of circuit #15 and be served by TapeKit.</b> Publishing it waits on TapeOut's one-time 0.08 OKB container fee, so for now the same file is served from Vercel. It still has no backend: every number below comes straight from the chain.");
+  set("tag1", '<span class="dot"></span>Built for TapeKit');
+  set("chip", "No backend");
+  set("callt", "Its future home");
+  document.getElementById("verify")?.remove();
+}
+
 // ------------------------------------------------------------------ boot
 renderTricks(); renderTable(); observe();
 pick(TRICKS[4]);

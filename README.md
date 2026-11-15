@@ -38,6 +38,15 @@ Every address is in [`deployments/xlayer-mainnet.json`](deployments/xlayer-mainn
 3. **One no stops the payment.** The decision is recorded either way, along with which fuse blew. The Breaker's latch state lives in the wallet.
 4. **Designers are paid.** `FuseRegistry.charge()` takes each fuse's fee from the wallet's prepaid USDT0 balance. 90% goes to whoever owns the circuit NFT, and the protocol keeps 10% (capped at 20%).
 
+## Built on TapeOut
+
+- **Every fuse is a TapeOut circuit.** Circuits #15–18 live on TapeOut's OrderGuard processor, and every payment calls the processor's `eval` or `step` on X Layer.
+- **TAP-02 toolchain.** [`circuits/`](circuits) builds, encodes and simulates TAP-02 netlists, and its tests pass TapeOut's official test vectors.
+- **Netlist integrity in the app.** The [fuse market](https://fusebox-xlayer.vercel.app/app/market) reads each fuse's netlist straight from its TapeOut processor and checks it against the hash the registry pinned when the fuse was listed. Fuses without a hand-drawn schematic get their real wiring drawn from those bytes.
+- **DeWEB and TapeKit.** [`deweb/`](deweb) is a version of Fusebox meant to be stored on X Layer in circuit #15's container and opened through TapeKit at `15-2-272.tapekit.org`. It has no off-chain references, and your browser reads every number, including a live "scam Atlas" `check()`, from X Layer.
+  - The publish was rehearsed on a mainnet fork: the container was opened, all 7 chunks stored and the name bound, and the SHA-256 read back from the chain matched.
+  - The mainnet publish waits on TapeOut's one-time 0.08 OKB container fee. Until then, the same file is previewed at [/onchain](https://fusebox-xlayer.vercel.app/onchain).
+
 ## Repository
 
 | Folder | What's in it |
@@ -46,8 +55,9 @@ Every address is in [`deployments/xlayer-mainnet.json`](deployments/xlayer-mainn
 | [`contracts/`](contracts) | `FuseRegistry`, `FuseboxWallet` and `FuseboxFactory` (Foundry), the unit and fuzz tests, the X Layer fork tests, and the launch scripts. |
 | [`mcp/`](mcp) | [`fusebox-mcp`](https://www.npmjs.com/package/fusebox-mcp): `fusebox_check`, `fusebox_pay` and `fusebox_status` for any MCP agent (`npx -y fusebox-mcp`). |
 | [`web/`](web) | The site and app (Next.js, GSAP, three.js, viem). They read X Layer mainnet directly. |
+| [`deweb/`](deweb) | The DeWEB edition: one self-contained page with no backend, built for circuit #15's container (`15.2.272.tape`, served by TapeKit), plus a resumable publisher. |
 | [`deployments/`](deployments) | Deployed addresses. |
-| [`docs/`](docs) | [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) (sockets, circuits, fee flow, threat model, gas) and [`STATUS.md`](docs/STATUS.md). |
+| [`docs/`](docs) | [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) (sockets, circuits, fee flow, threat model, gas), [`STATUS.md`](docs/STATUS.md) and [`tapeout-ecosystem-research.md`](docs/tapeout-ecosystem-research.md). |
 | [`design/`](design) | Design directions and the landing mock. |
 
 ## Run it

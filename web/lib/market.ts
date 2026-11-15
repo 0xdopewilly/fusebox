@@ -9,7 +9,7 @@ const usd = (v: bigint) => formatUnits(v, 6);
 
 export interface MarketFuse {
   fuseId: number; key: string; name: string; processor: Address; circuitId: number; designer: Address; socket: number;
-  gates: number; nState: number; fee: string; listed: boolean; decisions: number; earned: string; lifetimeEarned: string; metadataURI: string; onAtlas: boolean;
+  gates: number; nState: number; fee: string; listed: boolean; decisions: number; earned: string; lifetimeEarned: string; metadataURI: string; onAtlas: boolean; netlistHash: Hex; nIn: number;
 }
 export interface Market { source: "fork" | "mainnet"; fuses: MarketFuse[]; protocolBps: number; protocolEarned: string; totalDecisions: number; totalEarned: string }
 
@@ -40,7 +40,7 @@ export async function getMarket(): Promise<Market> {
     return {
       fuseId: Number(id), key, name, processor: f.processor, circuitId: Number(f.circuitId), designer, socket: Number(f.socket),
       gates: Number(f.gateCount), nState: Number(f.nState), fee: usd(f.fee), listed: f.listed, decisions: Number(dec),
-      earned: usd(earned), lifetimeEarned: usd(life), metadataURI: l.metadataURI ?? "", onAtlas: DEPLOYMENT.fuseIds.includes(Number(id)),
+      earned: usd(earned), lifetimeEarned: usd(life), metadataURI: l.metadataURI ?? "", onAtlas: DEPLOYMENT.fuseIds.includes(Number(id)), netlistHash: f.netlistHash, nIn: Number(f.nIn),
     } satisfies MarketFuse;
   }));
   const data: Market = {

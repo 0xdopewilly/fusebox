@@ -6,6 +6,7 @@ import { useMarket } from "@/lib/useMarket";
 import { LAYERS } from "@/lib/fuses";
 import { short, fmt, OKLINK } from "@/lib/hooks";
 import Netlist from "@/components/landing/Netlist";
+import ChainNetlist from "./ChainNetlist";
 
 const SAY: Record<string, string> = {
   "daily-cap": "No more than the owner's cap in a UTC day, however the agent is asked.",
@@ -56,7 +57,7 @@ export default function MarketView() {
                     <h3>{f.name}</h3><p className="say">{SAY[f.key] ?? f.metadataURI}</p>
                     <p className="m" style={{ marginTop: 12, color: "var(--dim)" }}>Fuse #{f.fuseId} · <a href={`${OKLINK}/address/${f.processor}`} target="_blank" rel="noreferrer" style={{ color: "var(--mute)" }}>circuit #{f.circuitId} ↗</a> · designer {short(f.designer)}{f.onAtlas ? <span className="lime"> · on Atlas</span> : null}</p>
                   </div>
-                  <div className="sch">{layout ? <Netlist f={layout} /> : <div className="m mute">Netlist on-chain</div>}<div className="m">{f.gates} gates{f.nState ? ` · ${f.nState} state bit` : ""}</div></div>
+                  <div className="sch">{layout && <Netlist f={layout} />}<ChainNetlist processor={f.processor} circuitId={f.circuitId} nIn={f.nIn} pinned={f.netlistHash} draw={!layout} /></div>
                   <div><div className="chips">
                     <span className="chip l">{fmt(f.fee)} USDT0 / check</span>
                     <span className="chip">{f.decisions} decisions</span>
