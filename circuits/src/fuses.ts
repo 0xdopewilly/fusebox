@@ -143,12 +143,12 @@ export function fieldsFromBits(socket: Socket, bits: number[]): Fields {
   return f;
 }
 
-const pinBus = (b: Builder, s: Socket, name: string) => {
+export const pinBus = (b: Builder, s: Socket, name: string) => {
   const p = s.pins.find((x) => x.name === name);
   if (!p) throw new Error(`no pin ${name}`);
   return b.bus(p.offset, p.width);
 };
-const pin = (b: Builder, s: Socket, name: string) => pinBus(b, s, name)[0];
+export const pin = (b: Builder, s: Socket, name: string) => pinBus(b, s, name)[0];
 
 // ---------------------------------------------------------------------------------------------
 // Fuse 1: daily cap. 8-bit adder + no-borrow comparator; carry out of the adder must be 0.

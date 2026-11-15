@@ -153,6 +153,7 @@ if (allowed) await agent.writeContract({ address: WALLET, abi: fuseboxWalletAbi,
                 </tbody>
               </table></div>
               <p>Every owner call is in the app. Open the wallet&apos;s page and connect the owner&apos;s address: the owner console has <b>Safety</b> (freeze, reset, pause, daily budgets), <b>Fuses</b> (edit, remove, install from the market, accept a new fee), <b>Payees</b>, <b>People</b> (agents, approvers, the approval window), <b>Money</b> (fund or withdraw the wallet, top up or withdraw fees) and <b>Ownership</b> (a two-step handover the new owner accepts). Each write is simulated before you sign.</p>
+              <p><b>Alerts and exports.</b> Every wallet publishes its decisions as an Atom feed at <code>/api/wallet/&lt;address&gt;/feed</code> (subscribe in Slack with <code>/feed subscribe</code>, an email digest or any reader) and its whole history as CSV at <code>/api/wallet/&lt;address&gt;/csv</code>. With the wallet&apos;s page open, the app can also raise a browser notification whenever a payment is stopped.</p>
             </section>
 
             <section id="mcp">
@@ -182,8 +183,10 @@ if (allowed) await agent.writeContract({ address: WALLET, abi: fuseboxWalletAbi,
                 <li><b>Tape it out</b> on an X Layer TapeOut processor: mint one transistor per gate and call <code>tapeout(netlist, nIn, nOut)</code>. You get the circuit NFT.</li>
                 <li><b>List it</b> on the <Link href="/app/designers">designers page</Link>, or call <code>registry.list(processor, circuitId, socket, netlistHash, fee, uri)</code>. The registry checks the pinout, the gate budget (512), the state rules and the netlist hash against the chain.</li>
                 <li><b>Earn on every decision</b>, the no&apos;s included. Claim with <code>claim(fuseId, to)</code>. Sell the NFT and the income moves with it. Wallet owners install your fuse from the <Link href="/app/market">fuse market</Link> in one signature.</li>
+                <li><b>Describe it.</b> A listing&apos;s <code>metadataURI</code> holds a small <code>fusebox-fuse/1</code> JSON (name, summary, description, rule). The designers page writes it on X Layer itself as a <code>data:application/json;base64</code> URI, so the description needs no host; an https link to the same JSON works too. Every fuse gets its own page, e.g. <Link href="/app/fuse/1">/app/fuse/1</Link>.</li>
                 <li><b>Run it like a product.</b> From the designers page, change the fee (<code>setFee</code>), delist it from new installs (<code>setListed</code>) or link a page that explains it (<code>setMetadataURI</code>). A lower fee applies to everyone at once; a higher one only to wallets whose owner accepts it.</li>
               </ol>
+              <p>Several designs can compete on one socket. The repo ships four rivals for the same sockets, exhaustively tested and rehearsed on a mainnet fork but not yet taped out on mainnet: <b>Per-Payment Cap</b> (no single payment over the cap), <b>Strict Payee Book</b> (no trial amount), <b>Two-Strike Breaker</b> (two latches: the first stranger is refused, the second blows it) and <b>Lead Approver</b> (seat 1 must be one of the two signers). A rival names its settings in its metadata, and the app labels them that way.</p>
               <p className="small">Duplicate-invoice checks, business hours only, per-payee caps, velocity limits: there&apos;s room for many more fuses.</p>
             </section>
 

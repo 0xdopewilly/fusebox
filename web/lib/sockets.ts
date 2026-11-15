@@ -5,18 +5,29 @@ import type { Address } from "viem";
  * amounts count in steps of the install's `unit` (1 USDT0 by default) up to 254, hours up to 255.
  */
 export interface ParamField { k: "a" | "b"; label: string; suffix: string; max: number; def: number; money: boolean }
-export interface SocketSpec { socket: number; key: string; name: string; fields: ParamField[]; say: string }
+export interface SocketSpec { socket: number; key: string; name: string; fields: ParamField[]; say: string; pins: [string, number, string][] }
 
 export const SOCKETS: Record<number, SocketSpec> = {
   1: { socket: 1, key: "daily-cap", name: "Daily Cap", say: "No more than the cap in a UTC day, however the agent is asked.",
-    fields: [{ k: "a", label: "Cap per UTC day", suffix: "USDT0", max: 254, def: 50, money: true }] },
+    fields: [{ k: "a", label: "Cap per UTC day", suffix: "USDT0", max: 254, def: 50, money: true }],
+    pins: [["amount", 8, "this payment in units, rounded up (255 for another token)"], ["spent", 8, "spent today through this slot, in units"], ["cap", 8, "the owner's daily cap in units (0 to 254)"]] },
   2: { socket: 2, key: "payee-guard", name: "Payee Guard", say: "Saved payees only; a newly saved payee gets a trial amount until its cooling-off ends.",
-    fields: [{ k: "a", label: "Cooling-off", suffix: "hours", max: 255, def: 24, money: false }, { k: "b", label: "Trial amount", suffix: "USDT0", max: 254, def: 2, money: true }] },
-  3: { socket: 3, key: "breaker", name: "Breaker", say: "Trips on a payment to a stranger and stays blown until the owner resets it.", fields: [] },
+    fields: [{ k: "a", label: "Cooling-off", suffix: "hours", max: 255, def: 24, money: false }, { k: "b", label: "Trial amount", suffix: "USDT0", max: 254, def: 2, money: true }],
+    pins: [["listed", 1, "the payee is in the owner's payee book"], ["age", 8, "hours since the payee was saved (0 if not)"], ["cooldown", 8, "the install's cooling-off, in hours"], ["amount", 8, "this payment in units (255 for another token)"], ["trial", 8, "largest payment to a payee still cooling off"]] },
+  3: { socket: 3, key: "breaker", name: "Breaker", say: "Trips on a payment to a stranger and stays blown until the owner resets it.", fields: [],
+    pins: [["set", 1, "owner or agent freeze (control beats)"], ["clear", 1, "owner reset (control beats)"], ["attempt", 1, "1 on every payment decision"], ["suspect", 1, "the payee isn't in the payee book"]] },
   4: { socket: 4, key: "approval-2of3", name: "Two of Three", say: "Above a threshold, two of three approvers must sign that exact payment.",
-    fields: [{ k: "a", label: "Approvals above", suffix: "USDT0", max: 254, def: 20, money: true }] },
+    fields: [{ k: "a", label: "Approvals above", suffix: "USDT0", max: 254, def: 20, money: true }],
+    pins: [["approvals", 3, "bit k: seat k approved this exact payment in time"], ["amount", 8, "this payment in units (255 for another token)"], ["threshold", 8, "payments up to this need no approval"]] },
 };
 export const socketOf = (key: string) => Object.values(SOCKETS).find((s) => s.key === key);
+
+/** The socket's settings, relabelled by the fuse's metadata; with labels, an unlabelled setting is hidden (unused). */
+export function fieldsFor(socket: number, labels?: { a?: string; b?: string }): ParamField[] {
+  const base = SOCKETS[socket]?.fields ?? [];
+  if (!labels) return base;
+  return base.filter((f) => labels[f.k]).map((f) => ({ ...f, label: labels[f.k]! }));
+}
 
 export const USDT_UNIT = 1_000_000n;
 const ZERO = "0x0000000000000000000000000000000000000000" as Address;
@@ -36,9 +47,10 @@ export function toParams(socket: number, vals: { a?: number; b?: number }, token
   return { token, unit, a: vals.a ?? 0, b: socket === 2 ? vals.b ?? 0 : 0 };
 }
 
-/** One line describing an install's settings, in the owner's terms. */
-export function describe(socket: number, a: number, b: number, unit = "1"): string {
+/** One line describing an install's settings, in the owner's terms (the designer's labels when the fuse has them). */
+export function describe(socket: number, a: number, b: number, unit = "1", labels?: { a?: string; b?: string }): string {
   const amt = (n: number) => `${+(n * Number(unit)).toFixed(6)} USDT0`;
+  if (labels) return fieldsFor(socket, labels).map((f) => `${f.label} ${f.money ? amt(f.k === "a" ? a : b) : `${f.k === "a" ? a : b} ${f.suffix}`}`).join(" · ") || "No settings";
   if (socket === 1) return `${amt(a)} a UTC day`;
   if (socket === 2) return `${a} h cooling-off · ${amt(b)} trial`;
   if (socket === 3) return "Trips on strangers";

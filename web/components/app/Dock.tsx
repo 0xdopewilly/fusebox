@@ -38,7 +38,7 @@ export default function Dock() {
   const [open, setOpen] = useState(false);
   const sheet = useRef<HTMLDivElement>(null);
   const shade = useRef<HTMLDivElement>(null);
-  const active = (h: string) => (h === "/app" ? path === "/app" || path.startsWith("/app/w/") : path.startsWith(h));
+  const active = (h: string) => (h === "/app" ? path === "/app" || path.startsWith("/app/w/") : path.startsWith(h) || (h === "/app/market" && path.startsWith("/app/fuse/")));
 
   const close = useCallback(() => {
     if (!sheet.current || reduced()) { setOpen(false); return; }

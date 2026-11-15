@@ -1,0 +1,38 @@
+{
+  "1": {
+    "name": "Daily Cap",
+    "summary": "No more than the owner's cap in a UTC day, however the agent is asked.",
+    "description": "Adds this payment to what the wallet has already spent today through this fuse and refuses it if the total would pass the owner's cap. An 8-bit adder feeds a no-borrow comparator; an overflow out of the adder also refuses, so no amount can wrap around the cap. Amounts are counted in whole steps of the install's unit (1 USDT0 by default), rounded up. Stateless: the wallet supplies today's spend.",
+    "rule": "allow iff spent + amount <= cap",
+    "designer": "Fusebox",
+    "source": "https://github.com/0xdopewilly/fusebox/blob/main/circuits/src/fuses.ts",
+    "external_url": "https://fusebox-xlayer.vercel.app/app/fuse/1"
+  },
+  "2": {
+    "name": "Payee Guard",
+    "summary": "Saved payees only, with a trial amount for new ones until their cooling-off ends.",
+    "description": "Pays only addresses in the owner's payee book. A payee saved less than the cooling-off period ago can receive at most the trial amount, so a swapped bank detail or a poisoned address book can cost a test payment, never the invoice. A stranger gets nothing. Stateless: the wallet supplies the payee's age in hours.",
+    "rule": "allow iff listed and (age >= cooldown or amount <= trial)",
+    "designer": "Fusebox",
+    "source": "https://github.com/0xdopewilly/fusebox/blob/main/circuits/src/fuses.ts",
+    "external_url": "https://fusebox-xlayer.vercel.app/app/fuse/2"
+  },
+  "3": {
+    "name": "Breaker",
+    "summary": "Trips on a payment to a stranger and stays blown until the owner resets it.",
+    "description": "One LATCH holds the breaker's state on X Layer. A payment attempt to an address outside the payee book trips it: that payment and every one after it is refused, even to good payees, until the owner sends a reset. The agent and the approvers can trip it on purpose (freeze); only the owner can clear it, and a freeze wins over a reset in the same beat.",
+    "rule": "q' = set or (attempt and suspect) or (q and not clear); allow iff not q'",
+    "designer": "Fusebox",
+    "source": "https://github.com/0xdopewilly/fusebox/blob/main/circuits/src/fuses.ts",
+    "external_url": "https://fusebox-xlayer.vercel.app/app/fuse/3"
+  },
+  "4": {
+    "name": "Two of Three",
+    "summary": "Above a threshold, two of three approvers must sign that exact payment.",
+    "description": "Payments up to the owner's threshold pass. Above it, at least two of the three approver seats must have approved this exact payment (wallet, token, payee and amount) on-chain within the approval window. A majority gate over the three approval bits decides, so no single key, the agent's included, can push a large payment through.",
+    "rule": "allow iff amount <= threshold or at least 2 of 3 approvals",
+    "designer": "Fusebox",
+    "source": "https://github.com/0xdopewilly/fusebox/blob/main/circuits/src/fuses.ts",
+    "external_url": "https://fusebox-xlayer.vercel.app/app/fuse/4"
+  }
+}

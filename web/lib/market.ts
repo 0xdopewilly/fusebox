@@ -3,6 +3,7 @@ import { decodeEventLog, formatUnits, type Address, type Hex } from "viem";
 import { fuseboxLogs } from "./logs";
 import { client, DEPLOYMENT, IS_FORK } from "./chain";
 import { fuseRegistryAbi } from "./abi";
+import { decodeDataUri, sanitize, type FuseMeta } from "./fuseMeta";
 
 const SOCKET: Record<number, [string, string]> = { 1: ["daily-cap", "Daily Cap"], 2: ["payee-guard", "Payee Guard"], 3: ["breaker", "Breaker"], 4: ["approval-2of3", "Two of Three"] };
 const usd = (v: bigint) => formatUnits(v, 6);
@@ -10,8 +11,27 @@ const usd = (v: bigint) => formatUnits(v, 6);
 export interface MarketFuse {
   fuseId: number; key: string; name: string; processor: Address; circuitId: number; designer: Address; socket: number;
   gates: number; nState: number; fee: string; listed: boolean; decisions: number; earned: string; lifetimeEarned: string; metadataURI: string; onAtlas: boolean; netlistHash: Hex; nIn: number;
+  listedAt: number; meta: FuseMeta | null; original: boolean;
 }
 export interface Market { source: "fork" | "mainnet"; fuses: MarketFuse[]; protocolBps: number; protocolEarned: string; totalDecisions: number; totalEarned: string }
+
+// ---- listing metadata: on-chain data URIs decode here; an https link is fetched once in a while, small and bounded
+const metaCache = new Map<string, { at: number; meta: FuseMeta | null }>();
+async function resolveMeta(uri: string): Promise<FuseMeta | null> {
+  if (!uri) return null;
+  if (uri.startsWith("data:")) return decodeDataUri(uri);
+  if (!/^https:\/\//.test(uri)) return null;
+  const hit = metaCache.get(uri);
+  if (hit && Date.now() - hit.at < 10 * 60_000) return hit.meta;
+  let meta: FuseMeta | null = null;
+  try {
+    const r = await fetch(uri, { signal: AbortSignal.timeout(3000), redirect: "error", headers: { accept: "application/json" }, cache: "no-store" });
+    const len = Number(r.headers.get("content-length") || 0);
+    if (r.ok && len <= 16_384) { const t = (await r.text()).slice(0, 16_384); meta = sanitize(JSON.parse(t)); }
+  } catch { /* unreachable or not JSON: the listing shows without it */ }
+  metaCache.set(uri, { at: Date.now(), meta });
+  return meta;
+}
 
 let cached: { at: number; data: Market } | null = null;
 export async function getMarket(): Promise<Market> {
@@ -42,6 +62,7 @@ export async function getMarket(): Promise<Market> {
       fuseId: Number(id), key, name, processor: f.processor, circuitId: Number(f.circuitId), designer, socket: Number(f.socket),
       gates: Number(f.gateCount), nState: Number(f.nState), fee: usd(f.fee), listed: f.listed, decisions: Number(dec),
       earned: usd(earned), lifetimeEarned: usd(life), metadataURI: uri || l.metadataURI || "", onAtlas: DEPLOYMENT.fuseIds.includes(Number(id)), netlistHash: f.netlistHash, nIn: Number(f.nIn),
+      listedAt: Number(f.listedAt), meta: await resolveMeta(uri || l.metadataURI || ""), original: DEPLOYMENT.fuseIds.includes(Number(id)),
     } satisfies MarketFuse;
   }));
   const data: Market = {

@@ -6,7 +6,7 @@ import { erc20Abi } from "@/lib/erc20";
 import { DEP, pub } from "@/lib/client-chain";
 import { useTxQueue, type TxStep } from "@/lib/useTxQueue";
 import { useMarket } from "@/lib/useMarket";
-import { SOCKETS, readField, toParams, describe, type ParamField } from "@/lib/sockets";
+import { SOCKETS, readField, toParams, describe, fieldsFor, type ParamField } from "@/lib/sockets";
 import { short } from "@/lib/hooks";
 import type { Atlas, FuseSlot } from "@/lib/atlas";
 import { useWallet } from "./WalletProvider";
@@ -96,17 +96,18 @@ function FuseRow({ f, i, data, busy, one }: P & { f: FuseSlot; i: number }) {
   const { write } = useWallet();
   const W = { address: data.wallet, abi: fuseboxWalletAbi } as const;
   const spec = SOCKETS[f.socket];
+  const fields = fieldsFor(f.socket, f.paramLabels); // a rival circuit may use the socket's settings differently
   const [open, setOpen] = useState(false);
   const [vals, setVals] = useState<Record<string, string>>({ a: String(f.a), b: String(f.b) });
   const raised = parseUnits(f.fee, 6) > parseUnits(f.maxFee, 6);
-  const parsed = spec ? parse(spec.fields, vals) : "Unknown socket";
+  const parsed = spec ? parse(fields, vals) : "Unknown socket";
   const changed = typeof parsed !== "string" && (parsed.a !== f.a || (parsed.b ?? 0) !== f.b);
   return (
     <li className="oc-fuse">
       <div className="of-top">
-        <div className="grow"><b>{f.name}</b><span className="m mute">Slot {i + 1} · circuit #{f.circuitId} · {describe(f.socket, f.a, f.b, f.unit)}</span></div>
+        <div className="grow"><b>{f.name}</b><span className="m mute">Slot {i + 1} · circuit #{f.circuitId} · {describe(f.socket, f.a, f.b, f.unit, f.paramLabels)}</span></div>
         <div className="of-btns">
-          {spec?.fields.length ? <button className="btn" disabled={busy} onClick={() => setOpen(!open)} aria-expanded={open}>{open ? "Close" : "Edit"}</button> : null}
+          {fields.length ? <button className="btn" disabled={busy} onClick={() => setOpen(!open)} aria-expanded={open}>{open ? "Close" : "Edit"}</button> : null}
           <Confirm label="Remove" sure="Remove it?" className="btn danger" disabled={busy} onConfirm={() => one(`Remove ${f.name}`, () => write({ ...W, functionName: "removeFuse", args: [BigInt(i)] }))} />
         </div>
       </div>
@@ -119,9 +120,9 @@ function FuseRow({ f, i, data, busy, one }: P & { f: FuseSlot; i: number }) {
       )}
       {open && spec && (
         <div className="of-edit">
-          <Fields fields={spec.fields} vals={vals} set={(k, v) => setVals({ ...vals, [k]: v })} unit={f.unit} />
+          <Fields fields={fields} vals={vals} set={(k, v) => setVals({ ...vals, [k]: v })} unit={f.unit} />
           {typeof parsed === "string" && <span className="oc-err">{parsed}</span>}
-          {f.key === "daily-cap" && <span className="m mute" style={{ fontSize: 11 }}>Today&apos;s spend so far ({Number(f.spentToday).toFixed(2)} USDT0) still counts against the new cap.</span>}
+          {f.key === "daily-cap" && f.original !== false && <span className="m mute" style={{ fontSize: 11 }}>Today&apos;s spend so far ({Number(f.spentToday).toFixed(2)} USDT0) still counts against the new cap.</span>}
           <button className="btn lime" disabled={busy || typeof parsed === "string" || !changed} onClick={() => { if (typeof parsed === "string") return; one(`Save ${f.name}`, () => write({ ...W, functionName: "setFuseParams", args: [BigInt(i), toParams(f.socket, parsed, f.token, parseUnits(f.unit, 6))] })); setOpen(false); }}>Save {f.name}</button>
         </div>
       )}
@@ -137,9 +138,10 @@ export function InstallFuse({ wallet, installed, busy, one, preset, lock }: { wa
   const [id, setId] = useState<number | null>(preset ?? null);
   const pick = listed.find((f) => f.fuseId === id) ?? null;
   const spec = pick ? SOCKETS[pick.socket] : null;
+  const fields = pick ? fieldsFor(pick.socket, pick.original ? undefined : pick.meta?.params) : [];
   const [vals, setVals] = useState<Record<string, string>>({});
-  useEffect(() => { if (spec) setVals(Object.fromEntries(spec.fields.map((f) => [f.k, String(f.def)]))); }, [spec?.socket]); // eslint-disable-line react-hooks/exhaustive-deps
-  const parsed = spec ? parse(spec.fields, vals) : "Pick a fuse";
+  useEffect(() => { setVals(Object.fromEntries(fields.map((f) => [f.k, String(f.def)]))); }, [pick?.fuseId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const parsed = spec ? parse(fields, vals) : "Pick a fuse";
   const full = installed.length >= 8;
   const dup = pick && installed.includes(pick.fuseId);
   return (
@@ -147,21 +149,21 @@ export function InstallFuse({ wallet, installed, busy, one, preset, lock }: { wa
       <label className="oc-f m" hidden={lock}><span>Fuse</span>
         <select aria-label="Fuse to install" value={id ?? ""} onChange={(e) => setId(e.target.value ? Number(e.target.value) : null)}>
           <option value="">{market ? "Choose a listed fuse…" : "Reading the market…"}</option>
-          {listed.map((f) => <option key={f.fuseId} value={f.fuseId}>{f.name} · fuse {f.fuseId} · circuit #{f.circuitId} · {f.fee} USDT0 a check{installed.includes(f.fuseId) ? " · installed" : ""}</option>)}
+          {listed.map((f) => <option key={f.fuseId} value={f.fuseId}>{f.meta?.name ?? f.name} · fuse {f.fuseId} · circuit #{f.circuitId} · {f.fee} USDT0 a check{installed.includes(f.fuseId) ? " · installed" : ""}</option>)}
         </select>
       </label>
       {pick && spec && (
         <>
-          <span className="m mute" style={{ fontSize: 11, lineHeight: 1.5 }}>{spec.say} {pick.gates} gates by {short(pick.designer)}.</span>
-          {spec.fields.length ? <Fields fields={spec.fields} vals={vals} set={(k, v) => setVals({ ...vals, [k]: v })} /> : null}
+          <span className="m mute" style={{ fontSize: 11, lineHeight: 1.5 }}>{pick.meta?.summary ?? (pick.original ? spec.say : "")} {pick.gates} gates by {short(pick.designer)}.</span>
+          {fields.length ? <Fields fields={fields} vals={vals} set={(k, v) => setVals({ ...vals, [k]: v })} /> : null}
         </>
       )}
       {typeof parsed === "string" && pick && <span className="oc-err">{parsed}</span>}
       {dup && <span className="oc-err" style={{ color: "var(--mute)" }}>Already on this wallet. A second copy checks every payment twice and charges twice.</span>}
       {full && <span className="oc-err">A wallet holds at most 8 fuses. Remove one first.</span>}
       <button className="btn lime" disabled={busy || !pick || !spec || typeof parsed === "string" || full}
-        onClick={() => { if (!pick || !spec || typeof parsed === "string") return; one(`Install ${pick.name}`, () => write({ address: wallet, abi: fuseboxWalletAbi, functionName: "addFuse", args: [BigInt(pick.fuseId), toParams(pick.socket, parsed, USDT0), parseUnits(pick.fee, 6)] })); }}>
-        {pick ? `Install ${pick.name} · ${pick.fee} USDT0 a check` : "Install"}
+        onClick={() => { if (!pick || !spec || typeof parsed === "string") return; one(`Install ${pick.meta?.name ?? pick.name}`, () => write({ address: wallet, abi: fuseboxWalletAbi, functionName: "addFuse", args: [BigInt(pick.fuseId), toParams(pick.socket, parsed, USDT0), parseUnits(pick.fee, 6)] })); }}>
+        {pick ? `Install ${pick.meta?.name ?? pick.name} · ${pick.fee} USDT0 a check` : "Install"}
       </button>
     </div>
   );

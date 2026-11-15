@@ -6,6 +6,8 @@ import { DEP, pub } from "@/lib/client-chain";
 import { short, fmt, OKLINK } from "@/lib/hooks";
 import { useTxQueue } from "@/lib/useTxQueue";
 import type { Market } from "@/lib/market";
+import Link from "next/link";
+import { encodeMeta, metaSource } from "@/lib/fuseMeta";
 import { useWallet } from "./WalletProvider";
 import NoWallet from "./NoWallet";
 
@@ -16,21 +18,43 @@ interface Info { owner: Address; nIn: number; nOut: number; nState: number; gate
 function ManageFuse({ f, busy, run }: { f: Market["fuses"][number]; busy: boolean; run: (label: string, fn: () => Promise<Hex>) => void }) {
   const { write } = useWallet();
   const R = { address: DEP.registry as Address, abi: fuseRegistryAbi } as const;
-  const [fee, setFee] = useState(f.fee); const [uri, setUri] = useState(f.metadataURI);
+  const [fee, setFee] = useState(f.fee);
+  const [sum, setSum] = useState(f.meta?.summary ?? ""); const [desc, setDesc] = useState(f.meta?.description ?? ""); const [rule, setRule] = useState(f.meta?.rule ?? "");
+  const [uri, setUri] = useState(metaSource(f.metadataURI) === "link" ? f.metadataURI : "");
   const feeOk = /^\d+(\.\d{1,6})?$/.test(fee.trim()) && Number(fee) <= 1;
   const up = feeOk && Number(fee) > Number(f.fee);
+  // the description is written on X Layer itself, as a fusebox-fuse/1 data URI the market and the fuse page read
+  const doc = encodeMeta({ name: f.meta?.name ?? f.name, summary: sum.trim(), description: desc.trim(), rule: rule.trim(), designer: f.meta?.designer, source: f.meta?.source, external_url: `https://fusebox-xlayer.vercel.app/app/fuse/${f.fuseId}` });
+  const docErr = !sum.trim() ? "Add a one-line summary" : sum.length > 200 ? "Summary: 200 characters at most" : desc.length > 1200 ? "Description: 1,200 characters at most" : rule.length > 160 ? "Rule: 160 characters at most" : null;
+  const same = doc === f.metadataURI || (sum.trim() === (f.meta?.summary ?? "") && desc.trim() === (f.meta?.description ?? "") && rule.trim() === (f.meta?.rule ?? "") && metaSource(f.metadataURI) === "on-chain");
   return (
     <div className="mf">
       <div className="mf-top"><b>#{f.fuseId} {f.name}</b><span className={f.listed ? "lime" : "red"}>{f.listed ? "Listed" : "Delisted"}</span></div>
       <div className="mf-grid">
         <label className="field"><span>Fee per check (USDT0)</span><input aria-label={`Fee per check for fuse ${f.fuseId}`} value={fee} onChange={(e) => setFee(e.target.value)} inputMode="decimal" /></label>
         <button className="btn" disabled={busy || !feeOk || Number(fee) === Number(f.fee)} onClick={() => run(`Set fuse #${f.fuseId}'s fee`, () => write({ ...R, functionName: "setFee", args: [BigInt(f.fuseId), parseUnits(fee.trim(), 6)] }))}>Set fee</button>
-        <label className="field"><span>Description link</span><input aria-label={`Description link for fuse ${f.fuseId}`} value={uri} onChange={(e) => setUri(e.target.value)} placeholder="ipfs://… or https://…" spellCheck={false} /></label>
-        <button className="btn" disabled={busy || uri === f.metadataURI || uri.length > 300} onClick={() => run(`Set fuse #${f.fuseId}'s link`, () => write({ ...R, functionName: "setMetadataURI", args: [BigInt(f.fuseId), uri.trim()] }))}>Save link</button>
       </div>
       {!feeOk && <p className="m red" style={{ fontSize: 11 }}>A fee from 0 to 1 USDT0, up to 6 decimals.</p>}
       {up && <p className="m mute" style={{ fontSize: 11 }}>A higher fee applies to new installs at once; wallets already running this fuse keep paying their accepted {f.fee} until their owner accepts the new price. A lower fee applies to everyone straight away.</p>}
-      <button className={`btn${f.listed ? " danger" : ""}`} style={{ marginTop: 10 }} disabled={busy} onClick={() => run(f.listed ? `Delist fuse #${f.fuseId}` : `Relist fuse #${f.fuseId}`, () => write({ ...R, functionName: "setListed", args: [BigInt(f.fuseId), !f.listed] }))}>{f.listed ? "Delist (existing installs keep working)" : "List it again"}</button>
+      <div className="mf-desc">
+        <label className="field"><span>Summary · one line on the market card</span><input aria-label={`Summary for fuse ${f.fuseId}`} value={sum} onChange={(e) => setSum(e.target.value)} maxLength={200} /></label>
+        <label className="field"><span>Description · the fuse&apos;s own page</span><textarea aria-label={`Description for fuse ${f.fuseId}`} value={desc} onChange={(e) => setDesc(e.target.value)} rows={4} maxLength={1200} /></label>
+        <label className="field"><span>Rule · in plain terms (optional)</span><input aria-label={`Rule for fuse ${f.fuseId}`} value={rule} onChange={(e) => setRule(e.target.value)} maxLength={160} placeholder="allow iff …" /></label>
+        <div className="mf-row">
+          <span className="m mute" style={{ fontSize: 11 }}>{docErr ?? `Stored on X Layer: ${doc.length.toLocaleString()} bytes, no host to keep alive.`}</span>
+          <button className="btn" disabled={busy || !!docErr || same} onClick={() => run(`Describe fuse #${f.fuseId}`, () => write({ ...R, functionName: "setMetadataURI", args: [BigInt(f.fuseId), doc] }))}>Save description</button>
+        </div>
+        <details className="mf-adv m"><summary>Or point to your own JSON</summary>
+          <div className="mf-grid">
+            <label className="field"><span>Metadata URL (https://…)</span><input aria-label={`Metadata URL for fuse ${f.fuseId}`} value={uri} onChange={(e) => setUri(e.target.value)} placeholder="https://…/fuse.json" spellCheck={false} /></label>
+            <button className="btn" disabled={busy || !/^https:\/\/\S+$/.test(uri.trim()) || uri.trim() === f.metadataURI || uri.length > 300} onClick={() => run(`Set fuse #${f.fuseId}'s link`, () => write({ ...R, functionName: "setMetadataURI", args: [BigInt(f.fuseId), uri.trim()] }))}>Save link</button>
+          </div>
+        </details>
+      </div>
+      <div className="mf-row" style={{ marginTop: 12 }}>
+        <Link className="m lime" href={`/app/fuse/${f.fuseId}`} style={{ fontSize: 11 }}>Its page →</Link>
+        <button className={`btn${f.listed ? " danger" : ""}`} disabled={busy} onClick={() => run(f.listed ? `Delist fuse #${f.fuseId}` : `Relist fuse #${f.fuseId}`, () => write({ ...R, functionName: "setListed", args: [BigInt(f.fuseId), !f.listed] }))}>{f.listed ? "Delist (existing installs keep working)" : "List it again"}</button>
+      </div>
     </div>
   );
 }
@@ -39,7 +63,7 @@ function ManageFuse({ f, busy, run }: { f: Market["fuses"][number]; busy: boolea
 export default function DesignerTools({ market }: { market: Market | null }) {
   const { account, wallets, connect, write } = useWallet();
   const q = useTxQueue<object>();
-  const [proc, setProc] = useState(DEP.processor); const [cid, setCid] = useState(""); const [fee, setFee] = useState("0.001"); const [uri, setUri] = useState("");
+  const [proc, setProc] = useState(DEP.processor); const [cid, setCid] = useState(""); const [fee, setFee] = useState("0.001"); const [fname, setFname] = useState(""); const [fsum, setFsum] = useState("");
   const [info, setInfo] = useState<Info | null>(null); const [infoErr, setInfoErr] = useState<string | null>(null);
   const mine = market && account ? market.fuses.filter((f) => f.designer.toLowerCase() === account.toLowerCase()) : [];
   const claimable = mine.filter((f) => Number(f.earned) > 0);
@@ -108,8 +132,9 @@ export default function DesignerTools({ market }: { market: Market | null }) {
               {info && <div className="hint2">Owner {short(info.owner)} · {info.nIn} inputs · {info.gates} gates{info.nState ? ` · ${info.nState} state bits` : ""} · {socket ? `fits the ${socket[1]} socket` : "no matching socket"} · netlist {info.hash.slice(0, 10)}…</div>}
               <div className="prow">
                 <div className="field"><label>Fee per check, USDT0</label><input aria-label="Fee per check, USDT0" value={fee} onChange={(e) => setFee(e.target.value)} inputMode="decimal" /></div>
-                <div className="field" style={{ flex: 2 }}><label>Metadata URI (optional)</label><input aria-label="Metadata URI (optional)" value={uri} onChange={(e) => setUri(e.target.value)} placeholder="ipfs://… or https://…" /></div>
+                <div className="field" style={{ flex: 2 }}><label>Name</label><input aria-label="Fuse name" value={fname} onChange={(e) => setFname(e.target.value)} maxLength={60} placeholder={socket ? `e.g. Strict ${socket[1]}` : "e.g. Per-payment cap"} /></div>
               </div>
+              <div className="field"><label>One-line summary · stored on X Layer with the listing</label><input aria-label="One-line summary" value={fsum} onChange={(e) => setFsum(e.target.value)} maxLength={200} placeholder="What it lets through, in a sentence" /></div>
             </div>
           </div>
         </div>
@@ -118,7 +143,7 @@ export default function DesignerTools({ market }: { market: Market | null }) {
         <div className="summary">
           <div className="sh2 m"><span className="mute">Designer</span><span className="lime">{account ? short(account) : "not connected"}</span></div>
           <div className="go">
-            <button className="btn lime" disabled={q.running || !!problem} onClick={() => q.start([{ id: "list", label: "List the circuit", run: () => write({ address: DEP.registry as Address, abi: fuseRegistryAbi, functionName: "list", args: [getAddress(proc.toLowerCase()), BigInt(cid), socket![0], info!.hash, parseUnits(fee || "0", 6), uri] }) }], {})}>List it as a fuse <span className="k">→</span></button>
+            <button className="btn lime" disabled={q.running || !!problem} onClick={() => q.start([{ id: "list", label: "List the circuit", run: () => write({ address: DEP.registry as Address, abi: fuseRegistryAbi, functionName: "list", args: [getAddress(proc.toLowerCase()), BigInt(cid), socket![0], info!.hash, parseUnits(fee || "0", 6), fname.trim() || fsum.trim() ? encodeMeta({ name: fname.trim() || undefined, summary: fsum.trim() || undefined, designer: short(account!) }) : ""] }) }], {})}>List it as a fuse <span className="k">→</span></button>
             {problem && <div className="warn2">{problem}</div>}
             {last && <p className="m mute" style={{ marginTop: 10 }}>{last.label}: {last.state === "done" ? "done" : last.state === "error" ? last.error : last.state === "skip" ? "not needed" : "sign in your wallet…"}{last.hash ? <> · <a className="lime" href={`${OKLINK}/tx/${last.hash}`} target="_blank" rel="noreferrer">tx ↗</a></> : null}</p>}
           </div>

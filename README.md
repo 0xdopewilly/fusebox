@@ -8,6 +8,8 @@ Fusebox wires an AI agent's wallet through small logic circuits taped out on [Ta
 - **Live app:** https://fusebox-xlayer.vercel.app/app (Atlas, a real agent wallet on X Layer mainnet)
 - **For agents:** `claude mcp add fusebox -- npx -y fusebox-mcp` ([npm](https://www.npmjs.com/package/fusebox-mcp))
 - **Try to scam it:** https://fusebox-xlayer.vercel.app/app/try. Write the payment an agent might be tricked into; the app runs Atlas's real `check()` on X Layer. It's free, needs no wallet, and nothing moves.
+- **For owners:** every wallet page has an owner console (fuses, payees, agents, approvers, money, ownership), an Atom feed of its decisions, a full CSV export and browser alerts for stopped payments.
+- **For designers:** every fuse has its own page (e.g. [/app/fuse/1](https://fusebox-xlayer.vercel.app/app/fuse/1)), installs from the market in one signature, and describes itself on-chain (`fusebox-fuse/1` metadata as a data URI).
 
 ## Live on X Layer mainnet (chain 196)
 
@@ -51,7 +53,7 @@ Every address is in [`deployments/xlayer-mainnet.json`](deployments/xlayer-mainn
 
 | Folder | What's in it |
 |---|---|
-| [`circuits/`](circuits) | The TAP-02 netlist toolchain (builder, encoder, simulator) and the four fuses, with exhaustive tests. |
+| [`circuits/`](circuits) | The TAP-02 netlist toolchain (builder, encoder, simulator), the four shipped fuses and four rival designs for the same sockets ([`src/rivals.ts`](circuits/src/rivals.ts)), all with exhaustive tests. `scripts/publish-rivals.mjs` tapes the rivals out and lists them (rehearsed on a fork; `--dry` prices it). |
 | [`contracts/`](contracts) | `FuseRegistry`, `FuseboxWallet` and `FuseboxFactory` (Foundry), the unit and fuzz tests, the X Layer fork tests, and the launch scripts. |
 | [`mcp/`](mcp) | [`fusebox-mcp`](https://www.npmjs.com/package/fusebox-mcp): `fusebox_check`, `fusebox_pay` and `fusebox_status` for any MCP agent (`npx -y fusebox-mcp`). |
 | [`web/`](web) | The site and app (Next.js, GSAP, three.js, viem). They read X Layer mainnet directly. |

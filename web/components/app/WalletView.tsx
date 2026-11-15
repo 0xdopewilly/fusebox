@@ -4,10 +4,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { gsap, useGSAP, reduced } from "@/lib/gsap";
 import { useAtlas, short, fmt, OKLINK } from "@/lib/hooks";
 import { LAYERS } from "@/lib/fuses";
+import { describe } from "@/lib/sockets";
 import type { Atlas, DecisionRow } from "@/lib/atlas";
 import LineWire, { type WireStatus } from "./LineWire";
 import Netlist from "@/components/landing/Netlist";
 import OwnerConsole from "./OwnerConsole";
+import DecisionTools from "./DecisionTools";
 import Loading from "./Loading";
 
 /** A number that rolls to its new value whenever it changes. */
@@ -73,11 +75,11 @@ export default function WalletView({ address, from }: { address?: string; from?:
   if (!data) return <div className="page"><div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div><Loading label={address ? "Reading this wallet from X Layer" : "Reading Atlas from X Layer"} error={error} /></div>;
 
   const a: Atlas = data;
-  const cap = a.fuses.find((f) => f.key === "daily-cap");
+  const cap = a.fuses.find((f) => f.key === "daily-cap" && f.original !== false) ?? a.fuses.find((f) => f.key === "daily-cap");
   const blown = a.fuses.find((f) => f.latched);
   const isPayee = (addr: string) => a.payees.some((p) => p.address.toLowerCase() === addr.toLowerCase());
   const f = sel !== null ? a.fuses[sel] : null;
-  const layout = f ? LAYERS.find((l) => l.key === f.key) : null;
+  const layout = f?.original ? LAYERS.find((l) => l.key === f.key) : null;
   const copy = () => { navigator.clipboard?.writeText(a.wallet); setCopied(true); setTimeout(() => setCopied(false), 1400); };
   // a long history starts short: 20 rows on the desktop table, 8 cards on phones, then 20 more per tap
   const tableN = 20 + more, cardN = 8 + more;
@@ -131,10 +133,12 @@ export default function WalletView({ address, from }: { address?: string; from?:
               <span className="m lime">Slot {f.slot + 1} · fuse #{f.fuseId}</span>
               <h3>{f.name}</h3>
               <p style={{ color: "var(--soft)", fontSize: 14, lineHeight: 1.5 }}>
+                {f.original === false ? `${f.summary ?? "A rival design for this socket."} Settings: ${describe(f.socket, f.a, f.b, f.unit, f.paramLabels)}.${f.latched ? " Blown: it refuses every payment until the owner resets it." : ""}` : <>
                 {f.key === "daily-cap" && `No more than ${f.a} USDT0 a UTC day. ${Number(f.spentToday).toFixed(2)} spent today.`}
                 {f.key === "payee-guard" && `Saved payees only. A new payee gets up to ${f.b} USDT0 until its ${f.a}-hour cooling-off ends.`}
                 {f.key === "breaker" && (f.latched ? "Blown: it tripped on a stranger and stays blown until the owner resets it." : "Trips on a payment to a stranger and stays blown until the owner resets it.")}
                 {f.key === "approval-2of3" && `Over ${f.a} USDT0, two of three approvers must sign that exact payment.`}
+                </>}
               </p>
             </div>
             <div className="m sch" style={{ gridColumn: "span 2" }}>{layout && <Netlist f={layout} />}<div className="mute" style={{ marginTop: 8 }}>Real netlist · {f.gates} gates{f.nState ? ` · ${f.nState} state bit` : ""}</div></div>
@@ -151,6 +155,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
       </div>
 
       <div className="blockhead" data-b><h2 className="disp">Decisions</h2><span className="m mute">{a.counts.decisions} on-chain · {a.counts.allowed} paid · {a.counts.blocked} stopped</span></div>
+      <div data-b><DecisionTools wallet={a.wallet} rows={a.decisions} fresh={fresh} names={a.fuses.map((x) => x.name)} /></div>
       <div data-b><Scope rows={a.decisions} /></div>
       <div className="dtable" style={{ overflowX: "auto" }} data-b tabIndex={0} role="region" aria-label="Decisions table">
         <table className="tbl decisions">

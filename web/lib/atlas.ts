@@ -3,7 +3,8 @@ import { unstable_cache } from "next/cache";
 import { decodeEventLog, formatUnits, type Address, type Hex } from "viem";
 import { fuseboxLogs } from "./logs";
 import { client, DEPLOYMENT, IS_FORK, RPC } from "./chain";
-import { fuseboxWalletAbi, fuseRegistryAbi, fuseboxFactoryAbi } from "./abi";
+import { fuseboxWalletAbi, fuseRegistryAbi, fuseboxFactoryAbi, tapeoutProcessorAbi } from "./abi";
+import { decodeDataUri } from "./fuseMeta";
 
 const erc20 = [{ type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "a", type: "address" }], outputs: [{ type: "uint256" }] }] as const;
 const SOCKET_KEY: Record<number, string> = { 1: "daily-cap", 2: "payee-guard", 3: "breaker", 4: "approval-2of3" };
@@ -16,6 +17,8 @@ export interface FuseSlot {
   slot: number; fuseId: number; key: string; name: string; circuitId: number; processor: Address;
   gates: number; nState: number; fee: string; maxFee: string; unit: string; a: number; b: number; token: Address; socket: number;
   latched: boolean; designer: Address; decisions: number; earned: string; lifetimeEarned: string; spentToday: string;
+  /** one of the four fuses Fusebox shipped (they have hand-drawn schematics and built-in copy) */
+  original?: boolean; summary?: string; paramLabels?: { a?: string; b?: string };
 }
 export interface DecisionRow {
   id: number; block: number; time: number; tx: Hex; to: Address; amount: string; allowed: boolean;
@@ -56,6 +59,22 @@ async function readHistory(addr: Address, head: bigint) {
     }
   }
   return { rows, payees, agents };
+}
+
+/** A wallet's whole decision history, oldest first, with the fuse names of its current line (for exports and feeds). */
+export async function getHistory(addr: Address) {
+  const head = await client.getBlockNumber();
+  const W = { address: addr, abi: fuseboxWalletAbi } as const;
+  const [hist, n] = await Promise.all([readHistory(addr, head), client.readContract({ ...W, functionName: "fuseCount" })]);
+  const slots = await Promise.all(Array.from({ length: Number(n) }, (_, i) => client.readContract({ ...W, functionName: "slotAt", args: [BigInt(i)] })));
+  // the same names as the wallet page: the shipped fuses by socket, any other design by its own metadata
+  const names = await Promise.all(slots.map(async (s) => {
+    const byKey = NAME[SOCKET_KEY[Number(s.socket)] ?? ""] ?? `socket ${s.socket}`;
+    if (DEPLOYMENT.fuseIds.includes(Number(s.fuseId))) return byKey;
+    const uri = await client.readContract({ address: DEPLOYMENT.registry, abi: fuseRegistryAbi, functionName: "metadataURI", args: [s.fuseId] }).catch(() => "");
+    return (uri && decodeDataUri(uri)?.name) || byKey;
+  }));
+  return { rows: hist.rows, payees: hist.payees, names };
 }
 
 // ------------------------------------------------------------------ snapshot
@@ -109,20 +128,29 @@ async function build(addr: Address): Promise<Atlas> {
   ])]);
   const fuses = await Promise.all(Array.from({ length: Number(n) }, async (_, i) => {
     const s = await client.readContract({ ...W, functionName: "slotAt", args: [BigInt(i)] });
-    const [f, designer, dCount, earned, life, spent] = await Promise.all([
+    // a sequential fuse is "blown" when a clean payment (attempt, payee saved) would be refused from its current state;
+    // asking the processor works for any design on the socket, however many latches it keeps
+    const blocked = s.nState > 0
+      ? client.readContract({ address: s.processor, abi: tapeoutProcessorAbi, functionName: "step", args: [s.circuitId, s.state, "0x04"] }).then(([, out]) => (Number(BigInt(out || "0x0")) & 1) === 0).catch(() => s.state !== "0x" && BigInt(s.state) !== 0n)
+      : Promise.resolve(false);
+    const [f, designer, dCount, earned, life, spent, uri, latched] = await Promise.all([
       client.readContract({ ...R, functionName: "fuse", args: [s.fuseId] }),
       client.readContract({ ...R, functionName: "designerOf", args: [s.fuseId] }),
       client.readContract({ ...R, functionName: "decisions", args: [s.fuseId] }),
       client.readContract({ ...R, functionName: "earned", args: [s.fuseId] }),
       client.readContract({ ...R, functionName: "lifetimeEarned", args: [s.fuseId] }),
       client.readContract({ ...W, functionName: "spentToday", args: [BigInt(i)] }),
+      client.readContract({ ...R, functionName: "metadataURI", args: [s.fuseId] }).catch(() => ""),
+      blocked,
     ]);
+    const meta = uri ? decodeDataUri(uri) : null;
+    const original = DEPLOYMENT.fuseIds.includes(Number(s.fuseId));
     const key = SOCKET_KEY[Number(s.socket)] ?? `socket-${s.socket}`;
     return {
-      slot: i, fuseId: Number(s.fuseId), key, name: NAME[key] ?? key, circuitId: Number(s.circuitId), processor: s.processor,
+      slot: i, fuseId: Number(s.fuseId), key, name: (original ? NAME[key] : meta?.name) ?? NAME[key] ?? key, circuitId: Number(s.circuitId), processor: s.processor,
       gates: Number(f.gateCount), nState: Number(s.nState), fee: usd(f.fee), maxFee: usd(s.maxFee),
       unit: usd(s.params.unit), a: Number(s.params.a), b: Number(s.params.b),
-      latched: s.nState > 0 && s.state !== "0x" && BigInt(s.state) !== 0n, designer, decisions: Number(dCount),
+      latched, designer, decisions: Number(dCount), original, summary: meta?.summary, paramLabels: original ? undefined : meta?.params,
       earned: usd(earned), lifetimeEarned: usd(life), spentToday: usd(spent), token: s.params.token, socket: Number(s.socket),
     } satisfies FuseSlot;
   }));

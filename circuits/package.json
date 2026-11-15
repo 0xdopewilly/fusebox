@@ -12,7 +12,8 @@
     "build": "node scripts/build.ts",
     "test": "node --test test/*.test.ts",
     "typecheck": "tsc --noEmit -p .",
-    "check": "npm run typecheck && npm test && npm run build"
+    "check": "npm run typecheck && npm test && npm run build && npm run build:rivals",
+    "build:rivals": "node scripts/build-rivals.ts"
   },
   "devDependencies": {
     "@types/node": "24.19.2",

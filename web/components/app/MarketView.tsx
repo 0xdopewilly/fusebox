@@ -52,12 +52,12 @@ export default function MarketView() {
           <h2 className="sr">Listed fuses</h2>
           <div style={{ marginTop: 40 }}>
             {data.fuses.map((f, i) => {
-              const layout = LAYERS.find((l) => l.key === f.key);
+              const layout = f.original ? LAYERS.find((l) => l.key === f.key) : undefined;
               return (
                 <div className="fz" key={f.fuseId} data-cursor="Signal">
                   <div><div className="ix">{String(i + 1).padStart(2, "0")}</div></div>
                   <div style={{ gridColumn: "2 / 4" }}>
-                    <h3>{f.name}</h3><p className="say">{SAY[f.key] ?? f.metadataURI}</p>
+                    <h3><Link href={`/app/fuse/${f.fuseId}`} className="fz-name">{f.meta?.name ?? f.name}</Link></h3><p className="say">{f.meta?.summary ?? (f.original ? SAY[f.key] : "") ?? ""}</p>
                     <p className="m" style={{ marginTop: 12, color: "var(--dim)" }}>Fuse #{f.fuseId} · <a href={`${OKLINK}/address/${f.processor}`} target="_blank" rel="noreferrer" style={{ color: "var(--mute)" }}>circuit #{f.circuitId} ↗</a> · designer {short(f.designer)}{f.onAtlas ? <span className="lime"> · on Atlas</span> : null}</p>
                   </div>
                   <div className="sch">{layout && <Netlist f={layout} />}<ChainNetlist processor={f.processor} circuitId={f.circuitId} nIn={f.nIn} pinned={f.netlistHash} draw={!layout} /></div>

@@ -8,7 +8,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const short = /^0x[0-9a-fA-F]{40}$/.test(address) ? `${address.slice(0, 6)}…${address.slice(-4)}` : "wallet";
   const title = `Wallet ${short} · Fusebox`;
   const description = `A Fusebox wallet on X Layer: every payment its AI agent makes has to pass the fuses its owner chose. Live balance, fuses and decisions.`;
-  return { title, description, openGraph: { title, description }, twitter: { title, description } };
+  const feed = /^0x[0-9a-fA-F]{40}$/.test(address) ? { types: { "application/atom+xml": `/api/wallet/${address}/feed` } } : undefined;
+  return { title, description, openGraph: { title, description }, twitter: { title, description }, alternates: feed };
 }
 
 export default async function WalletPage({ params, searchParams }: Props) {
