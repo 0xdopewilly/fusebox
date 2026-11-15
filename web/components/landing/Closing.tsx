@@ -70,7 +70,7 @@ export default function Closing() {
     <section className="cta reg" ref={root}>
       <Reg />
       <div className="wrap">
-        <div className="m" style={{ marginBottom: 34 }}><span className="lime" data-scr>[07]</span> <span className="mute" data-scr>Get started</span></div>
+        <div className="m" style={{ marginBottom: 34 }}><span className="lime" data-scr>[08]</span> <span className="mute" data-scr>Get started</span></div>
         <h2 className="disp"><span className="txt">Wire it up</span><span className="dot" /></h2>
         <div className="row2">
           <p>Give your agent a wallet with fuses on X Layer, or tape out a fuse of your own and earn from every decision it makes.</p>

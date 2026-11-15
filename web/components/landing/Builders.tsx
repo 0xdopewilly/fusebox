@@ -98,7 +98,7 @@ export default function Builders() {
   return (
     <section className="dev reg" ref={root} id="build">
       <Reg />
-      <div className="wrap sh"><div className="m lime" data-scr>[06]</div><div className="m mute" data-scr>For agent builders</div></div>
+      <div className="wrap sh"><div className="m lime" data-scr>[07]</div><div className="m mute" data-scr>For agent builders</div></div>
       <div className="wrap body">
         <div className="left">
           <h2 className="disp">One call before <span className="lime">every</span> payment.</h2>

@@ -6,6 +6,7 @@ import Problem from "@/components/landing/Problem";
 import LiveProof from "@/components/landing/LiveProof";
 import How from "@/components/landing/How";
 import Fuses from "@/components/landing/Fuses";
+import Users from "@/components/landing/Users";
 import Designers from "@/components/landing/Designers";
 import Builders from "@/components/landing/Builders";
 import Closing from "@/components/landing/Closing";
@@ -22,6 +23,7 @@ export default function Home() {
         <Problem />
         <How />
         <Fuses />
+        <Users />
         <Designers />
         <Builders />
         <Closing />

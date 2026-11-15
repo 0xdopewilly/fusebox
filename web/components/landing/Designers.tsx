@@ -40,7 +40,7 @@ export default function Designers() {
   }, []);
   return (
     <section className="flood" ref={root} id="designers">
-      <div className="wrap sh"><div className="m">[05]</div><div className="m">For circuit designers</div><div className="m" style={{ gridColumn: "5 / 7" }}>Every fee goes to whoever owns the circuit NFT</div></div>
+      <div className="wrap sh"><div className="m">[06]</div><div className="m">For circuit designers</div><div className="m" style={{ gridColumn: "5 / 7" }}>Every fee goes to whoever owns the circuit NFT</div></div>
       <div className="wrap body">
         <h2 className="disp">A fuse is a product. It pays you every time it decides.</h2>
         <div className="pts">
