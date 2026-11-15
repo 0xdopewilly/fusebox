@@ -37,7 +37,7 @@ const TABS: { id: string; lines: Seg[][]; out: [string, string][] }[] = [
   {
     id: "MCP",
     lines: [
-      [["// any MCP agent gets two tools: fusebox_check and fusebox_pay", "c"]],
+      [["// fusebox-mcp gives any MCP agent fusebox_check, fusebox_pay and fusebox_status", "c"]],
       [["{"]],
       [['  "tool"', "s"], [": "], ['"fusebox_pay"', "s"], [","]],
       [['  "arguments"', "s"], [": { "], ['"to"', "s"], [": "], ['"0x9f3e…c41a"', "s"], [", "], ['"amount"', "s"], [": "], ['"2.5"', "n"], [","]],

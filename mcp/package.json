@@ -1,0 +1,40 @@
+{
+  "name": "fusebox-mcp",
+  "version": "0.1.0",
+  "description": "MCP tools for AI agents paying through a Fusebox wallet on X Layer: check a payment against TapeOut circuit fuses, pay, and read the wallet's state.",
+  "type": "module",
+  "bin": {
+    "fusebox-mcp": "index.mjs"
+  },
+  "files": [
+    "index.mjs",
+    "abi.json",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/0xdopewilly/fusebox",
+    "directory": "mcp"
+  },
+  "homepage": "https://fusebox-xlayer.vercel.app",
+  "keywords": [
+    "mcp",
+    "x-layer",
+    "tapeout",
+    "ai-agents",
+    "wallet",
+    "fusebox"
+  ],
+  "scripts": {
+    "test": "node test/smoke.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "viem": "2.57.12",
+    "zod": "4.6.7"
+  }
+}
