@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   let last: unknown = null;
   for (const url of RPCS) {
     try {
-      const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: payload, signal: AbortSignal.timeout(10_000), cache: "no-store" });
+      const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: payload, signal: AbortSignal.timeout(6_000), cache: "no-store" });
       const text = await r.text();
       if (!r.ok || !text.trimStart().startsWith("{") && !text.trimStart().startsWith("[")) continue;
       const json = JSON.parse(text) as Res | Res[];

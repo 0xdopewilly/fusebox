@@ -1,7 +1,8 @@
 import "server-only";
+import { unstable_cache } from "next/cache";
 import { decodeEventLog, formatUnits, type Address, type Hex } from "viem";
 import { fuseboxLogs } from "./logs";
-import { client, DEPLOYMENT, IS_FORK } from "./chain";
+import { client, DEPLOYMENT, IS_FORK, RPC } from "./chain";
 import { fuseboxWalletAbi, fuseRegistryAbi, fuseboxFactoryAbi } from "./abi";
 
 const erc20 = [{ type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "a", type: "address" }], outputs: [{ type: "uint256" }] }] as const;
@@ -31,13 +32,15 @@ export interface Atlas {
 
 // ------------------------------------------------------------------ decision log (from the shared log layer)
 const blockTime = new Map<number, number>();
+// a block's timestamp never changes: keep it in the shared data cache so a cold server doesn't re-ask the RPC for each one
+const cachedBlockTime = unstable_cache(async (b: number) => Number((await client.getBlock({ blockNumber: BigInt(b) })).timestamp), ["fusebox-blocktime", RPC], { revalidate: false });
 const isAtlas = (a: Address) => a.toLowerCase() === DEPLOYMENT.atlas.toLowerCase();
 async function readHistory(addr: Address, head: bigint) {
   // the shared log layer covers every factory wallet from its creation, so any wallet's full history is here
   const logs = (await fuseboxLogs(Number(head))).filter((l) => l.address === addr.toLowerCase());
   const rows: DecisionRow[] = []; const payees = new Map<Address, number>(); const agents = new Set<Address>();
   const need = [...new Set(logs.map((l) => l.blockNumber))].filter((b) => !blockTime.has(b));
-  await Promise.all(need.map(async (b) => blockTime.set(b, Number((await client.getBlock({ blockNumber: BigInt(b) })).timestamp))));
+  await Promise.all(need.map(async (b) => blockTime.set(b, await cachedBlockTime(b))));
   for (const l of [...logs].sort((x, y) => x.blockNumber - y.blockNumber || x.logIndex - y.logIndex)) {
     let ev;
     try { ev = decodeEventLog({ abi: fuseboxWalletAbi, data: l.data, topics: l.topics as [Hex, ...Hex[]] }); } catch { continue; }
@@ -79,6 +82,9 @@ async function build(addr: Address): Promise<Atlas> {
   const W = { address: addr, abi: fuseboxWalletAbi } as const;
   const R = { address: DEPLOYMENT.registry, abi: fuseRegistryAbi } as const;
   const head = await client.getBlock();
+  // the history only needs the head, so it loads alongside the contract reads
+  const histP = readHistory(addr, head.number);
+  histP.catch(() => {}); // awaited below; this only stops an early failure above from leaving it unhandled
   const [owner, paused, n, decisions, allowed, blocked, approvers, balance, feeBalance, protocolBps] = await Promise.all([
     client.readContract({ ...W, functionName: "owner" }),
     client.readContract({ ...W, functionName: "paused" }),
@@ -110,7 +116,7 @@ async function build(addr: Address): Promise<Atlas> {
       earned: usd(earned), lifetimeEarned: usd(life), spentToday: usd(spent),
     } satisfies FuseSlot;
   }));
-  const hist = await readHistory(addr, head.number);
+  const hist = await histP;
   const paidToDesigners = usd(hist.rows.reduce((t, r) => t + BigInt(Math.round(Number(r.fee) * 1e6)), 0n));
   return {
     source: IS_FORK ? "fork" : "mainnet", block: Number(head.number), time: Number(head.timestamp),

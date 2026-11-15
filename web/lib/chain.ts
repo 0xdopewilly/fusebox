@@ -19,6 +19,8 @@ export const RPC = process.env.FUSEBOX_RPC || (IS_FORK ? "http://127.0.0.1:8547"
 export const RPCS = IS_FORK || process.env.FUSEBOX_RPC ? [RPC] : ["https://rpc.xlayer.tech", "https://tapeout.net/rpc-xlayer", "https://xlayer.drpc.org"];
 export const client = createPublicClient({
   chain: { ...xLayer, rpcUrls: { default: { http: [RPC] } } },
-  transport: fallback(RPCS.map((u) => http(u, { timeout: 10_000, retryCount: 1 })), { retryCount: 1 }),
+  // with fallbacks, a hung RPC gives up after 6 s and the next one answers; a single RPC (a fork) gets more patience.
+  // Parallel reads share one JSON-RPC batch per RPC.
+  transport: fallback(RPCS.map((u) => http(u, { timeout: RPCS.length > 1 ? 6_000 : 15_000, retryCount: RPCS.length > 1 ? 0 : 1, batch: { batchSize: 40, wait: 4 } })), { retryCount: 1 }),
   batch: { multicall: true },
 });

@@ -1,7 +1,7 @@
 "use client";
 import { useRef } from "react";
 import { gsap, SplitText, ScrollTrigger, useGSAP, introDone, reduced } from "@/lib/gsap";
-import { FuseScene } from "./FuseScene";
+import type { FuseScene } from "./FuseScene";
 
 const TAGS = [
   { id: "fil", title: "Filament", sub: "a NAND circuit on X Layer", dx: -40, dy: -128 },
@@ -21,37 +21,49 @@ export default function Hero() {
     const flash = el.querySelector<HTMLElement>(".flash")!;
     let hot = false;
 
-    // ---- 3D fuse ----
-    const scene = new FuseScene(cv, {
-      onFrame: (a) => {
-        const ox = cv.offsetLeft, oy = cv.offsetTop;
-        let d = "";
-        TAGS.forEach((t, i) => {
-          const tag = tagEls[i];
-          const ax = ox + a[i].x, ay = oy + a[i].y, bx = ax + t.dx, by = ay + t.dy;
-          tag.style.transform = `translate(${bx}px,${by - 18}px)`;
-          const c = t.id === "blow" && hot ? "#ff5232" : "#bbfe2f";
-          d += `<path d="M${ax.toFixed(1)} ${ay.toFixed(1)}L${ax.toFixed(1)} ${by.toFixed(1)}L${bx.toFixed(1)} ${by.toFixed(1)}" fill="none" stroke="${c}" stroke-width="1"/><rect x="${(ax - 3.5).toFixed(1)}" y="${(ay - 3.5).toFixed(1)}" width="7" height="7" fill="${c}"/>`;
-        });
-        lead.innerHTML = d;
-      },
-      onBlow: (b) => {
-        if (b === hot) return;
-        hot = b;
-        tagEls[2].classList.toggle("hot", b);
-        if (b) gsap.fromTo(flash, { scaleX: 0, autoAlpha: 1 }, { scaleX: 1, duration: 0.5, ease: "power3.out", onComplete: () => { gsap.to(flash, { autoAlpha: 0, duration: 0.6 }); } });
-      },
+    // ---- 3D fuse: three.js loads once the page is interactive, so it never holds up the first paint or the intro ----
+    const reveal = { v: 0 };
+    let scene: FuseScene | null = null;
+    let io: IntersectionObserver | null = null, ro: ResizeObserver | null = null;
+    let dead = false, shown = false;
+    import("./FuseScene").then(({ FuseScene }) => {
+      if (dead) return;
+      const s = new FuseScene(cv, {
+        onFrame: (a) => {
+          if (!shown) { shown = true; el.classList.add("scene-on"); }
+          const ox = cv.offsetLeft, oy = cv.offsetTop;
+          let d = "";
+          TAGS.forEach((t, i) => {
+            const tag = tagEls[i];
+            const ax = ox + a[i].x, ay = oy + a[i].y, bx = ax + t.dx, by = ay + t.dy;
+            tag.style.transform = `translate(${bx}px,${by - 18}px)`;
+            const c = t.id === "blow" && hot ? "#ff5232" : "#bbfe2f";
+            d += `<path d="M${ax.toFixed(1)} ${ay.toFixed(1)}L${ax.toFixed(1)} ${by.toFixed(1)}L${bx.toFixed(1)} ${by.toFixed(1)}" fill="none" stroke="${c}" stroke-width="1"/><rect x="${(ax - 3.5).toFixed(1)}" y="${(ay - 3.5).toFixed(1)}" width="7" height="7" fill="${c}"/>`;
+          });
+          lead.innerHTML = d;
+        },
+        onBlow: (b) => {
+          if (b === hot) return;
+          hot = b;
+          tagEls[2].classList.toggle("hot", b);
+          if (b) gsap.fromTo(flash, { scaleX: 0, autoAlpha: 1 }, { scaleX: 1, duration: 0.5, ease: "power3.out", onComplete: () => { gsap.to(flash, { autoAlpha: 0, duration: 0.6 }); } });
+        },
+      });
+      s.reveal = reveal;
+      // arrived after the entrance already revealed it (a slow connection): dither it in now instead of popping
+      if (!reduced() && reveal.v >= 1.01) gsap.fromTo(reveal, { v: 0 }, { v: 1.01, duration: 1.4, ease: "power2.inOut" });
+      scene = s;
+      io = new IntersectionObserver(([e]) => (e.isIntersecting ? s.start() : s.stop()), { rootMargin: "100px" });
+      io.observe(cv);
+      ro = new ResizeObserver(() => s.resize());
+      ro.observe(cv);
     });
-    const io = new IntersectionObserver(([e]) => (e.isIntersecting ? scene.start() : scene.stop()), { rootMargin: "100px" });
-    io.observe(cv);
-    const ro = new ResizeObserver(() => scene.resize());
-    ro.observe(cv);
     const onMove = (e: PointerEvent) => {
       const r = el.getBoundingClientRect();
-      scene.setPointer(((e.clientX - r.left) / r.width) * 2 - 1, ((e.clientY - r.top) / r.height) * 2 - 1);
+      scene?.setPointer(((e.clientX - r.left) / r.width) * 2 - 1, ((e.clientY - r.top) / r.height) * 2 - 1);
     };
     el.addEventListener("pointermove", onMove);
-    const onClick = () => scene.blow();
+    const onClick = () => scene?.blow();
     cv.addEventListener("click", onClick);
 
     // ---- entrance ----
@@ -65,7 +77,7 @@ export default function Hero() {
 
     const tl = gsap.timeline({ paused: true });
     if (reduced()) {
-      scene.reveal.v = 1.01;
+      reveal.v = 1.01;
     } else {
       tl.from(document.querySelectorAll(".grid i"), { scaleY: 0, duration: 1.4, stagger: 0.06, ease: "wire" }, 0)
         .from(el.querySelector(".eyebrow"), { scrambleText: { text: "[01] Guardrails that run on X Layer, not on trust", chars: "01", speed: 0.5 }, duration: 1.2 }, 0.1)
@@ -75,7 +87,7 @@ export default function Hero() {
         .to(circuits.filter((c) => !brackets.includes(c)), { opacity: 0.15, duration: 0.05, repeat: 5, yoyo: true, stagger: { each: 0.04, from: "random" }, ease: "none" }, 0.95)
         .from(sub.lines, { yPercent: 105, duration: 1, stagger: 0.07 }, 0.55)
         .from(el.querySelectorAll(".ctas > *"), { y: 24, autoAlpha: 0, duration: 0.9, stagger: 0.08 }, 0.75)
-        .to(scene.reveal, { v: 1.01, duration: 1.8, ease: "power2.inOut" }, 0.35)
+        .to(reveal, { v: 1.01, duration: 1.8, ease: "power2.inOut" }, 0.35)
         .from(tagEls, { autoAlpha: 0, duration: 0.5, stagger: 0.12 }, 1.6)
         .from(lead, { autoAlpha: 0, duration: 0.5 }, 1.6)
         .from(el.querySelector(".hint"), { autoAlpha: 0, x: 12, duration: 0.6 }, 2)
@@ -100,10 +112,11 @@ export default function Hero() {
     }
 
     return () => {
-      io.disconnect(); ro.disconnect();
+      dead = true;
+      io?.disconnect(); ro?.disconnect();
       el.removeEventListener("pointermove", onMove);
       cv.removeEventListener("click", onClick);
-      scene.dispose();
+      scene?.dispose();
       ScrollTrigger.refresh();
     };
   }, []);

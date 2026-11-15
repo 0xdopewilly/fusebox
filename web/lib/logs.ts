@@ -12,7 +12,7 @@ import index from "./deployments/mainnet-index.json";
  *  - blocks before `scannedTo` come from mainnet-index.json (scripts/index-logs.mjs, refreshed on every build);
  *  - after that, aligned 1,000-block windows. Finished windows never change, so each is fetched once and kept in
  *    Next's data cache, shared by every server instance. An hourly warm-up keeps the uncached tail short.
- * X Layer caps eth_getLogs ranges: tapeout.net 1,000 blocks, rpc.xlayer.tech 100.
+ * X Layer caps eth_getLogs ranges: tapeout.net 1,000 blocks, rpc.xlayer.tech and drpc 100.
  */
 export interface RawLog { address: Address; topics: Hex[]; data: Hex; blockNumber: number; transactionHash: Hex; logIndex: number }
 
@@ -28,35 +28,65 @@ export const TOPIC = {
 const TOPICS = Object.values(TOPIC);
 
 const LOGS_RPC = process.env.FUSEBOX_LOGS_RPC;
-const SOURCES: [string, number][] = IS_FORK ? [[RPC, 5000]] : LOGS_RPC ? [[LOGS_RPC, 1000]] : [["https://tapeout.net/rpc-xlayer", 1000], [RPC, 100]];
+const LOGS_STEP = Number(process.env.FUSEBOX_LOGS_STEP) || 1000; // a fork of rpc.xlayer.tech needs 100
+const SOURCES: [string, number][] = IS_FORK ? [[RPC, 5000]] : LOGS_RPC ? [[LOGS_RPC, LOGS_STEP]]
+  : [["https://tapeout.net/rpc-xlayer", 1000], ["https://xlayer.drpc.org", 100], [RPC, 100]]; // rpc.xlayer.tech last: the app's reads already lean on it, and it rate-limits
 const IDX = IS_FORK ? { blocks: [] as number[], scannedTo: DEPLOYMENT.fromBlock - 1 } : (index as { blocks: number[]; scannedTo: number });
 const WINDOW = 1000;
 const FINAL = 64; // a window is cached once its last block is this far behind the head
 const LAG = 6; // blocks this close to the head are re-read on every call, in case the log source is a little behind
+const HEDGE_MS = 1500; // tapeout.net sometimes hangs for 20 s: after this long the next source starts too
+const CALL_MS = 8000;
 
-async function rpc<T>(url: string, method: string, params: unknown[]): Promise<T> {
-  const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }), cache: "no-store", signal: AbortSignal.timeout(12_000) });
-  const j = await r.json();
-  if (j.error) throw new Error(j.error.message);
-  return j.result as T;
+type LogJson = Record<string, string | string[]>;
+const hex = (n: number) => "0x" + n.toString(16);
+
+/** Several eth_getLogs ranges in one HTTP request (a JSON-RPC batch); any error fails the whole set. */
+async function getLogsBatch(url: string, ranges: [number, number][], signal: AbortSignal): Promise<LogJson[][]> {
+  const body = ranges.map(([f, t], id) => ({ jsonrpc: "2.0", id, method: "eth_getLogs", params: [{ topics: [TOPICS], fromBlock: hex(f), toBlock: hex(t) }] }));
+  const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), cache: "no-store", signal: AbortSignal.any([signal, AbortSignal.timeout(CALL_MS)]) });
+  const j = (await r.json()) as { id: number; result?: LogJson[]; error?: { message: string } }[];
+  if (!Array.isArray(j)) throw new Error(`${url}: not a batch reply`);
+  const byId = new Map(j.map((x) => [x.id, x]));
+  return ranges.map((_, id) => {
+    const x = byId.get(id);
+    if (!x || x.error || !Array.isArray(x.result)) throw new Error(`${url}: ${x?.error?.message ?? "missing reply"}`);
+    return x.result;
+  });
 }
 
-/** All logs carrying one of our event signatures in [a, b], from any contract (filtered later). */
-async function scan(a: number, b: number): Promise<RawLog[]> {
-  let last: unknown;
-  for (const [url, step] of SOURCES) {
-    try {
-      const out: RawLog[] = [];
-      const parts: [number, number][] = [];
-      for (let f = a; f <= b; f += step) parts.push([f, Math.min(b, f + step - 1)]);
-      for (let i = 0; i < parts.length; i += 6) {
-        const res = await Promise.all(parts.slice(i, i + 6).map(([f, t]) => rpc<Record<string, string | string[]>[]>(url, "eth_getLogs", [{ topics: [TOPICS], fromBlock: "0x" + f.toString(16), toBlock: "0x" + t.toString(16) }])));
-        res.flat().forEach((l) => out.push({ address: (l.address as string).toLowerCase() as Address, topics: l.topics as Hex[], data: l.data as Hex, blockNumber: parseInt(l.blockNumber as string, 16), transactionHash: l.transactionHash as Hex, logIndex: parseInt(l.logIndex as string, 16) }));
-      }
-      return out;
-    } catch (e) { last = e; }
+/** One source's logs for [a, b], cut to its range cap, ten ranges per request. */
+async function scanFrom(url: string, step: number, a: number, b: number, signal: AbortSignal): Promise<RawLog[]> {
+  const parts: [number, number][] = [];
+  for (let f = a; f <= b; f += step) parts.push([f, Math.min(b, f + step - 1)]);
+  const out: RawLog[] = [];
+  for (let i = 0; i < parts.length; i += 10) {
+    (await getLogsBatch(url, parts.slice(i, i + 10), signal)).flat().forEach((l) => out.push({
+      address: (l.address as string).toLowerCase() as Address, topics: l.topics as Hex[], data: l.data as Hex,
+      blockNumber: parseInt(l.blockNumber as string, 16), transactionHash: l.transactionHash as Hex, logIndex: parseInt(l.logIndex as string, 16),
+    }));
   }
-  throw last;
+  return out;
+}
+
+/**
+ * All logs carrying one of our event signatures in [a, b], from any contract (filtered later). Sources are hedged:
+ * each starts when the one before it fails or has been quiet for HEDGE_MS, and the first complete answer wins.
+ */
+async function scan(a: number, b: number): Promise<RawLog[]> {
+  const ctl = new AbortController();
+  // a range that fits one 100-block call goes to drpc first: it answers small ranges about twice as fast as tapeout.net
+  const order = b - a < 100 && SOURCES.length > 1 ? [SOURCES[1], SOURCES[0], ...SOURCES.slice(2)] : SOURCES;
+  let prevFailed: Promise<unknown> = Promise.resolve();
+  const runs = order.map(([url, step], i) => {
+    const gate = i === 0 ? Promise.resolve() : Promise.race([new Promise((r) => setTimeout(r, HEDGE_MS * i)), prevFailed]);
+    const run = gate.then(() => { if (ctl.signal.aborted) throw new Error("settled"); return scanFrom(url, step, a, b, ctl.signal); });
+    prevFailed = run.then(() => new Promise(() => {}), () => undefined); // settles only if this source fails
+    return run;
+  });
+  try { return await Promise.any(runs); }
+  catch (e) { throw (e as AggregateError).errors?.find((x) => !/settled|abort/i.test(String(x))) ?? e; }
+  finally { ctl.abort(); }
 }
 
 // Finished ranges are immutable: keep them in the shared data cache. The key includes the log source, so a fork
