@@ -2,6 +2,8 @@ import { isAddress, parseUnits, type Address } from "viem";
 import { checkPayment } from "@/lib/atlas";
 
 export const dynamic = "force-dynamic";
+// a cold start may need to catch up on blocks since the last visit; finished windows are cached for everyone after
+export const maxDuration = 60;
 
 /** A free, read-only check() against the Atlas demo wallet: which fuses would let this payment through? */
 export async function GET(req: Request) {

@@ -1,6 +1,6 @@
 import "server-only";
 import { decodeEventLog, formatUnits, type Address, type Hex } from "viem";
-import { fuseboxLogs, walletLogs } from "./logs";
+import { fuseboxLogs } from "./logs";
 import { client, DEPLOYMENT, IS_FORK } from "./chain";
 import { fuseboxWalletAbi, fuseRegistryAbi, fuseboxFactoryAbi } from "./abi";
 
@@ -32,10 +32,9 @@ export interface Atlas {
 // ------------------------------------------------------------------ decision log (from the shared log layer)
 const blockTime = new Map<number, number>();
 const isAtlas = (a: Address) => a.toLowerCase() === DEPLOYMENT.atlas.toLowerCase();
-async function readHistory(addr: Address, head: bigint, from: number) {
-  const logs = isAtlas(addr)
-    ? (await fuseboxLogs(Number(head))).filter((l) => l.address.toLowerCase() === addr.toLowerCase())
-    : await walletLogs(addr, from, Number(head));
+async function readHistory(addr: Address, head: bigint) {
+  // the shared log layer covers every factory wallet from its creation, so any wallet's full history is here
+  const logs = (await fuseboxLogs(Number(head))).filter((l) => l.address === addr.toLowerCase());
   const rows: DecisionRow[] = []; const payees = new Map<Address, number>(); const agents = new Set<Address>();
   const need = [...new Set(logs.map((l) => l.blockNumber))].filter((b) => !blockTime.has(b));
   await Promise.all(need.map(async (b) => blockTime.set(b, Number((await client.getBlock({ blockNumber: BigInt(b) })).timestamp))));
@@ -59,13 +58,13 @@ const inflight = new Map<string, Promise<Atlas>>();
 
 export const getAtlas = () => getWallet(DEPLOYMENT.atlas);
 
-/** Any wallet made by the Fusebox factory. `from` is where to start reading its history (its creation block if known). */
-export async function getWallet(addr: Address, from?: number): Promise<Atlas> {
+/** Any wallet made by the Fusebox factory, with its full history. */
+export async function getWallet(addr: Address): Promise<Atlas> {
   const key = addr.toLowerCase();
   const c = cache.get(key);
   if (c && Date.now() - c.at < 3_000) return c.data;
   if (inflight.has(key)) return inflight.get(key)!;
-  const p = build(addr, from).finally(() => inflight.delete(key));
+  const p = build(addr).finally(() => inflight.delete(key));
   inflight.set(key, p);
   const data = await p;
   cache.set(key, { at: Date.now(), data });
@@ -76,7 +75,7 @@ export async function isFuseboxWallet(addr: Address) {
   return client.readContract({ address: DEPLOYMENT.factory, abi: fuseboxFactoryAbi, functionName: "isWallet", args: [addr] });
 }
 
-async function build(addr: Address, from?: number): Promise<Atlas> {
+async function build(addr: Address): Promise<Atlas> {
   const W = { address: addr, abi: fuseboxWalletAbi } as const;
   const R = { address: DEPLOYMENT.registry, abi: fuseRegistryAbi } as const;
   const head = await client.getBlock();
@@ -111,7 +110,7 @@ async function build(addr: Address, from?: number): Promise<Atlas> {
       earned: usd(earned), lifetimeEarned: usd(life), spentToday: usd(spent),
     } satisfies FuseSlot;
   }));
-  const hist = await readHistory(addr, head.number, from ?? Math.max(DEPLOYMENT.fromBlock, Number(head.number) - 20_000));
+  const hist = await readHistory(addr, head.number);
   const paidToDesigners = usd(hist.rows.reduce((t, r) => t + BigInt(Math.round(Number(r.fee) * 1e6)), 0n));
   return {
     source: IS_FORK ? "fork" : "mainnet", block: Number(head.number), time: Number(head.timestamp),

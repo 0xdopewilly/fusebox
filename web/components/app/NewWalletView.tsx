@@ -73,7 +73,7 @@ export default function NewWalletView() {
     const steps: TxStep<Ctx>[] = [
       {
         id: "create", label: "Create your Fusebox wallet", detail: `owner ${short(account!)} · agent ${short(agent.trim())}`,
-        run: () => write({ address: DEP.factory as Address, abi: fuseboxFactoryAbi, functionName: "createWallet", args: [account!, [getAddress(agent.trim())], toHex(crypto.getRandomValues(new Uint8Array(32)))] }),
+        run: () => write({ address: DEP.factory as Address, abi: fuseboxFactoryAbi, functionName: "createWallet", args: [account!, [getAddress(agent.trim().toLowerCase())], toHex(crypto.getRandomValues(new Uint8Array(32)))] }),
         after: (r, c) => {
           for (const l of r.logs) { try { const ev = decodeEventLog({ abi: fuseboxFactoryAbi, data: l.data, topics: l.topics }); if (ev.eventName === "WalletCreated") c.wallet = ev.args.wallet; } catch {} }
           c.block = Number(r.blockNumber);
@@ -88,8 +88,8 @@ export default function NewWalletView() {
       const detail = f.key === "daily-cap" ? `${clamp(cap)} USDT0 a day` : f.key === "payee-guard" ? `${clamp(cool)} h cooling-off, ${clamp(trial)} USDT0 trial` : f.key === "approval-2of3" ? `approvals over ${clamp(thr)} USDT0` : "trips on strangers";
       steps.push({ id: `fuse-${f.key}`, label: `Splice in ${f.name}`, detail: `${detail} · ${Number(f.fee) / 1e6} USDT0 per check`, run: (c) => write({ ...W(), address: c.wallet!, functionName: "addFuse", args: [BigInt(f.id), params, f.fee] }) });
     });
-    goodPayees.forEach((p, i) => steps.push({ id: `payee-${i}`, label: "Save a payee", detail: short(p.trim()), run: (c) => write({ ...W(), address: c.wallet!, functionName: "addPayee", args: [getAddress(p.trim())] }) }));
-    if (on["approval-2of3"]) steps.push({ id: "approvers", label: "Seat the three approvers", detail: approvers.map((a) => short(a.trim())).join(" · "), run: (c) => write({ ...W(), address: c.wallet!, functionName: "setApprovers", args: [approvers.map((a) => getAddress(a.trim())) as [Address, Address, Address]] }) });
+    goodPayees.forEach((p, i) => steps.push({ id: `payee-${i}`, label: "Save a payee", detail: short(p.trim()), run: (c) => write({ ...W(), address: c.wallet!, functionName: "addPayee", args: [getAddress(p.trim().toLowerCase())] }) }));
+    if (on["approval-2of3"]) steps.push({ id: "approvers", label: "Seat the three approvers", detail: approvers.map((a) => short(a.trim())).join(" · "), run: (c) => write({ ...W(), address: c.wallet!, functionName: "setApprovers", args: [approvers.map((a) => getAddress(a.trim().toLowerCase())) as [Address, Address, Address]] }) });
     if (depositUnits > 0n) {
       steps.push({ id: "approve", label: "Allow the registry to take the fee deposit", detail: `${deposit} USDT0`, run: async () => {
         const have = await pub.readContract({ address: DEP.usdt0 as Address, abi: erc20, functionName: "allowance", args: [account!, DEP.registry as Address] });

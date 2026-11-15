@@ -3,6 +3,8 @@ import { IS_FORK } from "@/lib/chain";
 import snapshot from "@/lib/deployments/market-snapshot.json";
 
 export const dynamic = "force-dynamic";
+// a cold start may need to catch up on blocks since the last visit; finished windows are cached for everyone after
+export const maxDuration = 60;
 
 export async function GET() {
   try {

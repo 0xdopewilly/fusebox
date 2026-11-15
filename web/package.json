@@ -7,7 +7,8 @@
     "dev": "next dev -p 3120",
     "build": "next build",
     "start": "next start -p 3120",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prebuild": "node scripts/index-logs.mjs || echo \"index refresh skipped; using the committed index\""
   },
   "dependencies": {
     "@gsap/react": "2.1.2",

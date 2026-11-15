@@ -32,7 +32,7 @@ export default function OwnerPanel({ data }: { data: Atlas }) {
         <div>
           <p>Save a payee. Payee Guard still holds them to the trial amount until their cooling-off ends.</p>
           <input value={payee} onChange={(e) => setPayee(e.target.value)} placeholder="0x…" spellCheck={false} />
-          <button className="btn" disabled={q.running || !isAddress(payee.trim(), { strict: false })} onClick={() => one("Save payee", () => write({ ...W, functionName: "addPayee", args: [getAddress(payee.trim())] }))}>Save payee</button>
+          <button className="btn" disabled={q.running || !isAddress(payee.trim(), { strict: false })} onClick={() => one("Save payee", () => write({ ...W, functionName: "addPayee", args: [getAddress(payee.trim().toLowerCase())] }))}>Save payee</button>
         </div>
         <div>
           <p>Fee balance: {Number(data.feeBalance).toFixed(4)} USDT0. Withdraw any of it back to you.</p>
