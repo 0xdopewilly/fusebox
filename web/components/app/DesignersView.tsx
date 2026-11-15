@@ -1,6 +1,7 @@
 "use client";
 import { useMarket } from "@/lib/useMarket";
 import { short, fmt, OKLINK } from "@/lib/hooks";
+import DesignerTools from "./DesignerTools";
 
 const STEPS = [
   ["Design the circuit", "Write it as NAND gates (plus LATCH bits if it needs memory) with the Fusebox toolchain, which builds, simulates and exhaustively tests TAP-02 netlists. It reads one socket: the payment's inputs, laid out bit by bit."],
@@ -47,6 +48,7 @@ export default function DesignersView() {
           <p className="proof m">Every row is the registry&apos;s own ledger: fees are charged in the same call as each decision, so earnings move the moment a wallet uses a fuse.</p>
         </div>
       )}
+      <DesignerTools market={data} />
     </div>
   );
 }

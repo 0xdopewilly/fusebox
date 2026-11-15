@@ -370,3 +370,21 @@ html.js .hero [data-in], html.js .hero .bigword { opacity: 0; animation: fx-fall
   .word-hot { display: none; }
 }
 html[data-intro="skip"] .intro { display: none; }
+
+/* ---------- live proof strip ---------- */
+.liveproof { position: relative; z-index: 4; border-bottom: 1px solid var(--hair); background: #030303; }
+.lp-row { display: grid; grid-template-columns: repeat(6, 1fr); }
+.lp-cell { padding: 22px 14px; border-left: 1px solid var(--hair2); color: var(--mute); }
+.lp-cell:first-child { border-left: 0; padding-left: 0; }
+.lp-cell b { display: block; font-family: var(--display); font-weight: 800; font-variation-settings: "wdth" 104; font-size: 30px; letter-spacing: -0.03em; color: var(--ink); margin-bottom: 4px; }
+.lp-cell b.red { color: var(--red); } .lp-cell b.lime { color: var(--lime); font-size: 22px; padding: 4px 0 4px; }
+.lp-cell a { color: inherit; transition: color 0.3s; } .lp-cell a:hover { color: var(--lime); }
+.lp-head { color: var(--lime); display: flex; align-items: center; }
+.lp-links { display: flex; flex-direction: column; gap: 10px; justify-content: center; }
+.lp-links button { text-align: left; font: inherit; letter-spacing: inherit; text-transform: none; color: var(--lime); border: 1px solid rgba(187, 254, 47, 0.4); padding: 7px 10px; transition: background-color 0.3s, color 0.3s; }
+.lp-links button:hover { background: var(--lime); color: var(--lime-ink); }
+@media (max-width: 760px) {
+  .lp-row { grid-template-columns: 1fr 1fr; }
+  .lp-cell { padding: 16px 0 16px 12px; } .lp-cell:nth-child(odd) { border-left: 0; padding-left: 0; } .lp-cell:nth-child(n+3) { border-top: 1px solid var(--hair2); }
+  .lp-cell b { font-size: 24px; }
+}

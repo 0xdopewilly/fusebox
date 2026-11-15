@@ -22,6 +22,7 @@ export default function Connect() {
             <>
               <Link href="/app/mine" onClick={() => setOpen(false)}>My wallets</Link>
               <Link href="/app/new" onClick={() => setOpen(false)}>Wire up a new wallet</Link>
+              <Link href="/app/approve" onClick={() => setOpen(false)}>Approvals</Link>
               <button onClick={() => { navigator.clipboard?.writeText(account); setOpen(false); }}>Copy address</button>
               <button onClick={() => { disconnect(); setOpen(false); }}>Disconnect</button>
             </>

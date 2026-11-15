@@ -1,0 +1,46 @@
+import { RPCS } from "@/lib/chain";
+
+export const dynamic = "force-dynamic";
+
+/** Read-only methods the browser needs. Signed transactions go through the user's own wallet, never through here. */
+const ALLOWED = new Set([
+  "eth_chainId", "net_version", "eth_blockNumber", "eth_call", "eth_estimateGas", "eth_getBalance", "eth_getCode",
+  "eth_getStorageAt", "eth_getLogs", "eth_getTransactionCount", "eth_getTransactionByHash", "eth_getTransactionReceipt",
+  "eth_getBlockByNumber", "eth_getBlockByHash", "eth_gasPrice", "eth_maxPriorityFeePerGas", "eth_feeHistory",
+]);
+const MAX_BATCH = 25;
+
+type Req = { jsonrpc: "2.0"; id: number | string | null; method: string; params?: unknown[] };
+type Res = { id?: unknown; result?: unknown; error?: { code?: number; message?: string } };
+
+const fail = (id: unknown, code: number, message: string, status = 200) =>
+  Response.json({ jsonrpc: "2.0", id: id ?? null, error: { code, message } }, { status });
+
+/** A revert is the chain's real answer; any other error (range caps, CDN pages, rate limits) means try the next RPC. */
+const authoritative = (r: Res) => !r.error || /revert/i.test(r.error.message ?? "") || r.error.code === 3;
+
+export async function POST(req: Request) {
+  let body: Req | Req[];
+  try { body = await req.json(); } catch { return fail(null, -32700, "parse error", 400); }
+  const calls = Array.isArray(body) ? body : [body];
+  if (!calls.length || calls.length > MAX_BATCH) return fail(null, -32600, `batch must hold 1-${MAX_BATCH} calls`, 400);
+  for (const c of calls) {
+    if (!c || typeof c.method !== "string") return fail(null, -32600, "invalid request", 400);
+    if (!ALLOWED.has(c.method)) return fail(c.id, -32601, `${c.method} is not available on this read-only endpoint`);
+  }
+
+  const payload = JSON.stringify(body);
+  let last: unknown = null;
+  for (const url of RPCS) {
+    try {
+      const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: payload, signal: AbortSignal.timeout(10_000), cache: "no-store" });
+      const text = await r.text();
+      if (!r.ok || !text.trimStart().startsWith("{") && !text.trimStart().startsWith("[")) continue;
+      const json = JSON.parse(text) as Res | Res[];
+      last = json;
+      if ((Array.isArray(json) ? json : [json]).every(authoritative)) return Response.json(json, { headers: { "cache-control": "no-store" } });
+    } catch { /* next RPC */ }
+  }
+  if (last) return Response.json(last, { headers: { "cache-control": "no-store" } });
+  return fail(calls[0].id, -32603, "X Layer RPCs unreachable", 503);
+}

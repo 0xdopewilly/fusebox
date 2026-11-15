@@ -84,7 +84,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
       <section className="w-hero">
         <div className="who" data-b>
           <div className="m">{a.isAtlas ? <><span className="lime">[Atlas]</span> <span className="mute">ops agent · public demo wallet · owner {short(a.owner)}</span></> : <><span className="lime">[Fusebox wallet]</span> <span className="mute">owner {short(a.owner)} · agent {short(a.agent)}</span></>}</div>
-          <div className="m addr">{a.wallet}<button onClick={copy} data-cursor="Copy">{copied ? "Copied" : "Copy"}</button><a href={`${OKLINK}/address/${a.wallet}`} target="_blank" rel="noreferrer" data-cursor="OKLink">↗</a></div>
+          <div className="m addr">{a.wallet}<button onClick={copy} data-cursor="Copy">{copied ? "Copied" : "Copy"}</button><a href={`${OKLINK}/address/${a.wallet}`} target="_blank" rel="noreferrer" data-cursor="OKLink">↗</a>{a.isAtlas ? <a href={`https://repo.sourcify.dev/196/${a.wallet}`} target="_blank" rel="noreferrer" data-cursor="Source" style={{ color: "var(--dim)" }}>Verified source ↗</a> : null}</div>
           <div className="bal"><b><Count value={Number(a.balance)} /></b><span className="m">USDT0 in the wallet</span></div>
           <div className={`state-line${blown || a.paused ? " bad" : ""}`}>
             <i />{a.paused ? <span><b>Paused.</b> The owner froze the wallet; nothing pays until they unfreeze it.</span>
@@ -150,7 +150,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
               <tr key={r.id} className={fresh.has(r.id) ? "new" : ""}>
                 <td className="num" style={{ textAlign: "left" }}>{r.id}</td>
                 <td className="num hide-s" style={{ textAlign: "left" }}>{new Date(r.time * 1000).toISOString().slice(5, 16).replace("T", " ")}</td>
-                <td><span className={`res ${r.allowed ? "ok" : "no"}`}>{r.allowed ? "Paid" : "Stopped"}</span></td>
+                <td><span className={`res ${r.allowed ? "ok" : "no"}`}>{r.allowed ? "Paid" : "Stopped"}</span>{!r.allowed && a.fuses.some((x, i) => x.key === "approval-2of3" && r.status[i] === "blew") ? <Link className="m lime" style={{ display: "block", marginTop: 6, fontSize: 10.5 }} href={`/app/approve?wallet=${a.wallet}&to=${r.to}&amount=${r.amount}`}>Approve ↗</Link> : null}</td>
                 <td className="num">{fmt(r.amount)}</td>
                 <td className="memo">“{r.memo}”<small>{short(r.to)} · {isPayee(r.to) ? "saved payee" : "stranger"}</small></td>
                 <td><span className="sq">{r.status.map((s, i) => <i key={i} className={s} title={`${a.fuses[i]?.name ?? "fuse"}: ${s}`} />)}</span></td>
