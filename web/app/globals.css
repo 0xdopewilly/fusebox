@@ -312,6 +312,7 @@ html.js .hero [data-in], html.js .hero .bigword { opacity: 0; animation: fx-fall
 .foot > div { padding-left: 14px; }
 .foot > div:first-child { padding-left: 0; }
 .foot a { display: block; color: #bdbdb8; margin-top: 6px; transition: color 0.3s, transform 0.4s var(--ease-out); }
+.foot > div, .foot a { text-shadow: 0 0 6px #000, 0 0 12px #000, 0 0 2px #000; } /* keeps the links readable over the binary rain */
 .foot a:hover { color: var(--lime); transform: translateX(4px); }
 .rain { position: absolute; left: var(--pad); right: var(--pad); bottom: 150px; height: 420px; z-index: 1; pointer-events: none; -webkit-mask-image: linear-gradient(to bottom, transparent, #000 45%); mask-image: linear-gradient(to bottom, transparent, #000 45%); }
 .cta .bigword { bottom: -0.39em; }
