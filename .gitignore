@@ -8,3 +8,10 @@ node_modules/
 .env
 .env.*
 !.env.example
+# design scratch (review screenshots, crops)
+design/d/cuts/
+design/d/sheet*
+design/d/review*
+design/d/hero*.png
+design/d/landing-*.png
+design/d/intro*
