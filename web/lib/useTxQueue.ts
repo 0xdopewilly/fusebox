@@ -2,6 +2,7 @@
 import { useCallback, useRef, useState } from "react";
 import type { Hash, TransactionReceipt } from "viem";
 import { pub } from "./client-chain";
+import { txError } from "./txError";
 
 export type StepState = "todo" | "sign" | "mine" | "done" | "skip" | "error";
 export interface TxStep<C> { id: string; label: string; detail?: string; run: (ctx: C) => Promise<Hash | null>; after?: (r: TransactionReceipt, ctx: C) => void }
@@ -31,8 +32,7 @@ export function useTxQueue<C extends object>() {
           st.after?.(r, pl.ctx);
           patch(i, { state: "done" });
         } catch (e) {
-          const msg = (e as { shortMessage?: string; message?: string }).shortMessage || (e as Error).message || "Failed";
-          patch(i, { state: "error", error: /reject|denied|cancel/i.test(msg) ? "You declined it in your wallet." : msg.split("\n")[0] });
+          patch(i, { state: "error", error: txError(e) });
           return false;
         }
       }

@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { createWalletClient, custom, getAddress, type Address, type EIP1193Provider, type Hash } from "viem";
-import { XLAYER } from "@/lib/client-chain";
+import { BaseError, ContractFunctionRevertedError, createWalletClient, custom, getAddress, type Address, type EIP1193Provider, type Hash } from "viem";
+import { XLAYER, pub } from "@/lib/client-chain";
 
 interface Info { uuid: string; name: string; icon: string; rdns: string }
 interface Detail { info: Info; provider: EIP1193Provider }
@@ -81,6 +81,17 @@ export default function WalletProvider({ children }: { children: React.ReactNode
   const write = useCallback(async (a: Omit<WriteArgs, "account" | "chain">) => {
     if (!active.current || !account) throw new Error("Connect a wallet first.");
     await ensureChain();
+    // Dry-run first, so a doomed call fails here with the contract's reason instead of costing gas.
+    // A revert must repeat 1.5 s later to count: a node one block behind can miss the previous step's effect.
+    for (let i = 0; i < 2; i++) {
+      try { await pub.simulateContract({ ...(a as WriteArgs), account } as Parameters<typeof pub.simulateContract>[0]); break; }
+      catch (e) {
+        const reverted = e instanceof BaseError && !!e.walk((x) => x instanceof ContractFunctionRevertedError);
+        if (!reverted) break; // RPC trouble: let the wallet estimate as usual
+        if (i === 1) throw e;
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
     const wc = createWalletClient({ chain: XLAYER, transport: custom(active.current) });
     return wc.writeContract({ ...(a as WriteArgs), account, chain: XLAYER });
   }, [account, ensureChain]);
