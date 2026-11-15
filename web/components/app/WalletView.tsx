@@ -62,6 +62,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
   const { data, error, fresh } = useAtlas(4000, address ? `/api/wallet/${address}${from ? `?from=${from}` : ""}` : "/api/atlas");
   const [sel, setSel] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+  const [more, setMore] = useState(0); // older decisions revealed, 20 at a time
   const detailRef = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLDivElement>(null);
 
@@ -78,6 +79,13 @@ export default function WalletView({ address, from }: { address?: string; from?:
   const f = sel !== null ? a.fuses[sel] : null;
   const layout = f ? LAYERS.find((l) => l.key === f.key) : null;
   const copy = () => { navigator.clipboard?.writeText(a.wallet); setCopied(true); setTimeout(() => setCopied(false), 1400); };
+  // a long history starts short: 20 rows on the desktop table, 8 cards on phones, then 20 more per tap
+  const tableN = 20 + more, cardN = 8 + more;
+  const older = (n: number) => n < a.decisions.length
+    ? <button className="more-btn m" onClick={() => setMore((m) => m + 20)}>Show older decisions <span className="mute">· {Math.min(20, a.decisions.length - n)} of {a.decisions.length - n} more</span></button>
+    : a.counts.decisions > a.decisions.length
+      ? <p className="more-note m mute">The latest {a.decisions.length} of {a.counts.decisions}. Every one is on X Layer: <a href={`${OKLINK}/address/${a.wallet}`} target="_blank" rel="noreferrer">full history on OKLink ↗</a></p>
+      : null;
 
   return (
     <div className="page" ref={root}>
@@ -148,7 +156,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
         <table className="tbl decisions">
           <thead><tr><th>#</th><th className="hide-s">Time (UTC)</th><th>Result</th><th style={{ textAlign: "right" }}>Amount</th><th>To · what the agent said</th><th>Fuses</th><th className="hide-s" style={{ textAlign: "right" }}>Fees</th><th className="hide-s">Tx</th></tr></thead>
           <tbody>
-            {a.decisions.map((r) => (
+            {a.decisions.slice(0, tableN).map((r) => (
               <tr key={r.id} className={fresh.has(r.id) ? "new" : ""}>
                 <td className="num" style={{ textAlign: "left" }}>{r.id}</td>
                 <td className="num hide-s" style={{ textAlign: "left" }}>{new Date(r.time * 1000).toISOString().slice(5, 16).replace("T", " ")}</td>
@@ -162,10 +170,11 @@ export default function WalletView({ address, from }: { address?: string; from?:
             ))}
           </tbody>
         </table>
+        {older(tableN)}
       </div>
       {/* phones: each decision as a card instead of a squeezed table */}
       <div className="dcards" data-b>
-        {a.decisions.map((r) => {
+        {a.decisions.slice(0, cardN).map((r) => {
           const needs2of3 = !r.allowed && a.fuses.some((x, i) => x.key === "approval-2of3" && r.status[i] === "blew");
           const blew = a.fuses.filter((_, i) => r.status[i] !== "pass").map((f) => f.name);
           return (
@@ -184,6 +193,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
             </div>
           );
         })}
+        {older(cardN)}
       </div>
 
       <div className="side2" data-b>

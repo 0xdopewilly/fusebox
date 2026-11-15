@@ -114,7 +114,7 @@ export async function walletCard(raw: string) {
     const addr = getAddress(raw.toLowerCase()) as Address;
     // a crawler won't wait long: past 8 s the card goes out without live numbers
     w = await Promise.race([
-      (async () => ((await isFuseboxWallet(addr)) ? getWallet(addr) : null))(),
+      Promise.all([isFuseboxWallet(addr), getWallet(addr).catch(() => null)]).then(([ok, w]) => (ok ? w : null)),
       new Promise<null>((r) => setTimeout(() => r(null), 8000)),
     ]).catch(() => null);
   }

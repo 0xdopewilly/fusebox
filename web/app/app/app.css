@@ -279,6 +279,12 @@
   .pl-row.on .n, .pl-row.on .k, .pl-row:active .k { color: var(--lime); }
 }
 
+/* a long decision history starts short */
+.more-btn { display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; margin-top: 10px; padding: 15px 14px; background: transparent; color: var(--ink); border: 1px solid var(--hair2); cursor: pointer; transition: border-color 0.2s, color 0.2s; }
+.more-btn:hover { border-color: var(--lime); color: var(--lime); }
+.more-note { margin-top: 14px; text-align: center; line-height: 1.7; }
+.more-note a { color: var(--ink); }
+
 /* decision cards (phones) */
 .dcards { display: none; }
 @media (max-width: 900px) {

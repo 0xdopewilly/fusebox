@@ -81,11 +81,11 @@ export async function isFuseboxWallet(addr: Address) {
 async function build(addr: Address): Promise<Atlas> {
   const W = { address: addr, abi: fuseboxWalletAbi } as const;
   const R = { address: DEPLOYMENT.registry, abi: fuseRegistryAbi } as const;
-  const head = await client.getBlock();
-  // the history only needs the head, so it loads alongside the contract reads
-  const histP = readHistory(addr, head.number);
-  histP.catch(() => {}); // awaited below; this only stops an early failure above from leaving it unhandled
-  const [owner, paused, n, decisions, allowed, blocked, approvers, balance, feeBalance, protocolBps] = await Promise.all([
+  // the head, the wallet's state and (once the head is known) its history all load at once
+  const headP = client.getBlock();
+  const histP = headP.then((h) => readHistory(addr, h.number));
+  histP.catch(() => {}); // awaited below; this only stops an early failure from leaving it unhandled
+  const [head, [owner, paused, n, decisions, allowed, blocked, approvers, balance, feeBalance, protocolBps]] = await Promise.all([headP, Promise.all([
     client.readContract({ ...W, functionName: "owner" }),
     client.readContract({ ...W, functionName: "paused" }),
     client.readContract({ ...W, functionName: "fuseCount" }),
@@ -96,7 +96,7 @@ async function build(addr: Address): Promise<Atlas> {
     client.readContract({ address: DEPLOYMENT.usdt0, abi: erc20, functionName: "balanceOf", args: [addr] }),
     client.readContract({ ...R, functionName: "feeBalance", args: [addr] }),
     client.readContract({ ...R, functionName: "protocolFeeBps" }),
-  ]);
+  ])]);
   const fuses = await Promise.all(Array.from({ length: Number(n) }, async (_, i) => {
     const s = await client.readContract({ ...W, functionName: "slotAt", args: [BigInt(i)] });
     const [f, designer, dCount, earned, life, spent] = await Promise.all([

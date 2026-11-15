@@ -10,11 +10,10 @@ export async function GET(_req: Request, ctx: { params: Promise<{ address: strin
   const { address } = await ctx.params;
   if (!isAddress(address, { strict: false })) return Response.json({ error: "Not an address." }, { status: 400 });
   const addr = getAddress(address);
-  try {
-    if (!(await isFuseboxWallet(addr))) return Response.json({ error: "This address isn't a Fusebox wallet." }, { status: 404 });
-    return Response.json(await getWallet(addr), { headers: { "cache-control": "no-store" } });
-  } catch (e) {
-    console.error("wallet", (e as Error).message);
-    return Response.json({ error: "Couldn't reach X Layer just now." }, { status: 503 });
-  }
+  // asked together: the factory check and the snapshot share one round of RPC calls
+  const [isW, data] = await Promise.allSettled([isFuseboxWallet(addr), getWallet(addr)]);
+  if (isW.status === "fulfilled" && !isW.value) return Response.json({ error: "This address isn't a Fusebox wallet." }, { status: 404 });
+  if (isW.status === "fulfilled" && data.status === "fulfilled") return Response.json(data.value, { headers: { "cache-control": "no-store" } });
+  console.error("wallet", ((isW.status === "rejected" ? isW.reason : (data as PromiseRejectedResult).reason) as Error)?.message);
+  return Response.json({ error: "Couldn't reach X Layer just now." }, { status: 503 });
 }

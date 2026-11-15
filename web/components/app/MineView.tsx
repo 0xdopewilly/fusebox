@@ -54,7 +54,7 @@ export default function MineView() {
             <Link className="fz" key={r.address} href={`/app/w/${r.address}`} style={{ minHeight: 0 }} data-cursor="Open">
               <div><div className="ix">{String(i + 1).padStart(2, "0")}</div></div>
               <div style={{ gridColumn: "2 / 4" }}><h3>{short(r.address)}</h3><p className="say m">{r.address}</p></div>
-              <div style={{ gridColumn: "4 / 7" }}><div className="chips"><span className="chip l">{r.fuses} fuses</span><span className="chip">{r.decisions} decisions</span><span className="chip">{r.paused ? "Paused" : "Live"}</span></div></div>
+              <div style={{ gridColumn: "4 / 7" }}><div className="chips">{r.fuses ? <span className="chip l">{r.fuses} fuse{r.fuses === 1 ? "" : "s"}</span> : <span className="chip">No fuses yet</span>}<span className="chip">{r.decisions} decision{r.decisions === 1 ? "" : "s"}</span><span className="chip">{r.paused ? "Paused" : "Live"}</span></div></div>
             </Link>
           ))}
           <div className="fz" style={{ borderStyle: "dashed", minHeight: 0 }}>
