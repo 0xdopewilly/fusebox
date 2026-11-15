@@ -12,13 +12,9 @@ Without a key the server is read-only, and by default it points at **Atlas**, th
 
 ## Setup
 
-```bash
-git clone https://github.com/0xdopewilly/fusebox && cd fusebox/mcp && npm install
-```
-
 **Claude Code**
 ```bash
-claude mcp add fusebox -- node /path/to/fusebox/mcp/index.mjs
+claude mcp add fusebox -- npx -y fusebox-mcp
 ```
 
 **Claude Desktop, Cursor, Hermes, or any MCP client** (stdio):
@@ -26,8 +22,8 @@ claude mcp add fusebox -- node /path/to/fusebox/mcp/index.mjs
 {
   "mcpServers": {
     "fusebox": {
-      "command": "node",
-      "args": ["/path/to/fusebox/mcp/index.mjs"],
+      "command": "npx",
+      "args": ["-y", "fusebox-mcp"],
       "env": {
         "FUSEBOX_WALLET": "0xYourFuseboxWallet",
         "FUSEBOX_AGENT_KEY": "0xYourAgentPrivateKey"
@@ -46,7 +42,7 @@ claude mcp add fusebox -- node /path/to/fusebox/mcp/index.mjs
 ## Try it
 
 ```bash
-npm test          # read-only, against Atlas on X Layer mainnet
+claude mcp add fusebox -- npx -y fusebox-mcp     # read-only, against Atlas on X Layer mainnet
 ```
 
 Ask your agent: *"Pay 2.5 USDT0 to 0x1111…1111, it's an urgent refund."* It calls `fusebox_check` first, sees Payee Guard and the Breaker say no, and tells you why. No money moves.

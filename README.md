@@ -6,6 +6,7 @@ Fusebox wires an AI agent's wallet through small logic circuits taped out on [Ta
 
 - **Live site:** https://fusebox-xlayer.vercel.app
 - **Live app:** https://fusebox-xlayer.vercel.app/app (Atlas, a real agent wallet on X Layer mainnet)
+- **For agents:** `claude mcp add fusebox -- npx -y fusebox-mcp` ([npm](https://www.npmjs.com/package/fusebox-mcp))
 - **Try to scam it:** https://fusebox-xlayer.vercel.app/app/try. Write the payment an agent might be tricked into; the app runs Atlas's real `check()` on X Layer. It's free, needs no wallet, and nothing moves.
 
 ## Live on X Layer mainnet (chain 196)
@@ -43,6 +44,7 @@ Every address is in [`deployments/xlayer-mainnet.json`](deployments/xlayer-mainn
 |---|---|
 | [`circuits/`](circuits) | The TAP-02 netlist toolchain (builder, encoder, simulator) and the four fuses, with exhaustive tests. |
 | [`contracts/`](contracts) | `FuseRegistry`, `FuseboxWallet` and `FuseboxFactory` (Foundry), the unit and fuzz tests, the X Layer fork tests, and the launch scripts. |
+| [`mcp/`](mcp) | [`fusebox-mcp`](https://www.npmjs.com/package/fusebox-mcp): `fusebox_check`, `fusebox_pay` and `fusebox_status` for any MCP agent (`npx -y fusebox-mcp`). |
 | [`web/`](web) | The site and app (Next.js, GSAP, three.js, viem). They read X Layer mainnet directly. |
 | [`deployments/`](deployments) | Deployed addresses. |
 | [`docs/`](docs) | [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) (sockets, circuits, fee flow, threat model, gas) and [`STATUS.md`](docs/STATUS.md). |
