@@ -42,7 +42,7 @@ function Fields({ fields, vals, set, unit }: { fields: ParamField[]; vals: Recor
   return (
     <div className={fields.length > 1 ? "two" : ""}>
       {fields.map((f) => {
-        const suffix = f.money && unit && unit !== "1" ? `× ${unit} USDT0` : f.suffix;
+        const suffix = f.money && unit && unit !== "1" ? `× ${unit} USD₮0` : f.suffix;
         return <label key={f.k} className="oc-f m"><span>{f.label} ({suffix})</span><input aria-label={`${f.label} (${suffix})`} value={vals[f.k] ?? ""} onChange={(e) => set(f.k, e.target.value)} inputMode="numeric" /></label>;
       })}
     </div>
@@ -111,10 +111,10 @@ function FuseRow({ f, i, data, busy, one }: P & { f: FuseSlot; i: number }) {
           <Confirm label="Remove" sure="Remove it?" className="btn danger" disabled={busy} onConfirm={() => one(`Remove ${f.name}`, () => write({ ...W, functionName: "removeFuse", args: [BigInt(i)] }))} />
         </div>
       </div>
-      <div className="m mute of-fee">Fee {f.fee} USDT0 a check · you accept up to {f.maxFee}{f.latched ? <span className="red"> · blown</span> : null}</div>
+      <div className="m mute of-fee">Fee {f.fee} USD₮0 a check · you accept up to {f.maxFee}{f.latched ? <span className="red"> · blown</span> : null}</div>
       {raised && (
         <div className="oc-warn">
-          <span>The designer raised this fuse&apos;s fee to {f.fee} USDT0. You keep paying {f.maxFee} until you accept the new price.</span>
+          <span>The designer raised this fuse&apos;s fee to {f.fee} USD₮0. You keep paying {f.maxFee} until you accept the new price.</span>
           <button className="btn" disabled={busy} onClick={() => one(`Accept ${f.name}'s new fee`, () => write({ ...W, functionName: "setFuseMaxFee", args: [BigInt(i), parseUnits(f.fee, 6)] }))}>Accept {f.fee}</button>
         </div>
       )}
@@ -122,7 +122,7 @@ function FuseRow({ f, i, data, busy, one }: P & { f: FuseSlot; i: number }) {
         <div className="of-edit">
           <Fields fields={fields} vals={vals} set={(k, v) => setVals({ ...vals, [k]: v })} unit={f.unit} />
           {typeof parsed === "string" && <span className="oc-err">{parsed}</span>}
-          {f.key === "daily-cap" && f.original !== false && <span className="m mute" style={{ fontSize: 11 }}>Today&apos;s spend so far ({Number(f.spentToday).toFixed(2)} USDT0) still counts against the new cap.</span>}
+          {f.key === "daily-cap" && f.original !== false && <span className="m mute" style={{ fontSize: 11 }}>Today&apos;s spend so far ({Number(f.spentToday).toFixed(2)} USD₮0) still counts against the new cap.</span>}
           <button className="btn lime" disabled={busy || typeof parsed === "string" || !changed} onClick={() => { if (typeof parsed === "string") return; one(`Save ${f.name}`, () => write({ ...W, functionName: "setFuseParams", args: [BigInt(i), toParams(f.socket, parsed, f.token, parseUnits(f.unit, 6))] })); setOpen(false); }}>Save {f.name}</button>
         </div>
       )}
@@ -149,7 +149,7 @@ export function InstallFuse({ wallet, installed, busy, one, preset, lock }: { wa
       <label className="oc-f m" hidden={lock}><span>Fuse</span>
         <select aria-label="Fuse to install" value={id ?? ""} onChange={(e) => setId(e.target.value ? Number(e.target.value) : null)}>
           <option value="">{market ? "Choose a listed fuse…" : "Reading the market…"}</option>
-          {listed.map((f) => <option key={f.fuseId} value={f.fuseId}>{f.meta?.name ?? f.name} · fuse {f.fuseId} · circuit #{f.circuitId} · {f.fee} USDT0 a check{installed.includes(f.fuseId) ? " · installed" : ""}</option>)}
+          {listed.map((f) => <option key={f.fuseId} value={f.fuseId}>{f.meta?.name ?? f.name} · fuse {f.fuseId} · circuit #{f.circuitId} · {f.fee} USD₮0 a check{installed.includes(f.fuseId) ? " · installed" : ""}</option>)}
         </select>
       </label>
       {pick && spec && (
@@ -163,7 +163,7 @@ export function InstallFuse({ wallet, installed, busy, one, preset, lock }: { wa
       {full && <span className="oc-err">A wallet holds at most 8 fuses. Remove one first.</span>}
       <button className="btn lime" disabled={busy || !pick || !spec || typeof parsed === "string" || full}
         onClick={() => { if (!pick || !spec || typeof parsed === "string") return; one(`Install ${pick.meta?.name ?? pick.name}`, () => write({ address: wallet, abi: fuseboxWalletAbi, functionName: "addFuse", args: [BigInt(pick.fuseId), toParams(pick.socket, parsed, USDT0), parseUnits(pick.fee, 6)] })); }}>
-        {pick ? `Install ${pick.meta?.name ?? pick.name} · ${pick.fee} USDT0 a check` : "Install"}
+        {pick ? `Install ${pick.meta?.name ?? pick.name} · ${pick.fee} USD₮0 a check` : "Install"}
       </button>
     </div>
   );
@@ -193,7 +193,7 @@ function Payees({ data, busy, one }: P) {
   const known = data.payees.some((p) => same(p.address, payee.trim()));
   return (
     <>
-      <Row title="Save a payee" say={guard ? `Payee Guard lets a saved payee through in full after ${guard.a} h; until then it holds them to ${guard.b} USDT0. Anyone else is a stranger.` : "Saved payees are trusted by Payee Guard and never trip the Breaker."}>
+      <Row title="Save a payee" say={guard ? `Payee Guard lets a saved payee through in full after ${guard.a} h; until then it holds them to ${guard.b} USD₮0. Anyone else is a stranger.` : "Saved payees are trusted by Payee Guard and never trip the Breaker."}>
         <input aria-label="Payee address to save" value={payee} onChange={(e) => setPayee(e.target.value)} placeholder="0x…" spellCheck={false} />
         {known && <span className="oc-err" style={{ color: "var(--mute)" }}>Already saved.</span>}
         <button className="btn" disabled={busy || !okAddr(payee) || known} onClick={() => one("Save payee", () => write({ ...W, functionName: "addPayee", args: [toAddr(payee)] }))}>Save payee</button>
@@ -272,18 +272,18 @@ function Money({ data, busy, one, many, account }: P) {
   const bal = parseUnits(data.balance, 6), fees = parseUnits(data.feeBalance, 6);
   return (
     <>
-      <Row title={`Wallet · ${Number(data.balance).toFixed(4)} USDT0`} say={<>What the agent pays from. Add USDT0 from your own wallet{mine !== null ? <> (you hold {Number(formatUnits(mine, 6)).toFixed(4)})</> : null}, or take it back: only you can move it out, the agent only through pay.</>}>
+      <Row title={`Wallet · ${Number(data.balance).toFixed(4)} USD₮0`} say={<>What the agent pays from. Add USD₮0 from your own wallet{mine !== null ? <> (you hold {Number(formatUnits(mine, 6)).toFixed(4)})</> : null}, or take it back: only you can move it out, the agent only through pay.</>}>
         <div className="two">
-          <input aria-label="USDT0 to add to the wallet" value={add} onChange={(e) => setAdd(e.target.value)} placeholder="Add, USDT0" inputMode="decimal" />
+          <input aria-label="USD₮0 to add to the wallet" value={add} onChange={(e) => setAdd(e.target.value)} placeholder="Add, USD₮0" inputMode="decimal" />
           <button className="btn" disabled={busy || !okMoney(add) || over(add, mine)} onClick={() => one("Add to the wallet", () => write({ address: USDT0, abi: erc20Abi, functionName: "transfer", args: [data.wallet, u(add)] }))}>Add</button>
-          <input aria-label="USDT0 to withdraw from the wallet" value={out} onChange={(e) => setOut(e.target.value)} placeholder="Withdraw, USDT0" inputMode="decimal" />
+          <input aria-label="USD₮0 to withdraw from the wallet" value={out} onChange={(e) => setOut(e.target.value)} placeholder="Withdraw, USD₮0" inputMode="decimal" />
           <button className="btn" disabled={busy || !okMoney(out) || over(out, bal)} onClick={() => one("Withdraw from the wallet", () => write({ ...W, functionName: "execute", args: [USDT0, 0n, encodeFunctionData({ abi: erc20Abi, functionName: "transfer", args: [account, u(out)] })] }))}>Withdraw</button>
         </div>
         {(over(add, mine) || over(out, bal)) && <span className="oc-err">More than there is.</span>}
       </Row>
-      <Row title={`Fee balance · ${Number(data.feeBalance).toFixed(4)} USDT0`} say={<>Prepaid fees, held by the registry for this wallet. At {perDecision.toFixed(4)} USDT0 a decision it covers about <b>{covers}</b> more. Top it up from your wallet or take back what you don&apos;t need.</>}>
+      <Row title={`Fee balance · ${Number(data.feeBalance).toFixed(4)} USD₮0`} say={<>Prepaid fees, held by the registry for this wallet. At {perDecision.toFixed(4)} USD₮0 a decision it covers about <b>{covers}</b> more. Top it up from your wallet or take back what you don&apos;t need.</>}>
         <div className="two">
-          <input aria-label="USDT0 to prepay as fees" value={top} onChange={(e) => setTop(e.target.value)} placeholder="Top up, USDT0" inputMode="decimal" />
+          <input aria-label="USD₮0 to prepay as fees" value={top} onChange={(e) => setTop(e.target.value)} placeholder="Top up, USD₮0" inputMode="decimal" />
           <button className="btn" disabled={busy || !okMoney(top) || over(top, mine)} onClick={() => many([
             { id: "approve", label: "Allow the registry to take the top-up", run: async () => {
               const have = await pub.readContract({ address: USDT0, abi: erc20Abi, functionName: "allowance", args: [account, DEP.registry as Address] });
@@ -291,7 +291,7 @@ function Money({ data, busy, one, many, account }: P) {
             } },
             { id: "deposit", label: "Top up fees", run: () => write({ address: DEP.registry as Address, abi: fuseRegistryAbi, functionName: "deposit", args: [data.wallet, u(top)] }) },
           ])}>Top up</button>
-          <input aria-label="USDT0 to withdraw" value={back} onChange={(e) => setBack(e.target.value)} placeholder="USDT0" inputMode="decimal" />
+          <input aria-label="USD₮0 to withdraw" value={back} onChange={(e) => setBack(e.target.value)} placeholder="USD₮0" inputMode="decimal" />
           <button className="btn" disabled={busy || !okMoney(back) || over(back, fees)} onClick={() => one("Withdraw fees", () => write({ ...W, functionName: "withdrawFeeBalance", args: [u(back), account] }))}>Withdraw</button>
         </div>
         {(over(top, mine) || over(back, fees)) && <span className="oc-err">More than there is.</span>}

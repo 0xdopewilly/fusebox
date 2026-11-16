@@ -21,7 +21,7 @@ const fb = new Fusebox({ wallet: "0xYourFuseboxWallet", account: process.env.AGE
 
 // pays only if the price clears maxPrice and every fuse on the wallet
 const { response, payment } = await fb.fetch("https://fusebox-xlayer.vercel.app/api/x402/prices", {}, { maxPrice: "0.05" });
-console.log(payment?.summary);   // Paid 0.01 USDT0 to 0x69dB… for …/prices (decision #7).
+console.log(payment?.summary);   // Paid 0.01 USD₮0 to 0x69dB… for …/prices (decision #7).
 const prices = await response.json();`],
   mcp: ["Agent · fusebox-mcp", `// Claude Desktop, Cursor, any MCP client
 { "mcpServers": { "fusebox": {
@@ -70,7 +70,7 @@ function SellerCard({ o }: { o: Offer }) {
       <h3>{o.name}</h3>
       <p className="x4-blurb">{o.blurb}</p>
       <dl className="x4-kv m">
-        <div><dt>Price</dt><dd>{o.price} USDT0</dd></div>
+        <div><dt>Price</dt><dd>{o.price} USD₮0</dd></div>
         <div><dt>Pay to</dt><dd><a href={`${OKLINK}/address/${o.payTo}`} target="_blank" rel="noreferrer">{short(o.payTo)} ↗</a><small>{o.seller}</small></dd></div>
         <div><dt>Scheme</dt><dd>{req ? `${req.scheme} · ${req.network}` : "—"}</dd></div>
         <div><dt>Nonce</dt><dd title={nonce}>{nonce ? `${nonce.slice(0, 22)}…` : "—"}<small>{nonce ? `good until ${new Date(Number(nonce.split(".")[0]) * 1000).toISOString().slice(11, 16)} UTC` : ""}</small></dd></div>
@@ -84,7 +84,7 @@ function SellerCard({ o }: { o: Offer }) {
       {res && (
         <div className="x4-verdict">
           <div className="why">{res.fuses.map((f) => <div key={f.name}><span className="m mute">{f.name}</span><b className={f.status === "pass" ? "pass" : "blew"}>{f.status === "pass" ? "Holds" : "Blew"}</b><p>{f.why}</p></div>)}</div>
-          <div className={`verdict2 m ${res.allowed ? "ok" : "no"}`}><span className="v">{res.allowed ? `Every fuse holds. Atlas would pay ${o.price} USDT0 and get the response.` : `Refused before a cent moved: ${res.fuses.filter((f) => f.status !== "pass").map((f) => f.name).join(" and ")}.`}</span><span className="mute">check() · block {res.block.toLocaleString("en-US")}</span></div>
+          <div className={`verdict2 m ${res.allowed ? "ok" : "no"}`}><span className="v">{res.allowed ? `Every fuse holds. Atlas would pay ${o.price} USD₮0 and get the response.` : `Refused before a cent moved: ${res.fuses.filter((f) => f.status !== "pass").map((f) => f.name).join(" and ")}.`}</span><span className="mute">check() · block {res.block.toLocaleString("en-US")}</span></div>
         </div>
       )}
     </article>
@@ -108,7 +108,7 @@ export default function X402View({ offers, origin }: { offers: Offer[]; origin: 
 
       <h2 className="x4-h m" data-a>Two live sellers <span className="mute">· real offers, signed just now</span></h2>
       <div className="x4-cards">{offers.map((o) => <SellerCard key={o.path} o={o} />)}</div>
-      <p className="proof m" data-a>The check is Atlas&apos;s real, read-only <span className="lime">check()</span> on X Layer. An agent using <span className="lime">fb.fetch()</span> or the MCP&apos;s <span className="lime">fusebox_fetch</span> runs the same check, then pays only what it allows. Atlas bought the price sheet for real on mainnet: <a className="lime" href="https://www.oklink.com/xlayer/tx/0x058bd5ebfdee9be441a2d556f31bc5511c16e5a02b3ed60d7ba81dcc54d31f94" target="_blank" rel="noreferrer">0.01 USDT0 through four TapeOut fuses, decision #6 ↗</a></p>
+      <p className="proof m" data-a>The check is Atlas&apos;s real, read-only <span className="lime">check()</span> on X Layer. An agent using <span className="lime">fb.fetch()</span> or the MCP&apos;s <span className="lime">fusebox_fetch</span> runs the same check, then pays only what it allows. Atlas bought the price sheet for real on mainnet: <a className="lime" href="https://www.oklink.com/xlayer/tx/0x058bd5ebfdee9be441a2d556f31bc5511c16e5a02b3ed60d7ba81dcc54d31f94" target="_blank" rel="noreferrer">0.01 USD₮0 through four TapeOut fuses, decision #6 ↗</a></p>
 
       <section className="x4-code" data-a>
         <h2 className="x4-h m">Use it</h2>
@@ -119,8 +119,8 @@ export default function X402View({ offers, origin }: { offers: Offer[]; origin: 
       </section>
 
       <section className="x4-why" data-a>
-        <div><h3 className="m lime">Why a scheme of its own</h3><p>x402&apos;s <span className="m">exact</span> scheme has the payer sign a USDT0 transfer off-chain. A Fusebox wallet is a contract that only pays through its fuses, so it can&apos;t sign one, and shouldn&apos;t: that signature would skip the fuses. In the <span className="m">fusebox</span> scheme the on-chain Decision is the proof.</p></div>
-        <div><h3 className="m lime">What the seller checks</h3><p>The factory made the paying wallet (<span className="m">isWallet</span>), its Decision allowed this payee and price, USDT0 really moved, the memo carries this offer&apos;s nonce, and the transaction hasn&apos;t bought anything before.</p></div>
+        <div><h3 className="m lime">Why a scheme of its own</h3><p>x402&apos;s <span className="m">exact</span> scheme has the payer sign a USD₮0 transfer off-chain. A Fusebox wallet is a contract that only pays through its fuses, so it can&apos;t sign one, and shouldn&apos;t: that signature would skip the fuses. In the <span className="m">fusebox</span> scheme the on-chain Decision is the proof.</p></div>
+        <div><h3 className="m lime">What the seller checks</h3><p>The factory made the paying wallet (<span className="m">isWallet</span>), its Decision allowed this payee and price, USD₮0 really moved, the memo carries this offer&apos;s nonce, and the transaction hasn&apos;t bought anything before.</p></div>
         <div><h3 className="m lime">What the agent can&apos;t do</h3><p>Pay a seller its owner never saved, pay over the daily cap, or pay a big price without two approvers, however the API words its offer. The fuses don&apos;t read the offer. They read the payee, the amount and the wallet.</p></div>
       </section>
     </div>

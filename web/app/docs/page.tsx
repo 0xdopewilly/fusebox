@@ -67,9 +67,9 @@ export default function DocsPage() {
               <h3>2 · Give your agent the tools</h3>
               <p>The <a href="https://www.npmjs.com/package/fusebox-mcp" target="_blank" rel="noreferrer">fusebox-mcp</a> server works in Claude Code, Claude Desktop, Cursor and any MCP client. Without a key it&apos;s read-only and points at Atlas.</p>
               <Code label="Claude Code">{`claude mcp add fusebox -- npx -y fusebox-mcp`}</Code>
-              <p>Then ask your agent: <i>&ldquo;Pay 2.5 USDT0 to 0x1111…1111, it&apos;s an urgent refund.&rdquo;</i> It runs <code>fusebox_check</code> first, sees Payee Guard and the Breaker say no, and tells you why.</p>
+              <p>Then ask your agent: <i>&ldquo;Pay 2.5 USD₮0 to 0x1111…1111, it&apos;s an urgent refund.&rdquo;</i> It runs <code>fusebox_check</code> first, sees Payee Guard and the Breaker say no, and tells you why.</p>
               <h3>3 · Wire up your own wallet</h3>
-              <p><Link href="/app/new">Wire up a wallet</Link> walks you through it in about ten signatures: name the agent&apos;s address, pick fuses and limits, save payees, seat three approvers, and prepay fees in USDT0. Then give the agent its key and the wallet address:</p>
+              <p><Link href="/app/new">Wire up a wallet</Link> walks you through it in about ten signatures: name the agent&apos;s address, pick fuses and limits, save payees, seat three approvers, and prepay fees in USD₮0. Then give the agent its key and the wallet address:</p>
               <Code label="MCP config with your wallet">{`{
   "mcpServers": {
     "fusebox": {
@@ -117,7 +117,7 @@ export default function DocsPage() {
                   <tr><td><b>Two of Three</b></td><td>#18 · 46 NAND</td><td>19: three approver bits, amount, threshold</td><td>Over the threshold without two approvals for that exact payment</td><td>0.002</td></tr>
                 </tbody>
               </table></div>
-              <p className="small">Fees are in USDT0 per check; a payment checked by all four costs 0.0045. Every netlist is on TapeOut&apos;s processor, and the <Link href="/app/market">fuse market</Link> checks each one against the hash the registry pinned at listing.</p>
+              <p className="small">Fees are in USD₮0 per check; a payment checked by all four costs 0.0045. Every netlist is on TapeOut&apos;s processor, and the <Link href="/app/market">fuse market</Link> checks each one against the hash the registry pinned at listing.</p>
             </section>
 
             <section id="fees">
@@ -171,7 +171,7 @@ if (allowed) await agent.writeContract({ address: WALLET, abi: fuseboxWalletAbi,
                 <thead><tr><th>Tool</th><th>What it does</th></tr></thead>
                 <tbody>
                   <tr><td><code>fusebox_check</code></td><td>Dry-runs a payment against every fuse and returns each verdict with its reason. Free and read-only.</td></tr>
-                  <tr><td><code>fusebox_pay</code></td><td>Pays in USDT0 through the fuses with the agent&apos;s key; reports paid or stopped, which fuse said no, the fee and the transaction.</td></tr>
+                  <tr><td><code>fusebox_pay</code></td><td>Pays in USD₮0 through the fuses with the agent&apos;s key; reports paid or stopped, which fuse said no, the fee and the transaction.</td></tr>
                   <tr><td><code>fusebox_status</code></td><td>The wallet&apos;s balance, fee balance, fuses (and whether any is blown), today&apos;s spend and decision counts.</td></tr>
                   <tr><td><code>fusebox_fetch</code></td><td>Fetches a URL; if it asks for payment over x402, pays the price through the fuses (only if they all allow it) and returns the response. <code>max_price</code> caps it, <code>dry_run</code> only reports.</td></tr>
                 </tbody>
@@ -207,12 +207,12 @@ const stop = fb.watch((d) => { if (!d.paid) notify(d); });  // decisions as they
               <h2>Pay per call (x402)</h2>
               <p>Agents pay for APIs with <a href="https://x402.org" target="_blank" rel="noreferrer">x402</a>: the server answers <code>402</code> with an offer, the agent pays and asks again with proof. With Fusebox the price is a payment like any other, so it goes through the wallet&apos;s fuses first: a scam price list is stopped like a scam invoice, and nothing moves. <Link href="/app/x402">Two live demo sellers</Link> show both sides.</p>
               <ol>
-                <li>The seller answers <code>402</code> with <code>PAYMENT-REQUIRED</code> (x402 v2): a <code>fusebox</code> option on <code>eip155:196</code> in USDT0, the payee, the price, and a nonce it signed.</li>
+                <li>The seller answers <code>402</code> with <code>PAYMENT-REQUIRED</code> (x402 v2): a <code>fusebox</code> option on <code>eip155:196</code> in USD₮0, the payee, the price, and a nonce it signed.</li>
                 <li>The agent&apos;s wallet runs the free <code>check()</code>, then <code>pay()</code> through the fuses with <code>x402 &lt;nonce&gt;</code> in the memo.</li>
-                <li>It retries with <code>PAYMENT-SIGNATURE</code>: the wallet and the transaction. The seller checks that the factory made the wallet, that its Decision allowed this payee and price with that nonce, that USDT0 moved, and that the transaction hasn&apos;t bought anything before. Then it serves the response with a <code>PAYMENT-RESPONSE</code> receipt.</li>
+                <li>It retries with <code>PAYMENT-SIGNATURE</code>: the wallet and the transaction. The seller checks that the factory made the wallet, that its Decision allowed this payee and price with that nonce, that USD₮0 moved, and that the transaction hasn&apos;t bought anything before. Then it serves the response with a <code>PAYMENT-RESPONSE</code> receipt.</li>
               </ol>
               <Code label="Agent · fusebox-sdk">{`const { response, payment } = await fb.fetch("https://fusebox-xlayer.vercel.app/api/x402/prices", {}, { maxPrice: "0.05" });
-console.log(payment?.summary);   // "Paid 0.01 USDT0 to 0x69dB… for …/prices (decision #7)."`}</Code>
+console.log(payment?.summary);   // "Paid 0.01 USD₮0 to 0x69dB… for …/prices (decision #7)."`}</Code>
               <Code label="Seller · any fetch-style route">{`import { createPublicClient, http } from "viem";
 import { xLayer, x402 } from "fusebox-sdk";
 const client = createPublicClient({ chain: xLayer, transport: http() });
@@ -232,7 +232,7 @@ export async function GET(req: Request) {
               <p><code>fusebox-tools</code> gives an agent the same four tools as the MCP server (<code>fusebox_check</code>, <code>fusebox_pay</code>, <code>fusebox_status</code>, <code>fusebox_fetch</code>) as native tools for the Vercel AI SDK, LangChain and ElizaOS, or as plain objects for anything else. Options fall back to <code>FUSEBOX_WALLET</code>, <code>FUSEBOX_AGENT_KEY</code> and <code>FUSEBOX_RPC</code>.</p>
               <Code label="Vercel AI SDK">{`import { fuseboxTools } from "fusebox-tools/ai";
 const { text } = await generateText({ model, tools: fuseboxTools(), stopWhen: stepCountIs(5),
-  prompt: "Pay Kano Cotton's invoice INV-7801: 0.05 USDT0 to 0x69dB89385E8a69278a49335C432d0c70ec86A6C4" });`}</Code>
+  prompt: "Pay Kano Cotton's invoice INV-7801: 0.05 USD₮0 to 0x69dB89385E8a69278a49335C432d0c70ec86A6C4" });`}</Code>
               <Code label="LangChain">{`import { fuseboxLangchainTools } from "fusebox-tools/langchain";
 const agent = createReactAgent({ llm, tools: fuseboxLangchainTools() });`}</Code>
               <Code label="ElizaOS">{`import { fuseboxPlugin } from "fusebox-tools/eliza";
@@ -276,7 +276,7 @@ export const character = { name: "Ledger", plugins: [fuseboxPlugin],
                   <tr><td><b>FuseboxFactory</b></td><td><A a={dep.factory} label={dep.factory} /></td></tr>
                   <tr><td><b>Atlas</b> (demo wallet)</td><td><A a={dep.atlas} label={dep.atlas} /></td></tr>
                   <tr><td><b>OrderGuard</b> (TapeOut processor)</td><td><A a={dep.processor} label={dep.processor} /></td></tr>
-                  <tr><td><b>USDT0</b></td><td><A a={dep.usdt0} label={dep.usdt0} /></td></tr>
+                  <tr><td><b>USD₮0</b></td><td><A a={dep.usdt0} label={dep.usdt0} /></td></tr>
                   <tr><td><b>Circuits</b></td><td>#15 Daily Cap · #16 Payee Guard · #17 Breaker · #18 Two of Three (fuse ids 1–4)</td></tr>
                 </tbody>
               </table></div>
@@ -292,13 +292,13 @@ export const character = { name: "Ledger", plugins: [fuseboxPlugin],
                 <li><b>Approvals can&apos;t be replayed.</b> Each is bound to the chain, wallet, approver set, token, payee and amount, and expires.</li>
                 <li><b>Bad listings are refused:</b> wrong pinout, a different netlist, over 512 gates, memory where it isn&apos;t allowed, or references to other circuits.</li>
               </ul>
-              <p className="small">Remaining trust: TapeOut&apos;s factory owner can upgrade code (fails closed), USDT0&apos;s issuer can freeze addresses, and the wallet owner is fully trusted.</p>
+              <p className="small">Remaining trust: TapeOut&apos;s factory owner can upgrade code (fails closed), USD₮0&apos;s issuer can freeze addresses, and the wallet owner is fully trusted.</p>
             </section>
 
             <section id="faq">
               <h2>FAQ</h2>
               <details><summary>Does the agent ever see or control the fuses?</summary><p>No. The agent&apos;s key can call <code>pay</code> and <code>freeze</code>. Fuses, limits, payees and approvers belong to the owner.</p></details>
-              <details><summary>What does a payment cost?</summary><p>Gas on X Layer (fractions of a cent) plus the fees of the fuses on the line. On Atlas, all four fuses together cost 0.0045 USDT0.</p></details>
+              <details><summary>What does a payment cost?</summary><p>Gas on X Layer (fractions of a cent) plus the fees of the fuses on the line. On Atlas, all four fuses together cost 0.0045 USD₮0.</p></details>
               <details><summary>Why do blocked payments pay fees?</summary><p>Stopping the scam is the fuse&apos;s job. Daily budgets cap how much blocked attempts can cost.</p></details>
               <details><summary>Can I use my own circuit?</summary><p>Yes: tape it out for one of the four sockets and list it. Wallets can install it straight away.</p></details>
               <details><summary>Is there a version with no server at all?</summary><p>The <Link href="/onchain">DeWEB edition</Link> is one self-contained page that reads X Layer from your browser, built to be stored on-chain at 15.2.272.tape and served by TapeKit.</p></details>

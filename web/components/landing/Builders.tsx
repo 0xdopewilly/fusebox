@@ -17,7 +17,7 @@ const TABS: { id: string; lines: Seg[][]; out: [string, string][] }[] = [
       [["// the real thing: every fuse runs on X Layer, in this call", "c"]],
       [["await", "k"], [" wallet."], ["pay", "f"], ["(USDT0, to, amount, "], ['"Invoice INV-7790"', "s"], [")"]],
     ],
-    out: [["check()", "allowed <b class='r'>false</b> · status <b>[held, blew, latched, held]</b>"], ["pay()", "decision <b>#9</b> · <b class='r'>blocked</b> · fees <b class='lime'>0.004500 USDT0</b> · gas <b>904,112</b>"]],
+    out: [["check()", "allowed <b class='r'>false</b> · status <b>[held, blew, latched, held]</b>"], ["pay()", "decision <b>#9</b> · <b class='r'>blocked</b> · fees <b class='lime'>0.004500 USD₮0</b> · gas <b>904,112</b>"]],
   },
   {
     id: "FuseboxWallet.sol",

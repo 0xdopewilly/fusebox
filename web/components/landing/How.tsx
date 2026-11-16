@@ -17,7 +17,7 @@ const STEPS = [
   ["The agent asks to pay", "Payee, amount and a one-line reason. That's all it gets to say."],
   ["Each fuse checks it on X Layer", "Every fuse is a circuit of 11 to 108 logic gates, taped out on TapeOut. All of them run in the same call, and each answers yes or no."],
   ["One no stops the payment", "The wallet records which fuse said no and why. A blown Breaker stays blown until you reset it."],
-  ["The designers are paid", "Each fuse that decided earns its fee in USDT0, the no's included."],
+  ["The designers are paid", "Each fuse that decided earns its fee in USD₮0, the no's included."],
 ];
 const zig = (x: number) => `M${x + 22} ${Y}h12l5-9 7 18 7-18 7 18 7-18 5 9h${FW - 44 - 12 - 43}`;
 
@@ -106,7 +106,7 @@ export default function How() {
       const tl = gsap.timeline({ defaults: { ease: "none" }, onUpdate: () => renderStatus(tl.time()) });
       // 1 · the request
       tl.addLabel("s1", 0)
-        .to(amount, { duration: 0.45, scrambleText: { text: "2.500000 USDT0", chars: "0123456789", speed: 0.4 } }, 0.05)
+        .to(amount, { duration: 0.45, scrambleText: { text: "2.500000 USD₮0", chars: "0123456789", speed: 0.4 } }, 0.05)
         .to(to, { duration: 0.4, scrambleText: { text: "0x9f3e…c41a", chars: "0123456789abcdef", speed: 0.4 } }, 0.25)
         .to(memo, { duration: 0.5, text: { value: "“Urgent refund for a customer, per support ticket”" } }, 0.4)
         .to(q(".pulse"), { autoAlpha: 1, duration: 0.1 }, 0.9);
@@ -188,7 +188,7 @@ export default function How() {
             <div className="payouts m mute">
               {FUSES.map((f) => <div key={f.name}>{f.name} designer<b>+0.000000</b></div>)}
             </div>
-            <div className="verdict m"><span className="v">Stopped at Payee Guard. Nothing moved.</span><span className="mute">4 checks · <span data-f="total">0.000000</span> USDT0 to designers</span></div>
+            <div className="verdict m"><span className="v">Stopped at Payee Guard. Nothing moved.</span><span className="mute">4 checks · <span data-f="total">0.000000</span> USD₮0 to designers</span></div>
           </div>
         </div>
       </div>

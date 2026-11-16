@@ -8,7 +8,7 @@ import { gsap, reduced } from "@/lib/gsap";
  *  fuses on a line; it draws in as the panel opens. `home` is "" on the landing page and "/" elsewhere. */
 const SECTIONS = [["#how", "How it works", "One call, four fuses, one verdict"], ["#tapeout", "Built on TapeOut", "Every fuse is a TapeOut circuit on X Layer"], ["#fuses", "The fuses", "Four circuits taped out on TapeOut"], ["#who", "Who it's for", "And how Fusebox earns"],
   ["#designers", "For designers", "Sell a fuse, earn on every decision"], ["#build", "For builders", "One call before every payment"]] as const;
-const PAGES = [["/docs", "Docs"], ["/app/try", "Try to scam it"], ["/app/rob", "Rob the agent"], ["/app/x402", "Pay per call (x402)"], ["/onchain", "DeWEB edition"]] as const;
+const PAGES = [["/docs", "Docs"], ["/app/market", "Fuse market"], ["/app/try", "Try to scam it"], ["/app/rob", "Rob the agent"], ["/app/x402", "Pay per call"], ["/onchain", "DeWEB edition"]] as const;
 
 export default function SiteMenu({ open, onClose, home = "" }: { open: boolean; onClose: () => void; home?: string }) {
   const root = useRef<HTMLDivElement>(null);
@@ -28,6 +28,7 @@ export default function SiteMenu({ open, onClose, home = "" }: { open: boolean; 
       gsap.fromTo(el, { clipPath: "inset(0 0 100% 0)" }, { clipPath: "inset(0 0 0% 0)", duration: 0.55, ease: "expo.inOut", clearProps: "clipPath" });
       gsap.fromTo(".sm-wire", { scaleY: 0 }, { scaleY: 1, transformOrigin: "top", duration: 0.8, ease: "power3.inOut", delay: 0.2 });
       gsap.fromTo(".sm-item", { x: 18, autoAlpha: 0 }, { x: 0, autoAlpha: 1, duration: 0.5, stagger: 0.05, ease: "power3.out", delay: 0.25, clearProps: "transform" });
+      gsap.fromTo(".sm-label, .sm-page", { y: 10, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.45, stagger: 0.03, ease: "power3.out", delay: 0.4, clearProps: "transform" });
       gsap.fromTo(".sm-foot > *", { y: 12, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.45, stagger: 0.06, delay: 0.45, clearProps: "transform" });
     }, el);
     const esc = (e: KeyboardEvent) => e.key === "Escape" && close.current();
@@ -52,17 +53,19 @@ export default function SiteMenu({ open, onClose, home = "" }: { open: boolean; 
         <button className="sm-x m" onClick={onClose} aria-label="Close the menu"><span>Close</span><i /></button>
       </div>
       <div className="sm-body">
+        <div className="sm-label">On this page<span>{String(SECTIONS.length).padStart(2, "0")}</span></div>
         <div className="sm-list">
-        <span className="sm-wire" aria-hidden="true" />
-        {SECTIONS.map(([h, t, s], i) => (
-          <a key={h} className="sm-item" href={`${home}${h}`} onClick={(e) => go(e, h)}>
-            <span className="node" aria-hidden="true" /><span className="n m">{String(i + 1).padStart(2, "0")}</span>
-            <span className="t"><b>{t}</b><small>{s}</small></span>
-          </a>
-        ))}
-        <div className="sm-pages">
-          {PAGES.map(([h, t]) => <Link key={h} className="sm-item sm-page m" href={h} onClick={onClose}><span className="node" aria-hidden="true" />{t}<span className="k">→</span></Link>)}
+          <span className="sm-wire" aria-hidden="true" />
+          {SECTIONS.map(([h, t, s], i) => (
+            <a key={h} className="sm-item" href={`${home}${h}`} onClick={(e) => go(e, h)}>
+              <span className="node" aria-hidden="true" /><span className="n m">{String(i + 1).padStart(2, "0")}</span>
+              <span className="t"><b>{t}</b><small>{s}</small></span>
+            </a>
+          ))}
         </div>
+        <div className="sm-label sm-pages-l">Pages</div>
+        <div className="sm-pages">
+          {PAGES.map(([h, t]) => <Link key={h} className="sm-page m" href={h} onClick={onClose}>{t}<span className="k" aria-hidden="true">→</span></Link>)}
         </div>
       </div>
       <div className="sm-foot">

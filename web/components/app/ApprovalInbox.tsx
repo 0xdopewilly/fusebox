@@ -27,7 +27,7 @@ export default function ApprovalInbox({ account, onPick }: { account: Address; o
     return () => { on = false; clearInterval(id); };
   }, [account, nonce]);
   const act = async (r: Request, fn: "approvePayment" | "revokeApproval") => {
-    const ok = await q.start([{ id: fn, label: fn === "approvePayment" ? `Approve ${r.amount} USDT0 to ${short(r.to)}` : `Revoke your approval of ${r.amount} USDT0 to ${short(r.to)}`, run: () => write({ address: r.wallet, abi: fuseboxWalletAbi, functionName: fn, args: [DEP.usdt0 as Address, r.to, parseUnits(r.amount, 6)] }) }], {});
+    const ok = await q.start([{ id: fn, label: fn === "approvePayment" ? `Approve ${r.amount} USD₮0 to ${short(r.to)}` : `Revoke your approval of ${r.amount} USD₮0 to ${short(r.to)}`, run: () => write({ address: r.wallet, abi: fuseboxWalletAbi, functionName: fn, args: [DEP.usdt0 as Address, r.to, parseUnits(r.amount, 6)] }) }], {});
     if (ok) setNonce((n) => n + 1);
   };
   const last = q.steps[q.steps.length - 1];
@@ -47,7 +47,7 @@ export default function ApprovalInbox({ account, onPick }: { account: Address; o
           return (
             <article key={`${r.wallet}-${r.to}-${r.amount}`} className={`ibx${n >= 2 ? " clear" : ""}`}>
               <div className="ibx-top">
-                <div><b>{r.amount} USDT0</b><span className="m mute"> → {short(r.to)} · {r.saved ? "saved payee" : "not a saved payee"}</span></div>
+                <div><b>{r.amount} USD₮0</b><span className="m mute"> → {short(r.to)} · {r.saved ? "saved payee" : "not a saved payee"}</span></div>
                 <span className="m mute">{ago(r.last)}{r.attempts > 1 ? ` · ${r.attempts} attempts` : ""}</span>
               </div>
               <p className="ibx-memo">“{r.memo}”</p>
@@ -55,7 +55,7 @@ export default function ApprovalInbox({ account, onPick }: { account: Address; o
                 <span className="ibx-seats" aria-label={`${n} of 2 approvals`}>
                   {r.seats.map((s, i) => <span key={i} className={(r.mask >> i) & 1 ? "on" : ""} title={s}>{(r.mask >> i) & 1 ? "✓ " : ""}S{i + 1}{i === r.mySeat ? " · you" : ""}</span>)}
                 </span>
-                <span className={n >= 2 ? "lime" : "mute"}>{n >= 2 ? "Cleared: the agent's retry passes this fuse" : `${n} of 2 signed${r.threshold !== null ? ` · over ${r.threshold} USDT0` : ""}`}</span>
+                <span className={n >= 2 ? "lime" : "mute"}>{n >= 2 ? "Cleared: the agent's retry passes this fuse" : `${n} of 2 signed${r.threshold !== null ? ` · over ${r.threshold} USD₮0` : ""}`}</span>
               </div>
               <div className="ibx-act">
                 <Link className="m mute" href={r.isAtlas ? "/app" : `/app/w/${r.wallet}`}>{r.isAtlas ? "Atlas" : `Wallet ${short(r.wallet)}`} ↗</Link>
@@ -69,7 +69,7 @@ export default function ApprovalInbox({ account, onPick }: { account: Address; o
       </div>
       {box && box.recent.length > 0 && (
         <details className="inbox-recent m"><summary>Paid after approval · {box.recent.length}</summary>
-          <ul>{box.recent.map((r) => <li key={`${r.wallet}-${r.to}-${r.amount}-${r.paid}`}><span>{r.amount} USDT0 → {short(r.to)}</span><span className="mute">{r.isAtlas ? "Atlas" : short(r.wallet)} · paid {ago(r.paid!)}</span></li>)}</ul>
+          <ul>{box.recent.map((r) => <li key={`${r.wallet}-${r.to}-${r.amount}-${r.paid}`}><span>{r.amount} USD₮0 → {short(r.to)}</span><span className="mute">{r.isAtlas ? "Atlas" : short(r.wallet)} · paid {ago(r.paid!)}</span></li>)}</ul>
         </details>
       )}
       <div className="inbox-feed m">

@@ -52,14 +52,14 @@ export default function Designers() {
           <div><b data-count="90" data-suffix="%">90%</b><p>of every fee goes to the circuit&apos;s owner. Fusebox keeps 10%, and the contract caps its share at 20%.</p></div>
           <div><b>Even the no</b><p>A fuse that stops a scam has done its job, so blocked attempts pay too, within daily caps.</p></div>
           <div><b>1 NFT</b><p>The circuit NFT is the payout address. Sell it, and the income moves with it.</p></div>
-          <div><b>0 upfront</b><p>Wallet owners pay per decision, from a prepaid USDT0 balance. No licences, no subscriptions.</p></div>
+          <div><b>0 upfront</b><p>Wallet owners pay per decision, from a prepaid USD₮0 balance. No licences, no subscriptions.</p></div>
         </div>
       </div>
       <div className="wrap bars">
-        <div className="m barlab">Fee per check, USDT0<br />set by each fuse&apos;s designer</div>
+        <div className="m barlab">Fee per check, USD₮0<br />set by each fuse&apos;s designer</div>
         {BARS.map((b) => (
           <div className="bar" key={b.name} style={{ ["--h" as string]: `${b.h}%` }} data-h={b.h} data-cursor={`${b.fee} / check`}>
-            <i /><span>{b.name} · {b.fee}</span><em>{b.fee} USDT0</em>
+            <i /><span>{b.name} · {b.fee}</span><em>{b.fee} USD₮0</em>
           </div>
         ))}
       </div>

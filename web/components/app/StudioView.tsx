@@ -93,7 +93,7 @@ export default function StudioView() {
 
   const q = useTxQueue<Ctx>();
   const [made, setMade] = useState<Ctx | null>(null);
-  const blocker = !account ? "Connect the wallet that will own the circuit" : !compiled ? "Fix the rule first" : overBudget ? "Over the 512-gate budget" : !proven ? "Prove it first" : !name.trim() ? "Give it a name" : !feeOk ? "A fee from 0 to 1 USDT0" : okbCost !== null && cost?.okb != null && cost.okb < okbCost ? `Needs ${formatEther(okbCost)} OKB plus gas; this wallet has ${formatEther(cost.okb)}` : null;
+  const blocker = !account ? "Connect the wallet that will own the circuit" : !compiled ? "Fix the rule first" : overBudget ? "Over the 512-gate budget" : !proven ? "Prove it first" : !name.trim() ? "Give it a name" : !feeOk ? "A fee from 0 to 1 USD₮0" : okbCost !== null && cost?.okb != null && cost.okb < okbCost ? `Needs ${formatEther(okbCost)} OKB plus gas; this wallet has ${formatEther(cost.okb)}` : null;
   const launch = async () => {
     if (!compiled || !cost || !account) return;
     const net = compiled.net;
@@ -102,7 +102,7 @@ export default function StudioView() {
     if (needL > 0n) steps.push({ id: "latch", label: `Mint ${needL} LATCH transistor${needL > 1n ? "s" : ""}`, detail: `${formatEther(cost.price * needL + cost.pfee)} OKB`, run: () => write(payable({ address: cost.T, abi: transistorsAbi, functionName: "mint", args: [1n, needL], value: cost.price * needL + cost.pfee })) });
     steps.push({ id: "tape", label: "Tape it out on TapeOut", detail: `${net.gates} gates · ${formatEther(cost.tape)} OKB`, run: () => write(payable({ address: PROCESSOR, abi: tapeoutProcessorAbi, functionName: "tapeout", args: [net.hex as Hex, compiled.nIn, 1], value: cost.tape })),
       after: (r: { logs: { address: string; data: Hex; topics: Hex[] }[] }, c: Ctx) => { for (const l of r.logs) { if (l.address.toLowerCase() !== PROCESSOR.toLowerCase()) continue; try { const ev = decodeEventLog({ abi: tapeoutProcessorAbi, data: l.data, topics: l.topics as [Hex, ...Hex[]] }); if (ev.eventName === "TapedOut") c.circuitId = ev.args.circuitId; } catch {} } } });
-    steps.push({ id: "list", label: "List it in the fuse market", detail: `${fee} USDT0 a check, described on-chain`, run: (c: Ctx) => write({ address: DEP.registry as Address, abi: fuseRegistryAbi, functionName: "list", args: [PROCESSOR, c.circuitId!, socket, net.keccak as Hex, parseUnits(fee.trim(), 6), metaUri] }),
+    steps.push({ id: "list", label: "List it in the fuse market", detail: `${fee} USD₮0 a check, described on-chain`, run: (c: Ctx) => write({ address: DEP.registry as Address, abi: fuseRegistryAbi, functionName: "list", args: [PROCESSOR, c.circuitId!, socket, net.keccak as Hex, parseUnits(fee.trim(), 6), metaUri] }),
       after: (r: { logs: { address: string; data: Hex; topics: Hex[] }[] }, c: Ctx) => { for (const l of r.logs) { try { const ev = decodeEventLog({ abi: fuseRegistryAbi, data: l.data, topics: l.topics as [Hex, ...Hex[]] }); if (ev.eventName === "FuseListed") c.fuseId = Number(ev.args.fuseId); } catch {} } } });
     const ok = await q.start(steps as Parameters<typeof q.start>[0], {});
     if (ok) setMade({ ...(q.ctx() ?? {}) });
@@ -214,7 +214,7 @@ export default function StudioView() {
           <div className="st-fields">
             <label className="oc-f m"><span>Name</span><input aria-label="Fuse name" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="e.g. Careful Cap" /></label>
             <label className="oc-f m"><span>One line for the market (optional)</span><input aria-label="Summary" value={summary} onChange={(e) => setSummary(e.target.value)} maxLength={200} placeholder={`Allows a payment when ${text}.`.slice(0, 90)} /></label>
-            <label className="oc-f m"><span>Fee per check (USDT0)</span><input aria-label="Fee per check in USDT0" value={fee} onChange={(e) => setFee(e.target.value)} inputMode="decimal" /></label>
+            <label className="oc-f m"><span>Fee per check (USD₮0)</span><input aria-label="Fee per check in USD₮0" value={fee} onChange={(e) => setFee(e.target.value)} inputMode="decimal" /></label>
             <p className="m mute" style={{ fontSize: 10.5, lineHeight: 1.6 }}>90% of every fee goes to whoever holds the circuit NFT; Fusebox keeps 10%. The description is written on X Layer with the listing.</p>
           </div>
           <div className="st-go">

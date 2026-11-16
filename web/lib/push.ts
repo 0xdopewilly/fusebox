@@ -66,7 +66,7 @@ export function alertFor(r: { wallet: Address; isAtlas?: boolean; to: Address; a
   const signed = [0, 1, 2].filter((i) => ((r.mask ?? 0) >> i) & 1).length;
   const who = r.isAtlas ? "Atlas" : `Wallet ${short(r.wallet)}`;
   return {
-    title: `${who} wants to pay ${r.amount} USDT0`,
+    title: `${who} wants to pay ${r.amount} USD₮0`,
     body: `To ${short(r.to)}${r.saved ? " (saved payee)" : ""}${r.memo ? ` · “${r.memo.slice(0, 80)}”` : ""} · ${signed} of 2 signatures`,
     url: `${origin}/app/approve?wallet=${r.wallet}&to=${r.to}&amount=${r.amount}`,
     tag: `${r.wallet.slice(2, 10)}${r.to.slice(2, 10)}${r.amount.replace(".", "_")}`,

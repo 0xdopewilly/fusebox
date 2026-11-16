@@ -11,7 +11,7 @@ const STEPS: [string, string, string][] = [
   ["Designed", "A logic circuit", "A fuse is a TAP-02 netlist: NAND gates, plus latches for memory. Design one with TapeOut's toolchain, or build it from rules in Fuse Studio."],
   ["Taped out", "On TapeOut", "Minted gate by gate and taped out on TapeOut's processor on X Layer. The designer gets the circuit NFT. Fusebox's four are circuits #15 to #18."],
   ["Evaluated", "By TapeOut, on X Layer", "Every payment calls TapeOut's eval and step for each fuse, in the same transaction. A latch keeps its state on-chain between payments."],
-  ["Paid", "To the circuit's owner", "Every check pays whoever holds the circuit NFT, in USDT0. Sell the NFT and the income goes with it."],
+  ["Paid", "To the circuit's owner", "Every check pays whoever holds the circuit NFT, in USD₮0. Sell the NFT and the income goes with it."],
 ];
 
 export default function OnTapeOut() {
@@ -63,7 +63,7 @@ export default function OnTapeOut() {
                 <span className="m mute">TapeOut circuit</span>
                 <b className="disp">#{m.circuit}</b>
                 <span className="ot-name">{m.name}</span>
-                <span className="m mute">{m.chips[1]?.[0] ?? `${f.gates} gates`} · {m.fee} USDT0 a check</span>
+                <span className="m mute">{m.chips[1]?.[0] ?? `${f.gates} gates`} · {m.fee} USD₮0 a check</span>
               </div>
             );
           })}

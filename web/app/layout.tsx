@@ -5,9 +5,9 @@ import "./globals.css";
 import SmoothScroll from "@/components/fx/SmoothScroll";
 import Cursor from "@/components/fx/Cursor";
 
-const display = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--f-display", display: "swap" });
-const sans = Geist({ subsets: ["latin"], variable: "--f-sans", display: "swap" });
-const mono = Geist_Mono({ subsets: ["latin"], variable: "--f-mono", display: "swap" });
+const display = Archivo({ subsets: ["latin", "latin-ext"], axes: ["wdth"], variable: "--f-display", display: "swap" });
+const sans = Geist({ subsets: ["latin", "latin-ext"], variable: "--f-sans", display: "swap" });
+const mono = Geist_Mono({ subsets: ["latin", "latin-ext"], variable: "--f-mono", display: "swap" });
 
 const DESC = "Built on TapeOut and X Layer: Fusebox wires an AI agent's wallet through small logic circuits taped out on TapeOut. A payment reaches the payee only if every fuse holds, and each fuse that checks it pays its designer.";
 export const metadata: Metadata = {

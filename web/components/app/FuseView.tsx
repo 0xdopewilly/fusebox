@@ -45,9 +45,9 @@ export default function FuseView({ id }: { id: number }) {
       </section>
 
       <section className="stats m mute" data-a>
-        <div>Fee per check<b>{fmt(f.fee)}<small>USDT0</small></b></div>
+        <div>Fee per check<b>{fmt(f.fee)}<small>USD₮0</small></b></div>
         <div>Decisions<b>{f.decisions}</b></div>
-        <div>Earned<b>{Number(f.lifetimeEarned).toFixed(5)}<small>USDT0</small></b></div>
+        <div>Earned<b>{Number(f.lifetimeEarned).toFixed(5)}<small>USD₮0</small></b></div>
         <div>Gates<b>{f.gates}<small>{f.nState ? `+ ${f.nState} latch` : "NAND"}</small></b></div>
         <div>Inputs<b>{f.nIn}</b></div>
         <div>Listed<b style={{ fontSize: 20, marginTop: 14 }}>{since}</b></div>

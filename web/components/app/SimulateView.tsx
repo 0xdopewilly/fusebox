@@ -84,8 +84,8 @@ export default function SimulateView() {
   });
   if (!line.length) problems.push("Splice in at least one fuse");
   if (!rows.length) problems.push("Add a payment");
-  rows.forEach((r, i) => { if (!okAmt(r.amount)) problems.push(`Payment ${i + 1}: an amount in USDT0`); });
-  if (!okAmt(spent)) problems.push("Spent today: an amount in USDT0");
+  rows.forEach((r, i) => { if (!okAmt(r.amount)) problems.push(`Payment ${i + 1}: an amount in USD₮0`); });
+  if (!okAmt(spent)) problems.push("Spent today: an amount in USD₮0");
   if (!/^\d+$/.test(hours.trim())) problems.push("Hours since today's payee was saved: a whole number");
 
   const run = async () => {
@@ -149,7 +149,7 @@ export default function SimulateView() {
             </div>
           ))}
           <div className="sim-ctx">
-            <label className="m"><span>Already spent today (USDT0)</span><input aria-label="Already spent today in USDT0" value={spent} onChange={(e) => setSpent(e.target.value)} inputMode="decimal" /></label>
+            <label className="m"><span>Already spent today (USD₮0)</span><input aria-label="Already spent today in USD₮0" value={spent} onChange={(e) => setSpent(e.target.value)} inputMode="decimal" /></label>
             <label className="m"><span>Today&apos;s new payee, saved (hours ago)</span><input aria-label="Hours since today's new payee was saved" value={hours} onChange={(e) => setHours(e.target.value)} inputMode="numeric" /></label>
           </div>
         </div>
@@ -166,7 +166,7 @@ export default function SimulateView() {
                   <input aria-label={`Payment ${i + 1}: what the agent was told`} value={r.memo} onChange={(e) => upd(i, { memo: e.target.value })} placeholder="What the agent was told" />
                   <div className="sim-pay-row">
                     <select aria-label={`Payment ${i + 1}: who it goes to`} value={r.to} onChange={(e) => upd(i, { to: e.target.value as Payee })}>{(Object.keys(TO) as Payee[]).map((t) => <option key={t} value={t}>{TO[t]}</option>)}</select>
-                    <label className="sim-amt"><input aria-label={`Payment ${i + 1}: amount in USDT0`} value={r.amount} onChange={(e) => upd(i, { amount: e.target.value })} inputMode="decimal" /><span className="m mute">USDT0</span></label>
+                    <label className="sim-amt"><input aria-label={`Payment ${i + 1}: amount in USD₮0`} value={r.amount} onChange={(e) => upd(i, { amount: e.target.value })} inputMode="decimal" /><span className="m mute">USD₮0</span></label>
                     <span className="sim-seats m" role="group" aria-label={`Payment ${i + 1}: approvals`}>
                       {r.seats.map((on, s) => <button key={s} className={on ? "on" : ""} aria-pressed={on} title={`Approver seat ${s + 1} signed`} onClick={() => upd(i, { seats: r.seats.map((x, j) => (j === s ? !x : x)) as [boolean, boolean, boolean] })}>S{s + 1}</button>)}
                     </span>
@@ -197,7 +197,7 @@ export default function SimulateView() {
               const s = res[i];
               return (
                 <div key={r.key} className={`sim-tr${s ? (s.allowed ? " ok" : " no") : ""}`} role="row" data-simrow={i} style={{ gridTemplateColumns: `minmax(0, 2.4fr) repeat(${ran.fuses.length}, minmax(64px, 1fr)) 110px` }}>
-                  <span role="cell" className="sim-what"><b>{r.amount} USDT0</b> → {TO[r.to].toLowerCase()}{r.seats.some(Boolean) ? ` · signed ${r.seats.map((x, j) => (x ? `S${j + 1}` : "")).filter(Boolean).join("+")}` : ""}<small>“{r.memo || "no memo"}”</small></span>
+                  <span role="cell" className="sim-what"><b>{r.amount} USD₮0</b> → {TO[r.to].toLowerCase()}{r.seats.some(Boolean) ? ` · signed ${r.seats.map((x, j) => (x ? `S${j + 1}` : "")).filter(Boolean).join("+")}` : ""}<small>“{r.memo || "no memo"}”</small></span>
                   {ran.fuses.map((f, j) => (
                     <span key={f.fuseId} role="cell" className="sim-c" data-name={f.name}>
                       {s ? <i className={`sim-cell ${s.verdicts[j]}`} title={`${f.name}: ${s.verdicts[j]}${s.latchedAfter[j] ? " · blown from here" : ""}`}>{s.verdicts[j] === "pass" ? "✓" : s.verdicts[j] === "blew" ? "✕" : "?"}</i> : <i className="sim-cell wait" />}
@@ -212,7 +212,7 @@ export default function SimulateView() {
           {done.length === ran.rows.length && (
             <p className="sim-sum">
               {stopped === 0 ? "Every payment went through: this line didn't stop anything here." : `${stopped} of ${ran.rows.length} stopped before a cent moved.`}{" "}
-              Each check costs the fuse&apos;s fee on a real wallet ({ran.fuses.reduce((t, f) => t + Number(market.fuses.find((x) => x.fuseId === f.fuseId)?.fee ?? 0), 0).toFixed(4)} USDT0 a decision for this line).{" "}
+              Each check costs the fuse&apos;s fee on a real wallet ({ran.fuses.reduce((t, f) => t + Number(market.fuses.find((x) => x.fuseId === f.fuseId)?.fee ?? 0), 0).toFixed(4)} USD₮0 a decision for this line).{" "}
               {ran.fuses.some((f) => f.fuseId === -1)
                 ? <Link className="lime" href={`/app/studio?draft=${draft?.code ?? ""}`}>Back to the Studio to tape it out →</Link>
                 : <Link className="lime" href={`/app/new?f=${ran.fuses.map((f) => [f.fuseId, f.a, f.b].join(":")).join(",")}`}>Wire up a wallet with this line →</Link>}

@@ -32,7 +32,7 @@ export const DEMO_APIS: DemoApi[] = [
 export function gate(req: Request, api: DemoApi) {
   return requirePayment(req, {
     payTo: api.payTo, price: api.price, secret: secret(), client: client as unknown as PublicClient, factory: DEPLOYMENT.factory,
-    description: `${api.name} (${api.seller}), ${api.price} USDT0 per call, paid from a Fusebox wallet`, markUsed,
+    description: `${api.name} (${api.seller}), ${api.price} USD₮0 per call, paid from a Fusebox wallet`, markUsed,
   });
 }
 

@@ -14,6 +14,8 @@ const MONO = { fontFamily: "Geist Mono", fontSize: 15, letterSpacing: "0.08em", 
 let fonts: Promise<{ name: string; data: Buffer; weight: 400 | 500 | 800 }[]> | null = null;
 const loadFonts = () => (fonts ??= Promise.all([
   ["Archivo", "archivo-800.ttf", 800], ["Geist", "geist-400.ttf", 400], ["Geist Mono", "geist-mono-500.ttf", 500],
+  // ₮ for USD₮0, which none of the three draws (scripts/build-tugrik.py)
+  ["Fusebox Tug Display", "tug-display-800.ttf", 800], ["Fusebox Tug Sans", "tug-sans-400.ttf", 400], ["Fusebox Tug Mono", "tug-mono-500.ttf", 500],
 ].map(async ([name, file, weight]) => ({ name: name as string, data: await readFile(join(process.cwd(), "assets/og", file as string)), weight: weight as 400 | 500 | 800 }))));
 
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
@@ -46,7 +48,7 @@ function Card({ addr, w }: { addr: string; w: Atlas | null }) {
   const state = !w ? "" : w.paused ? "Paused by its owner · nothing can be paid" : blown ? `${blownNames.join(" and ")} blown · nothing can be paid until the owner resets it` : "Line closed · every fuse is holding";
   const stats: [string, string, string][] = w ? [
     [String(w.counts.decisions), "decisions", C.ink], [String(w.counts.blocked), "payments stopped", w.counts.blocked ? C.red : C.ink],
-    [num(w.balance), "USDT0 in the wallet", C.ink], [num(w.paidToDesigners), "USDT0 paid to designers", C.lime],
+    [num(w.balance), "USD₮0 in the wallet", C.ink], [num(w.paidToDesigners), "USD₮0 paid to designers", C.lime],
   ] : [];
   return (
     <div style={{ width: "100%", height: "100%", display: "flex", position: "relative", background: "#000", color: C.ink, fontFamily: "Geist" }}>
@@ -59,7 +61,7 @@ function Card({ addr, w }: { addr: string; w: Atlas | null }) {
           <svg width="44" height="20" viewBox="0 0 30 14"><rect x=".5" y="1.5" width="6" height="11" fill={C.ink} /><rect x="23.5" y="1.5" width="6" height="11" fill={C.ink} /><rect x="6.5" y="3.5" width="17" height="7" fill="none" stroke={C.ink} /><path d="M6.5 7h4.5l1.6-2.6 2 5.2 1.6-2.6h7.3" fill="none" stroke={C.lime} strokeWidth="1.4" /></svg>
           Fusebox
         </div>
-        <div style={{ ...MONO, color: C.mute, display: "flex", alignItems: "center" }}><div style={{ width: 9, height: 9, background: C.lime, marginRight: 10 }} />X Layer mainnet · chain 196</div>
+        <div style={{ ...MONO, color: C.mute, display: "flex", alignItems: "center" }}><div style={{ width: 9, height: 9, background: C.lime, marginRight: 10 }} />Built on&nbsp;<span style={{ color: C.lime }}>TapeOut</span>&nbsp;× X Layer</div>
       </div>
 
       <div style={{ position: "absolute", left: 40, top: 118, display: "flex", flexDirection: "column", width: 640 }}>
@@ -92,7 +94,7 @@ function Card({ addr, w }: { addr: string; w: Atlas | null }) {
               <div key={f.slot} style={{ display: "flex", flexDirection: "column", width: 265 }}>
                 <Fuse blown={f.latched} />
                 <div style={{ fontFamily: "Archivo", fontSize: 22, textTransform: "uppercase", marginTop: 12, letterSpacing: "-0.01em" }}>{f.name}</div>
-                <div style={{ ...MONO, fontSize: 12, color: f.latched ? C.red : C.mute, marginTop: 4 }}>{`${f.latched ? "Blown" : "Holding"} · ${f.gates} gates`}</div>
+                <div style={{ ...MONO, fontSize: 12, color: f.latched ? C.red : C.mute, marginTop: 4 }}>{`${f.latched ? "Blown · " : ""}TapeOut #${f.circuitId} · ${f.gates} gates`}</div>
               </div>
             ))}
             {fuses.length === 0 && <div style={{ ...MONO, color: C.mute }}>No fuses installed yet</div>}
@@ -101,7 +103,7 @@ function Card({ addr, w }: { addr: string; w: Atlas | null }) {
       )}
 
       <div style={{ position: "absolute", left: 40, right: 40, bottom: 0, height: 64, display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: `1px solid ${C.hair2}`, ...MONO, color: C.mute }}>
-        <div style={{ display: "flex" }}>AI agents pay.&nbsp;<span style={{ color: C.lime }}>Circuits decide.</span></div>
+        <div style={{ display: "flex" }}>AI agents pay.&nbsp;<span style={{ color: C.lime }}>TapeOut circuits decide.</span></div>
         <div style={{ color: C.ink, display: "flex", textTransform: "none" }}>{`fusebox-xlayer.vercel.app/app/w/${isAddress(addr) ? short(addr) : ""}`}</div>
       </div>
     </div>

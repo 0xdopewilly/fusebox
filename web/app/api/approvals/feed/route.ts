@@ -18,8 +18,8 @@ export async function GET(req: Request) {
     const entries = box.open.map((r) => {
       const n = [0, 1, 2].filter((i) => (r.mask >> i) & 1).length;
       const link = `${SITE}/app/approve?wallet=${r.wallet}&to=${r.to}&amount=${r.amount}`;
-      const title = `Needs approval: ${r.amount} USDT0 to ${short(r.to)}${r.isAtlas ? " (Atlas)" : ""} · ${n} of 2 signed`;
-      const body = `The agent of wallet ${r.wallet} asked to pay ${r.amount} USDT0 to ${r.to} (${r.saved ? "a saved payee" : "not a saved payee"}) and was refused until two approvers sign. It said: “${r.memo}”. Attempts: ${r.attempts}. Sign it at ${link}`;
+      const title = `Needs approval: ${r.amount} USD₮0 to ${short(r.to)}${r.isAtlas ? " (Atlas)" : ""} · ${n} of 2 signed`;
+      const body = `The agent of wallet ${r.wallet} asked to pay ${r.amount} USD₮0 to ${r.to} (${r.saved ? "a saved payee" : "not a saved payee"}) and was refused until two approvers sign. It said: “${r.memo}”. Attempts: ${r.attempts}. Sign it at ${link}`;
       return `<entry><id>tag:fusebox-xlayer.vercel.app,2026:approval:${r.wallet}:${r.to}:${r.amount}:${r.first}</id><title>${esc(title)}</title><link href="${esc(link)}"/><updated>${new Date(r.last * 1000).toISOString()}</updated><summary>${esc(body)}</summary></entry>`;
     });
     const updated = new Date((box.open[0]?.last ?? Math.floor(Date.now() / 1000)) * 1000).toISOString();

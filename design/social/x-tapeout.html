@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fusebox · built on TapeOut</title>
+<style>
+@font-face { font-family: "Archivo"; font-weight: 800; src: url("../../deweb/src/fonts/archivo-800.woff2") format("woff2"); }
+@font-face { font-family: "Geist"; font-weight: 400 600; src: url("../../deweb/src/fonts/geist.woff2") format("woff2"); }
+@font-face { font-family: "Geist Mono"; font-weight: 500; src: url("../../deweb/src/fonts/geist-mono-500.woff2") format("woff2"); }
+@font-face { font-family: "Geist Mono"; font-weight: 650; src: url("../../deweb/src/fonts/geist-mono-650.woff2") format("woff2"); }
+:root { --lime: #bbfe2f; --ink: #f2f2ee; --soft: #c9c9c4; --mute: #8d8d89; --dim: #585855; --hair: rgba(255,255,255,.07); --hair2: rgba(255,255,255,.13); --hair3: rgba(255,255,255,.26); }
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 1600px; height: 900px; background: #000; color: var(--ink); overflow: hidden; -webkit-font-smoothing: antialiased; }
+body { font-family: "Geist", sans-serif; position: relative; }
+.m { font-family: "Geist Mono", monospace; font-weight: 500; font-size: 14px; letter-spacing: .08em; text-transform: uppercase; }
+.lime { color: var(--lime); } .mute { color: var(--mute); }
+.grid { position: absolute; inset: 0 48px; display: grid; grid-template-columns: repeat(6, 1fr); }
+.grid i { border-left: 1px solid var(--hair); } .grid i:last-child { border-right: 1px solid var(--hair); }
+.bar { position: absolute; left: 48px; right: 48px; top: 0; height: 80px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--hair2); }
+.logo { display: flex; align-items: center; gap: 14px; font-family: "Archivo"; font-weight: 800; font-size: 26px; text-transform: uppercase; letter-spacing: -.01em; }
+.dot { display: inline-block; width: 9px; height: 9px; background: var(--lime); margin-right: 10px; vertical-align: 1px; box-shadow: 0 0 10px rgba(187,254,47,.6); }
+.head { position: absolute; left: 48px; right: 48px; top: 122px; }
+.eyebrow { margin-bottom: 22px; }
+h1 { font-family: "Archivo"; font-weight: 800; text-transform: uppercase; letter-spacing: -.045em; line-height: .93; font-size: 114px; }
+.under { position: absolute; left: 48px; right: 48px; top: 392px; display: grid; grid-template-columns: 1.15fr 1fr; gap: 48px; align-items: end; }
+.sub { font-size: 23px; line-height: 1.45; color: var(--soft); max-width: 760px; }
+.sub b { color: var(--ink); font-weight: 500; }
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--hair2); }
+.stats div { padding: 14px 0 0 14px; border-left: 1px solid var(--hair2); }
+.stats div:first-child { border-left: 0; padding-left: 0; }
+.stats b { display: block; font-family: "Archivo"; font-weight: 800; font-size: 44px; letter-spacing: -.03em; line-height: 1; margin-bottom: 8px; }
+.stats span { font-size: 12px; color: var(--mute); }
+.line { position: absolute; left: 48px; right: 48px; top: 556px; height: 214px; }
+.wire { position: absolute; left: 0; right: 0; top: 106px; height: 2px; background: var(--lime); box-shadow: 0 0 14px rgba(187,254,47,.55); }
+.ends { position: absolute; top: 74px; width: 124px; height: 66px; border: 1px solid var(--hair3); background: #000; display: flex; flex-direction: column; justify-content: center; padding: 0 14px; }
+.ends b { font-family: "Archivo"; font-weight: 800; font-size: 19px; text-transform: uppercase; letter-spacing: -.01em; }
+.ends.l { left: 0; } .ends.r { right: 0; border-color: var(--lime); }
+.fuses { position: absolute; left: 152px; right: 152px; top: 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+.fz { border: 1px solid var(--hair2); background: #070707; height: 214px; display: flex; flex-direction: column; }
+.fz .net { height: 116px; padding: 12px 12px 0; position: relative; }
+.fz .net svg { width: 100%; height: 100%; display: block; }
+.fz .meta { margin-top: auto; padding: 0 14px 14px; }
+.fz h3 { font-family: "Archivo"; font-weight: 800; font-size: 24px; text-transform: uppercase; letter-spacing: -.02em; line-height: 1; margin-bottom: 8px; }
+.fz .m { font-size: 12px; }
+.foot { position: absolute; left: 48px; right: 48px; bottom: 0; height: 74px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--hair2); }
+.foot .q { font-size: 19px; color: var(--soft); }
+.foot .q b { color: var(--ink); font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="grid"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+<div class="bar">
+  <div class="logo"><svg width="46" height="22" viewBox="0 0 30 14"><rect x=".5" y="1.5" width="6" height="11" fill="#f2f2ee"/><rect x="23.5" y="1.5" width="6" height="11" fill="#f2f2ee"/><rect x="6.5" y="3.5" width="17" height="7" fill="none" stroke="#f2f2ee"/><path d="M6.5 7h4.5l1.6-2.6 2 5.2 1.6-2.6h7.3" fill="none" stroke="#bbfe2f" stroke-width="1.4"/></svg>Fusebox</div>
+  <div class="m mute">On-chain hardware · AI agent payments</div>
+  <div class="m mute"><span class="dot"></span>Built on <span class="lime">TapeOut</span> × X Layer</div>
+</div>
+<div class="head">
+  <div class="m eyebrow"><span class="lime">[Builder notes]</span> <span class="mute">What TapeOut circuits do on X Layer mainnet</span></div>
+  <h1>TapeOut circuits<br><span class="lime">[doing real work]</span>.</h1>
+</div>
+<div class="under">
+  <p class="sub">Four circuits taped out on <b>TapeOut</b> decide every payment an AI agent makes, inside the payment itself. If one says no, nothing moves, and every check pays the circuit's owner.</p>
+  <div class="stats m">
+    <div><b>244</b><span>logic gates</span></div>
+    <div><b>4</b><span>TapeOut circuits</span></div>
+    <div><b>1</b><span>transaction per payment</span></div>
+    <div><b>16.7M</b><span>inputs tested</span></div>
+  </div>
+</div>
+<div class="line">
+  <div class="wire"></div>
+  <div class="ends l"><b>Agent</b><span class="m mute" style="font-size:11px">wallet key</span></div>
+  <div class="fuses" id="fuses"></div>
+  <div class="ends r"><b>Payee</b><span class="m mute" style="font-size:11px">paid only if all hold</span></div>
+</div>
+<div class="foot">
+  <div class="q">A prompt injection can persuade a model. <b>It can't persuade a NAND gate.</b></div>
+  <div class="m mute">TapeOut circuits <span class="lime">#15–18</span> · live on X Layer mainnet</div>
+</div>
+<script>
+// draws each fuse's real netlist (web/lib/fuse-layers.json): inputs left, one square per gate by logic depth, wires as curves
+window.draw = (layers) => {
+  const META = { "daily-cap": ["Daily Cap", 15, "108 NAND"], "payee-guard": ["Payee Guard", 16, "79 NAND"], breaker: ["Breaker", 17, "10 NAND + 1 LATCH"], "approval-2of3": ["Two of Three", 18, "46 NAND"] };
+  const W = 320, H = 104, P = 6;
+  document.getElementById("fuses").innerHTML = layers.map((f) => {
+    const cols = {}; f.layout.forEach((g, i) => (cols[g.d] ||= []).push(i));
+    const pos = {}; const cx = (d) => P + (d / (f.depth + 1)) * (W - 2 * P);
+    for (let s = 0; s < f.nIn; s++) pos[s] = [P, P + ((s + 0.5) / f.nIn) * (H - 2 * P)];
+    Object.entries(cols).forEach(([d, ids]) => ids.forEach((i, k) => { pos[f.layout[i].out] = [cx(+d), P + ((k + 0.5) / ids.length) * (H - 2 * P)]; }));
+    let wires = "", gates = "";
+    f.layout.forEach((g) => { const [x, y] = pos[g.out]; g.ins.forEach((s) => { const p = pos[s]; if (!p) return; const mx = (p[0] + x) / 2; wires += `<path d="M${p[0]} ${p[1]}C${mx} ${p[1]} ${mx} ${y} ${x} ${y}"/>`; });
+      gates += g.latch ? `<rect x="${x - 5}" y="${y - 5}" width="10" height="10" fill="none" stroke="#bbfe2f" stroke-width="1.6"/><rect x="${x - 2}" y="${y - 2}" width="4" height="4" fill="#bbfe2f"/>` : `<rect x="${x - 2.6}" y="${y - 2.6}" width="5.2" height="5.2" fill="#f2f2ee"/>`; });
+    let pins = ""; for (let s = 0; s < f.nIn; s++) pins += `<rect x="${pos[s][0] - 1.5}" y="${pos[s][1] - 1.5}" width="3" height="3" fill="#585855"/>`;
+    const [name, id, gatesLabel] = META[f.key];
+    return `<div class="fz"><div class="net"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><g fill="none" stroke="rgba(187,254,47,.28)" stroke-width=".8">${wires}</g>${pins}${gates}</svg></div>
+      <div class="meta"><h3>${name}</h3><div class="m"><span class="lime">TapeOut #${id}</span> <span class="mute">· ${gatesLabel}</span></div></div></div>`;
+  }).join("");
+};
+</script>
+</body>
+</html>

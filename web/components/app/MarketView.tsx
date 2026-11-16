@@ -44,9 +44,9 @@ export default function MarketView() {
           <section className="stats m mute" data-a>
             <div>Fuses listed<b>{data.fuses.length}</b></div>
             <div>Decisions<b>{data.totalDecisions}</b></div>
-            <div>Earned by designers<b>{Number(data.totalEarned).toFixed(5)}<small>USDT0</small></b></div>
+            <div>Earned by designers<b>{Number(data.totalEarned).toFixed(5)}<small>USD₮0</small></b></div>
             <div>Protocol share<b>{data.protocolBps / 100}%<small>cap 20%</small></b></div>
-            <div>Protocol earned<b>{Number(data.protocolEarned).toFixed(5)}<small>USDT0</small></b></div>
+            <div>Protocol earned<b>{Number(data.protocolEarned).toFixed(5)}<small>USD₮0</small></b></div>
             <div>Processor<b style={{ fontSize: 16, marginTop: 14 }}>{data.fuses[0] ? short(data.fuses[0].processor) : "—"}</b></div>
           </section>
           <h2 className="sr">Listed fuses</h2>
@@ -62,7 +62,7 @@ export default function MarketView() {
                   </div>
                   <div className="sch">{layout && <Netlist f={layout} />}<ChainNetlist processor={f.processor} circuitId={f.circuitId} nIn={f.nIn} pinned={f.netlistHash} draw={!layout} /></div>
                   <div><div className="chips">
-                    <span className="chip l">{fmt(f.fee)} USDT0 / check</span>
+                    <span className="chip l">{fmt(f.fee)} USD₮0 / check</span>
                     <span className="chip">{f.decisions} decisions</span>
                     <span className="chip">earned {Number(f.lifetimeEarned).toFixed(5)}</span>
                     <span className="chip">{f.listed ? "Listed" : "Delisted"}</span>

@@ -51,7 +51,7 @@ function Scope({ rows }: { rows: DecisionRow[] }) {
               <rect x={x(i) - 10} y="0" width="20" height={H} fill="transparent" />
               <rect className="tick" data-up={up ? "1" : "0"} x={x(i) - 1.5} y={up ? mid - hh : mid} width="3" height={hh} fill={c} opacity={hover === null || hover === i ? 1 : 0.35} />
               <rect x={x(i) - 3.5} y={(up ? mid - hh : mid + hh) - 3.5} width="7" height="7" fill={c} opacity={hover === i ? 1 : 0} />
-              {hover === i && <text x={Math.min(W - 160, x(i) + 10)} y={up ? mid - hh - 8 : mid + hh + 16} fill={c} fontFamily="var(--f-mono)" fontSize="11" letterSpacing=".6">{`#${r.id} ${Number(r.amount).toFixed(2)} USDT0 · ${up ? "PAID" : "BLOCKED"}`}</text>}
+              {hover === i && <text x={Math.min(W - 160, x(i) + 10)} y={up ? mid - hh - 8 : mid + hh + 16} fill={c} fontFamily="var(--f-mono)" fontSize="11" letterSpacing=".6">{`#${r.id} ${Number(r.amount).toFixed(2)} USD₮0 · ${up ? "PAID" : "BLOCKED"}`}</text>}
             </g>
           );
         })}
@@ -98,7 +98,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
         <div className="who" data-b>
           <div className="m">{a.isAtlas ? <><span className="lime">[Atlas]</span> <span className="mute">ops agent · public demo wallet · fuses on TapeOut · owner {short(a.owner)}</span></> : <><span className="lime">[Fusebox wallet]</span> <span className="mute">owner {short(a.owner)} · agent {short(a.agent)}</span></>}</div>
           <div className="m addr">{a.wallet}<button onClick={copy} data-cursor="Copy">{copied ? "Copied" : "Copy"}</button><a href={`${OKLINK}/address/${a.wallet}`} target="_blank" rel="noreferrer" data-cursor="OKLink">↗</a>{a.isAtlas ? <a href={`https://repo.sourcify.dev/196/${a.wallet}`} target="_blank" rel="noreferrer" data-cursor="Source" style={{ color: "var(--dim)" }}>Verified source ↗</a> : null}</div>
-          <div className="bal"><b><Count value={Number(a.balance)} /></b><span className="m">USDT0 in the wallet</span></div>
+          <div className="bal"><b><Count value={Number(a.balance)} /></b><span className="m">USD₮0 in the wallet</span></div>
           <div className={`state-line${blown || a.paused ? " bad" : ""}`}>
             <i />{a.paused ? <span><b>Paused.</b> The owner froze the wallet; nothing pays until they unfreeze it.</span>
               : blown ? <span><b>{blown.name} blown.</b> Nothing can be paid until the owner resets it.</span>
@@ -117,8 +117,8 @@ export default function WalletView({ address, from }: { address?: string; from?:
         <div>Decisions<b><Count value={a.counts.decisions} d={0} /></b></div>
         <div>Paid<b className="lime"><Count value={a.counts.allowed} d={0} /></b></div>
         <div>Stopped<b style={{ color: "var(--red)" }}><Count value={a.counts.blocked} d={0} /></b></div>
-        <div>Fee balance<b><Count value={Number(a.feeBalance)} d={4} /><small>USDT0</small></b></div>
-        <div>Paid to circuit designers<b><Count value={Number(a.paidToDesigners)} d={4} /><small>USDT0</small></b></div>
+        <div>Fee balance<b><Count value={Number(a.feeBalance)} d={4} /><small>USD₮0</small></b></div>
+        <div>Paid to circuit designers<b><Count value={Number(a.paidToDesigners)} d={4} /><small>USD₮0</small></b></div>
       </section>
 
       <OwnerConsole data={a} />
@@ -135,20 +135,20 @@ export default function WalletView({ address, from }: { address?: string; from?:
               <h3>{f.name}</h3>
               <p style={{ color: "var(--soft)", fontSize: 14, lineHeight: 1.5 }}>
                 {f.original === false ? `${f.summary ?? "A rival design for this socket."} Settings: ${describe(f.socket, f.a, f.b, f.unit, f.paramLabels)}.${f.latched ? " Blown: it refuses every payment until the owner resets it." : ""}` : <>
-                {f.key === "daily-cap" && `No more than ${f.a} USDT0 a UTC day. ${Number(f.spentToday).toFixed(2)} spent today.`}
-                {f.key === "payee-guard" && `Saved payees only. A new payee gets up to ${f.b} USDT0 until its ${f.a}-hour cooling-off ends.`}
+                {f.key === "daily-cap" && `No more than ${f.a} USD₮0 a UTC day. ${Number(f.spentToday).toFixed(2)} spent today.`}
+                {f.key === "payee-guard" && `Saved payees only. A new payee gets up to ${f.b} USD₮0 until its ${f.a}-hour cooling-off ends.`}
                 {f.key === "breaker" && (f.latched ? "Blown: it tripped on a stranger and stays blown until the owner resets it." : "Trips on a payment to a stranger and stays blown until the owner resets it.")}
-                {f.key === "approval-2of3" && `Over ${f.a} USDT0, two of three approvers must sign that exact payment.`}
+                {f.key === "approval-2of3" && `Over ${f.a} USD₮0, two of three approvers must sign that exact payment.`}
                 </>}
               </p>
             </div>
             <div className="m sch" style={{ gridColumn: "span 2" }}>{layout && <Netlist f={layout} />}<div className="mute" style={{ marginTop: 8 }}>Real netlist · {f.gates} gates{f.nState ? ` · ${f.nState} state bit` : ""}</div></div>
             <div className="m kv" style={{ gridColumn: "span 2" }}>
               <span>TapeOut circuit</span><span><a href={`${OKLINK}/address/${f.processor}`} target="_blank" rel="noreferrer">#{f.circuitId} on TapeOut&apos;s processor {short(f.processor)} ↗</a></span>
-              <span>Fee per check</span><span>{fmt(f.fee)} USDT0</span>
+              <span>Fee per check</span><span>{fmt(f.fee)} USD₮0</span>
               <span>Decisions</span><span>{f.decisions}</span>
-              <span>Earned (claimable)</span><span>{fmt(f.earned)} USDT0</span>
-              <span>Earned (lifetime)</span><span>{fmt(f.lifetimeEarned)} USDT0</span>
+              <span>Earned (claimable)</span><span>{fmt(f.earned)} USD₮0</span>
+              <span>Earned (lifetime)</span><span>{fmt(f.lifetimeEarned)} USD₮0</span>
               <span>Designer</span><span><a href={`${OKLINK}/address/${f.designer}`} target="_blank" rel="noreferrer">{short(f.designer)} ↗</a></span>
             </div>
           </div>
@@ -188,7 +188,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
           return (
             <div key={r.id} className={`dcard ${r.allowed ? "ok" : "no"}${fresh.has(r.id) ? " new" : ""}`}>
               <div className="dc-top m"><span className="mute">#{r.id} · {new Date(r.time * 1000).toISOString().slice(5, 16).replace("T", " ")} UTC</span><span className={`res ${r.allowed ? "ok" : "no"}`}>{r.allowed ? "Paid" : "Stopped"}</span></div>
-              <div className="dc-amt"><b>{fmt(r.amount)}</b><span className="m mute">USDT0 → {short(r.to)} · {isPayee(r.to) ? "saved payee" : "stranger"}</span></div>
+              <div className="dc-amt"><b>{fmt(r.amount)}</b><span className="m mute">USD₮0 → {short(r.to)} · {isPayee(r.to) ? "saved payee" : "stranger"}</span></div>
               <p className="dc-memo">“{r.memo}”</p>
               <div className="dc-foot m">
                 <span className="sq">{r.status.map((s, i) => <i key={i} className={s} title={`${a.fuses[i]?.name ?? "fuse"}: ${s}`} />)}</span>
@@ -207,7 +207,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
       <div className="side2" data-b>
         <div><span className="m mute">Saved payees · Payee Guard lets these through after {a.fuses.find((x) => x.key === "payee-guard")?.a ?? 24} h</span>
           <ul>{a.payees.map((p) => <li key={p.address}>{short(p.address)}<span>since {new Date(p.since * 1000).toISOString().slice(0, 16).replace("T", " ")}</span></li>)}</ul></div>
-        <div><span className="m mute">Approvers · two of three sign anything over {a.fuses.find((x) => x.key === "approval-2of3")?.a ?? 20} USDT0</span>
+        <div><span className="m mute">Approvers · two of three sign anything over {a.fuses.find((x) => x.key === "approval-2of3")?.a ?? 20} USD₮0</span>
           <ul>{a.approvers.map((p, i) => <li key={p}>{short(p)}<span>seat {i + 1}</span></li>)}</ul></div>
       </div>
     </div>

@@ -24,7 +24,7 @@ export default function DecisionTools({ wallet, rows, fresh, names }: { wallet: 
       if (!fresh.has(r.id) || r.allowed || told.current.has(r.id)) continue;
       told.current.add(r.id);
       const blew = r.status.map((s, i) => (s !== "pass" ? names[i] ?? `fuse ${i + 1}` : null)).filter(Boolean).join(", ");
-      try { new Notification("Fusebox stopped a payment", { body: `${r.amount} USDT0 to ${short(r.to)}: ${blew} said no. “${r.memo.slice(0, 80)}”`, tag: `fusebox-${wallet}-${r.id}`, icon: "/icon.svg" }); } catch {}
+      try { new Notification("Fusebox stopped a payment", { body: `${r.amount} USD₮0 to ${short(r.to)}: ${blew} said no. “${r.memo.slice(0, 80)}”`, tag: `fusebox-${wallet}-${r.id}`, icon: "/icon.svg" }); } catch {}
     }
   }, [fresh, rows, on, perm, names, wallet]);
   const toggle = async () => {

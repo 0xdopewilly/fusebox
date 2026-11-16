@@ -34,7 +34,7 @@ const STARTERS: { id: string; name: string; why: string; on: Record<Key, boolean
     on: { "daily-cap": true, "payee-guard": true, breaker: true, "approval-2of3": true }, cap: "200", cool: "72", trial: "5", thr: "50" },
   { id: "refund", name: "Refund desk", why: "Pays customers it has never paid before, so no payee book or Breaker: the daily cap and approvals carry the weight.",
     on: { "daily-cap": true, "payee-guard": false, breaker: false, "approval-2of3": true }, cap: "100", cool: "24", trial: "2", thr: "10" },
-  { id: "allowance", name: "Small allowance", why: "For a new or experimental agent: a few USDT0 a day, saved payees only, one stranger blows it.",
+  { id: "allowance", name: "Small allowance", why: "For a new or experimental agent: a few USD₮0 a day, saved payees only, one stranger blows it.",
     on: { "daily-cap": true, "payee-guard": true, breaker: true, "approval-2of3": false }, cap: "10", cool: "24", trial: "1", thr: "20" },
 ];
 
@@ -96,7 +96,7 @@ export default function NewWalletView() {
     if (on["approval-2of3"] && approvers.some((a) => !isAddress(a.trim(), { strict: false }))) p.push("Two of Three needs three approver addresses.");
     if (goodPayees.some((x) => !isAddress(x.trim(), { strict: false }))) p.push("A saved payee isn't a valid address.");
     if (depositUnits < 0n || floatUnits < 0n) p.push("Amounts must be numbers, up to 6 decimals.");
-    if (bal && depositUnits + floatUnits > bal.usdt) p.push(`You have ${Number(bal.usdt) / 1e6} USDT0; the deposit and float need ${Number(depositUnits + floatUnits) / 1e6}.`);
+    if (bal && depositUnits + floatUnits > bal.usdt) p.push(`You have ${Number(bal.usdt) / 1e6} USD₮0; the deposit and float need ${Number(depositUnits + floatUnits) / 1e6}.`);
     if (bal && bal.okb === 0n) p.push("You need a little OKB on X Layer for gas.");
     return p;
   }, [account, agent, on, approvers, goodPayees, depositUnits, floatUnits, bal]);
@@ -113,24 +113,24 @@ export default function NewWalletView() {
           try { const k = "fusebox:mine"; const list = JSON.parse(localStorage.getItem(k) || "[]"); list.unshift({ address: c.wallet, block: c.block, owner: account }); localStorage.setItem(k, JSON.stringify(list.slice(0, 20))); } catch {}
         },
       },
-      { id: "token", label: "Let it pay in USDT0", run: (c) => write({ ...W(), address: c.wallet!, functionName: "setToken", args: [DEP.usdt0 as Address, true] }) },
+      { id: "token", label: "Let it pay in USD₮0", run: (c) => write({ ...W(), address: c.wallet!, functionName: "setToken", args: [DEP.usdt0 as Address, true] }) },
     ];
     FUSES.filter((f) => on[f.key]).forEach((f) => {
       const params = f.key === "breaker" ? { token: "0x0000000000000000000000000000000000000000" as Address, unit: 0n, a: 0, b: 0 }
         : { token: DEP.usdt0 as Address, unit: USDT, a: f.key === "daily-cap" ? clamp(cap) : f.key === "payee-guard" ? clamp(cool) : clamp(thr), b: f.key === "payee-guard" ? clamp(trial) : 0 };
-      const detail = f.key === "daily-cap" ? `${clamp(cap)} USDT0 a day` : f.key === "payee-guard" ? `${clamp(cool)} h cooling-off, ${clamp(trial)} USDT0 trial` : f.key === "approval-2of3" ? `approvals over ${clamp(thr)} USDT0` : "trips on strangers";
-      steps.push({ id: `fuse-${f.key}`, label: `Splice in ${f.name}`, detail: `${detail} · ${Number(feeOf(f)) / 1e6} USDT0 per check`, run: (c) => write({ ...W(), address: c.wallet!, functionName: "addFuse", args: [BigInt(f.id), params, feeOf(f)] }) });
+      const detail = f.key === "daily-cap" ? `${clamp(cap)} USD₮0 a day` : f.key === "payee-guard" ? `${clamp(cool)} h cooling-off, ${clamp(trial)} USD₮0 trial` : f.key === "approval-2of3" ? `approvals over ${clamp(thr)} USD₮0` : "trips on strangers";
+      steps.push({ id: `fuse-${f.key}`, label: `Splice in ${f.name}`, detail: `${detail} · ${Number(feeOf(f)) / 1e6} USD₮0 per check`, run: (c) => write({ ...W(), address: c.wallet!, functionName: "addFuse", args: [BigInt(f.id), params, feeOf(f)] }) });
     });
     goodPayees.forEach((p, i) => steps.push({ id: `payee-${i}`, label: "Save a payee", detail: short(p.trim()), run: (c) => write({ ...W(), address: c.wallet!, functionName: "addPayee", args: [getAddress(p.trim().toLowerCase())] }) }));
     if (on["approval-2of3"]) steps.push({ id: "approvers", label: "Seat the three approvers", detail: approvers.map((a) => short(a.trim())).join(" · "), run: (c) => write({ ...W(), address: c.wallet!, functionName: "setApprovers", args: [approvers.map((a) => getAddress(a.trim().toLowerCase())) as [Address, Address, Address]] }) });
     if (depositUnits > 0n) {
-      steps.push({ id: "approve", label: "Allow the registry to take the fee deposit", detail: `${deposit} USDT0`, run: async () => {
+      steps.push({ id: "approve", label: "Allow the registry to take the fee deposit", detail: `${deposit} USD₮0`, run: async () => {
         const have = await pub.readContract({ address: DEP.usdt0 as Address, abi: erc20, functionName: "allowance", args: [account!, DEP.registry as Address] });
         return have >= depositUnits ? null : write({ address: DEP.usdt0 as Address, abi: erc20, functionName: "approve", args: [DEP.registry as Address, depositUnits] });
       } });
-      steps.push({ id: "deposit", label: "Prepay fees", detail: `${deposit} USDT0 ≈ ${perDecision ? Number(depositUnits / perDecision) : 0} decisions`, run: (c) => write({ address: DEP.registry as Address, abi: fuseRegistryAbi, functionName: "deposit", args: [c.wallet!, depositUnits] }) });
+      steps.push({ id: "deposit", label: "Prepay fees", detail: `${deposit} USD₮0 ≈ ${perDecision ? Number(depositUnits / perDecision) : 0} decisions`, run: (c) => write({ address: DEP.registry as Address, abi: fuseRegistryAbi, functionName: "deposit", args: [c.wallet!, depositUnits] }) });
     }
-    if (floatUnits > 0n) steps.push({ id: "float", label: "Fund the wallet for payments", detail: `${float} USDT0`, run: (c) => write({ address: DEP.usdt0 as Address, abi: erc20, functionName: "transfer", args: [c.wallet!, floatUnits] }) });
+    if (floatUnits > 0n) steps.push({ id: "float", label: "Fund the wallet for payments", detail: `${float} USD₮0`, run: (c) => write({ address: DEP.usdt0 as Address, abi: erc20, functionName: "transfer", args: [c.wallet!, floatUnits] }) });
     return steps;
   };
 
@@ -196,13 +196,13 @@ export default function NewWalletView() {
                 <div className="fopt" key={f.key}>
                   <Toggle on={on[f.key]} flip={() => toggle(f.key)} name={f.name} />
                   <div>
-                    <h4>{f.name}<small>{Number(feeOf(f)) / 1e6} USDT0 / check</small></h4>
+                    <h4>{f.name}<small>{Number(feeOf(f)) / 1e6} USD₮0 / check</small></h4>
                     <p>{f.say}</p>
-                    {on[f.key] && f.key === "daily-cap" && <div className="prow"><Field label="Cap per day" suffix="USDT0" v={cap} set={setCap} /></div>}
-                    {on[f.key] && f.key === "payee-guard" && <div className="prow"><Field label="Cooling-off" suffix="hours" v={cool} set={setCool} /><Field label="Trial amount" suffix="USDT0" v={trial} set={setTrial} /></div>}
+                    {on[f.key] && f.key === "daily-cap" && <div className="prow"><Field label="Cap per day" suffix="USD₮0" v={cap} set={setCap} /></div>}
+                    {on[f.key] && f.key === "payee-guard" && <div className="prow"><Field label="Cooling-off" suffix="hours" v={cool} set={setCool} /><Field label="Trial amount" suffix="USD₮0" v={trial} set={setTrial} /></div>}
                     {on[f.key] && f.key === "approval-2of3" && (
                       <>
-                        <div className="prow"><Field label="Approvals above" suffix="USDT0" v={thr} set={setThr} /></div>
+                        <div className="prow"><Field label="Approvals above" suffix="USD₮0" v={thr} set={setThr} /></div>
                         <div className="addr-list m" style={{ marginTop: 12 }}>
                           {approvers.map((a, i) => <div className="ar field" key={i}><input aria-label={`Approver ${i + 1} address`} value={a} onChange={(e) => setApprovers(approvers.map((x, k) => (k === i ? e.target.value : x)))} placeholder={`Approver ${i + 1} · 0x…`} spellCheck={false} /></div>)}
                         </div>
@@ -228,10 +228,10 @@ export default function NewWalletView() {
             <div className="ix">04</div>
             <div>
               <h3>Fund it</h3>
-              <p className="lead">Fees come from a prepaid USDT0 balance in the registry; the payments themselves come from the wallet. {bal ? <>You have <span className="m lime">{(Number(bal.usdt) / 1e6).toFixed(4)} USDT0</span> and <span className="m lime">{(Number(bal.okb) / 1e18).toFixed(5)} OKB</span>.</> : null}</p>
+              <p className="lead">Fees come from a prepaid USD₮0 balance in the registry; the payments themselves come from the wallet. {bal ? <>You have <span className="m lime">{(Number(bal.usdt) / 1e6).toFixed(4)} USD₮0</span> and <span className="m lime">{(Number(bal.okb) / 1e18).toFixed(5)} OKB</span>.</> : null}</p>
               <div className="prow">
-                <Field label="Fee balance" suffix="USDT0" v={deposit} set={setDeposit} />
-                <Field label="Wallet float" suffix="USDT0" v={float} set={setFloat} />
+                <Field label="Fee balance" suffix="USD₮0" v={deposit} set={setDeposit} />
+                <Field label="Wallet float" suffix="USD₮0" v={float} set={setFloat} />
               </div>
             </div>
           </div>
@@ -240,10 +240,10 @@ export default function NewWalletView() {
           <div className="summary">
             <div className="sh2 m"><span className="mute">Your wallet</span><span className="lime">{Object.values(on).filter(Boolean).length} fuses</span></div>
             <div className="rows">
-              <div><span>Per payment</span><span>{(Number(perDecision) / 1e6).toFixed(4)} USDT0</span></div>
+              <div><span>Per payment</span><span>{(Number(perDecision) / 1e6).toFixed(4)} USD₮0</span></div>
               <div><span>Fee balance covers</span><span>{perDecision && depositUnits > 0n ? `${Number(depositUnits / perDecision)} decisions` : "—"}</span></div>
-              <div><span>Daily cap</span><span>{on["daily-cap"] ? `${clamp(cap)} USDT0` : "off"}</span></div>
-              <div><span>Approvals over</span><span>{on["approval-2of3"] ? `${clamp(thr)} USDT0` : "off"}</span></div>
+              <div><span>Daily cap</span><span>{on["daily-cap"] ? `${clamp(cap)} USD₮0` : "off"}</span></div>
+              <div><span>Approvals over</span><span>{on["approval-2of3"] ? `${clamp(thr)} USD₮0` : "off"}</span></div>
               <div><span>Saved payees</span><span>{goodPayees.length}</span></div>
             </div>
             <Link className="m lime sim-link" href={simLink}>Test this line on sample payments first →</Link>
@@ -280,7 +280,7 @@ export default function NewWalletView() {
       {/* phones: the summary is at the end of a long form, so its action rides above the dock until you reach it */}
       {!made?.wallet && !sideSeen && (
         <div className="wz-sticky">
-          <div className="m"><b>{Object.values(on).filter(Boolean).length} fuses · {(Number(perDecision) / 1e6).toFixed(4)} USDT0 each</b>
+          <div className="m"><b>{Object.values(on).filter(Boolean).length} fuses · {(Number(perDecision) / 1e6).toFixed(4)} USD₮0 each</b>
             <span className={!q.running && problems.length ? "warn" : "mute"}>{q.running ? "Sign each step in your wallet…" : failed ? "A step failed: retry it below" : problems[0] ?? "Ready to wire it up"}</span></div>
           <button className="btn lime" disabled={q.running} onClick={() => { side.current?.scrollIntoView({ behavior: "smooth", block: "start" }); if (failed) retry(); else if (!problems.length) launch(); }}>
             {failed ? "Retry" : problems.length ? "Review" : "Wire it up"} <span className="k">→</span>

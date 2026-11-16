@@ -147,7 +147,7 @@ export default function Hero() {
         <div><b data-v="4">4</b>TapeOut circuits on one line</div>
         <div><b data-v="244">244</b>logic gates, taped out on TapeOut</div>
         <div><b data-v="1">1</b>call per payment</div>
-        <div><b data-v="0.0045" data-dec="4">0.0045</b>USDT0 per fully checked payment</div>
+        <div><b data-v="0.0045" data-dec="4">0.0045</b>USD₮0 per fully checked payment</div>
       </div>
       <div className="bigword" aria-hidden="true">Fusebox</div>
       <div className="flash" />

@@ -37,7 +37,7 @@ export const CONDS: Record<number, CondDef[]> = {
       build: (b, p) => lessOrEqual(b, p("amount"), p("cap")), spec: (f) => f.amount <= f.cap },
     { kind: "half", label: () => "this payment is at most half the cap", uses: { a: "Cap (one payment ≤ half)" },
       build: (b, p) => { const c = p("cap"); return lessOrEqual(b, p("amount"), [...c.slice(1), ZERO]); }, spec: (f) => f.amount <= f.cap >> 1 },
-    { kind: "fixed", label: (k) => `this payment is at most ${k} USDT0, whatever the settings`, param: { label: "Fixed limit (USDT0)", min: 1, max: 254, def: 100 },
+    { kind: "fixed", label: (k) => `this payment is at most ${k} USD₮0, whatever the settings`, param: { label: "Fixed limit (USD₮0)", min: 1, max: 254, def: 100 },
       build: (b, p, k) => lessOrEqual(b, p("amount"), konst(k)), spec: (f, k) => f.amount <= k },
   ],
   2: [
@@ -46,7 +46,7 @@ export const CONDS: Record<number, CondDef[]> = {
     { kind: "trial", label: () => "this payment is within the trial amount", uses: { b: "Trial amount" }, build: (b, p) => lessOrEqual(b, p("amount"), p("trial")), spec: (f) => f.amount <= f.trial },
     { kind: "age", label: (k) => `it was saved at least ${k} hours ago`, param: { label: "Hours", min: 1, max: 255, def: 72 },
       build: (b, p, k) => lessOrEqual(b, konst(k), p("age")), spec: (f, k) => f.age >= k },
-    { kind: "fixed", label: (k) => `this payment is at most ${k} USDT0`, param: { label: "Fixed limit (USDT0)", min: 1, max: 254, def: 10 },
+    { kind: "fixed", label: (k) => `this payment is at most ${k} USD₮0`, param: { label: "Fixed limit (USD₮0)", min: 1, max: 254, def: 10 },
       build: (b, p, k) => lessOrEqual(b, p("amount"), konst(k)), spec: (f, k) => f.amount <= k },
   ],
   4: [
@@ -56,7 +56,7 @@ export const CONDS: Record<number, CondDef[]> = {
       spec: (f, k) => [0, 1, 2].filter((i) => (f.approvals >> i) & 1).length >= k },
     { kind: "seat", label: (k) => `seat ${k} signed`, param: { label: "Seat", min: 1, max: 3, def: 1 },
       build: (b, p, k) => p("approvals")[k - 1], spec: (f, k) => ((f.approvals >> (k - 1)) & 1) === 1 },
-    { kind: "fixed", label: (k) => `this payment is at most ${k} USDT0`, param: { label: "Fixed limit (USDT0)", min: 1, max: 254, def: 50 },
+    { kind: "fixed", label: (k) => `this payment is at most ${k} USD₮0`, param: { label: "Fixed limit (USD₮0)", min: 1, max: 254, def: 50 },
       build: (b, p, k) => lessOrEqual(b, p("amount"), konst(k)), spec: (f, k) => f.amount <= k },
   ],
 };

@@ -31,10 +31,10 @@ function ManageFuse({ f, busy, run }: { f: Market["fuses"][number]; busy: boolea
     <div className="mf">
       <div className="mf-top"><b>#{f.fuseId} {f.name}</b><span className={f.listed ? "lime" : "red"}>{f.listed ? "Listed" : "Delisted"}</span></div>
       <div className="mf-grid">
-        <label className="field"><span>Fee per check (USDT0)</span><input aria-label={`Fee per check for fuse ${f.fuseId}`} value={fee} onChange={(e) => setFee(e.target.value)} inputMode="decimal" /></label>
+        <label className="field"><span>Fee per check (USD₮0)</span><input aria-label={`Fee per check for fuse ${f.fuseId}`} value={fee} onChange={(e) => setFee(e.target.value)} inputMode="decimal" /></label>
         <button className="btn" disabled={busy || !feeOk || Number(fee) === Number(f.fee)} onClick={() => run(`Set fuse #${f.fuseId}'s fee`, () => write({ ...R, functionName: "setFee", args: [BigInt(f.fuseId), parseUnits(fee.trim(), 6)] }))}>Set fee</button>
       </div>
-      {!feeOk && <p className="m red" style={{ fontSize: 11 }}>A fee from 0 to 1 USDT0, up to 6 decimals.</p>}
+      {!feeOk && <p className="m red" style={{ fontSize: 11 }}>A fee from 0 to 1 USD₮0, up to 6 decimals.</p>}
       {up && <p className="m mute" style={{ fontSize: 11 }}>A higher fee applies to new installs at once; wallets already running this fuse keep paying their accepted {f.fee} until their owner accepts the new price. A lower fee applies to everyone straight away.</p>}
       <div className="mf-desc">
         <label className="field"><span>Summary · one line on the market card</span><input aria-label={`Summary for fuse ${f.fuseId}`} value={sum} onChange={(e) => setSum(e.target.value)} maxLength={200} /></label>
@@ -95,11 +95,11 @@ export default function DesignerTools({ market }: { market: Market | null }) {
               : !mine.length ? <p className="lead">{short(account)} doesn&apos;t own any listed fuse yet. List one below.</p>
               : (
                 <>
-                  <p className="lead">Your fuses have earned <span className="m lime">{fmt(mine.reduce((t, f) => t + Number(f.lifetimeEarned), 0))} USDT0</span> in total; <span className="m lime">{fmt(claimable.reduce((t, f) => t + Number(f.earned), 0))}</span> is ready to claim.</p>
+                  <p className="lead">Your fuses have earned <span className="m lime">{fmt(mine.reduce((t, f) => t + Number(f.lifetimeEarned), 0))} USD₮0</span> in total; <span className="m lime">{fmt(claimable.reduce((t, f) => t + Number(f.earned), 0))}</span> is ready to claim.</p>
                   <div className="tricks">
                     {mine.map((f) => (
                       <div className="trick" key={f.fuseId} style={{ gridTemplateColumns: "60px 1fr auto" }}>
-                        <span className="n">#{f.fuseId}</span><span>{f.name} · {f.decisions} decisions · {fmt(f.earned)} USDT0 claimable</span>
+                        <span className="n">#{f.fuseId}</span><span>{f.name} · {f.decisions} decisions · {fmt(f.earned)} USD₮0 claimable</span>
                         <button className="btn" style={{ height: 34 }} disabled={q.running || Number(f.earned) <= 0} onClick={() => q.start([{ id: `c${f.fuseId}`, label: `Claim fuse #${f.fuseId}`, run: () => write({ address: DEP.registry as Address, abi: fuseRegistryAbi, functionName: "claim", args: [BigInt(f.fuseId), account] }) }], {})}>Claim</button>
                       </div>
                     ))}
@@ -131,7 +131,7 @@ export default function DesignerTools({ market }: { market: Market | null }) {
               </div>
               {info && <div className="hint2">Owner {short(info.owner)} · {info.nIn} inputs · {info.gates} gates{info.nState ? ` · ${info.nState} state bits` : ""} · {socket ? `fits the ${socket[1]} socket` : "no matching socket"} · netlist {info.hash.slice(0, 10)}…</div>}
               <div className="prow">
-                <div className="field"><label>Fee per check, USDT0</label><input aria-label="Fee per check, USDT0" value={fee} onChange={(e) => setFee(e.target.value)} inputMode="decimal" /></div>
+                <div className="field"><label>Fee per check, USD₮0</label><input aria-label="Fee per check, USD₮0" value={fee} onChange={(e) => setFee(e.target.value)} inputMode="decimal" /></div>
                 <div className="field" style={{ flex: 2 }}><label>Name</label><input aria-label="Fuse name" value={fname} onChange={(e) => setFname(e.target.value)} maxLength={60} placeholder={socket ? `e.g. Strict ${socket[1]}` : "e.g. Per-payment cap"} /></div>
               </div>
               <div className="field"><label>One-line summary · stored on X Layer with the listing</label><input aria-label="One-line summary" value={fsum} onChange={(e) => setFsum(e.target.value)} maxLength={200} placeholder="What it lets through, in a sentence" /></div>

@@ -66,8 +66,8 @@ export default function MineView() {
           {t && rows.length > 0 && (
             <section className="stats m mute fleet-kpi" data-a>
               <div>Wallets<b>{rows.length}</b></div>
-              <div>In the wallets<b>{usd(t.balance)}<small>USDT0</small></b></div>
-              <div>Prepaid fees<b>{usd(t.fees)}<small>USDT0</small></b></div>
+              <div>In the wallets<b>{usd(t.balance)}<small>USD₮0</small></b></div>
+              <div>Prepaid fees<b>{usd(t.fees)}<small>USD₮0</small></b></div>
               <div>Decisions today<b>{t.today}</b></div>
               <div>Stopped today<b style={{ color: t.stopped ? "var(--red)" : undefined }}>{t.stopped}</b></div>
               <div>Need a look<b style={{ color: t.alerts ? "#e8b13a" : undefined }}>{t.alerts}</b></div>

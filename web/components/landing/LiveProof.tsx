@@ -40,7 +40,7 @@ export default function LiveProof() {
         <div className="lp-cell lp-head"><span className="live" />Live on X Layer mainnet</div>
         <div className="lp-cell"><b data-n={live?.decisions ?? 0}>{live?.decisions ?? "—"}</b>fuse decisions</div>
         <div className="lp-cell"><b data-n={live?.blocked ?? 0} className="red">{live?.blocked ?? "—"}</b>payments stopped</div>
-        <div className="lp-cell"><b data-n={live?.fees ?? 0} data-d="4">{live ? live.fees.toFixed(4) : "—"}</b>USDT0 in fees</div>
+        <div className="lp-cell"><b data-n={live?.fees ?? 0} data-d="4">{live ? live.fees.toFixed(4) : "—"}</b>USD₮0 in fees</div>
         <div className="lp-cell"><a href={`https://www.oklink.com/xlayer/address/${PROCESSOR}`} target="_blank" rel="noreferrer" data-cursor="TapeOut"><b className="lime">{live?.circuits || "#15 #16 #17 #18"}</b>TapeOut circuits ↗</a></div>
         <div className="lp-cell lp-links">
           <a href={`https://repo.sourcify.dev/196/${REGISTRY}`} target="_blank" rel="noreferrer" data-cursor="Source">Verified on Sourcify ↗</a>

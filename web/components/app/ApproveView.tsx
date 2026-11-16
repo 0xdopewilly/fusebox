@@ -76,7 +76,7 @@ export default function ApproveView() {
                 <div className="tricks" style={{ marginBottom: 20 }}>
                   {waiting.slice(0, 6).map((d) => (
                     <button key={d.id} className={`trick${payee?.toLowerCase() === d.to.toLowerCase() && amount === d.amount ? " on" : ""}`} onClick={() => { setTo(d.to); setAmount(d.amount); }} data-cursor="Load">
-                      <span className="n">#{d.id}</span><span>{fmt(d.amount, 2)} USDT0 → {short(d.to)} · “{d.memo.slice(0, 48)}”</span><span className="go">Load</span>
+                      <span className="n">#{d.id}</span><span>{fmt(d.amount, 2)} USD₮0 → {short(d.to)} · “{d.memo.slice(0, 48)}”</span><span className="go">Load</span>
                     </button>
                   ))}
                 </div>
@@ -85,9 +85,9 @@ export default function ApproveView() {
                 <div className="field"><label>Wallet</label><input aria-label="Wallet" value={wallet} onChange={(e) => setWallet(e.target.value)} spellCheck={false} /></div>
                 <div className="prow">
                   <div className="field" style={{ flex: 2 }}><label>Pay to</label><input aria-label="Pay to" value={to} onChange={(e) => setTo(e.target.value)} placeholder="0x…" spellCheck={false} /></div>
-                  <div className="field"><label>Amount, USDT0</label><input aria-label="Amount, USDT0" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" /></div>
+                  <div className="field"><label>Amount, USD₮0</label><input aria-label="Amount, USD₮0" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" /></div>
                 </div>
-                {threshold !== null && amt && Number(amount) <= threshold && <div className="hint2">{amount} USDT0 is under this wallet&apos;s {threshold} USDT0 threshold, so Two of Three already lets it through.</div>}
+                {threshold !== null && amt && Number(amount) <= threshold && <div className="hint2">{amount} USD₮0 is under this wallet&apos;s {threshold} USD₮0 threshold, so Two of Three already lets it through.</div>}
                 {two < 0 && data && <div className="hint2">This wallet has no Two of Three fuse.</div>}
               </div>
             </div>

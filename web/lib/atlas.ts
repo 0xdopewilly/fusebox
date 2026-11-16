@@ -199,16 +199,16 @@ export async function checkPayment(to: Address, amount: bigint): Promise<CheckRe
     else if (st === "untrusted") why = "TapeOut's processor code changed and isn't attested, so the fuse fails closed.";
     else if (f.key === "daily-cap") {
       const left = Math.max(0, f.a - Number(f.spentToday));
-      why = ok ? `Within today's cap: ${left} of ${f.a} USDT0 left.` : `${amt} USDT0 would pass today's ${f.a} USDT0 cap (${Number(f.spentToday)} spent).`;
+      why = ok ? `Within today's cap: ${left} of ${f.a} USD₮0 left.` : `${amt} USD₮0 would pass today's ${f.a} USD₮0 cap (${Number(f.spentToday)} spent).`;
     } else if (f.key === "payee-guard") {
       const s = Number(since);
       const hours = s ? (now - s) / 3600 : 0;
-      why = ok ? (s && hours >= f.a ? "A saved payee, past its cooling-off." : `Saved ${hours.toFixed(1)} h ago and still cooling off, but ${amt} USDT0 is within the ${f.b} USDT0 trial.`)
-        : !s ? "Not a saved payee." : `Saved ${hours.toFixed(1)} h ago: still cooling off (${f.a} h), and ${amt} USDT0 is over the ${f.b} USDT0 trial.`;
+      why = ok ? (s && hours >= f.a ? "A saved payee, past its cooling-off." : `Saved ${hours.toFixed(1)} h ago and still cooling off, but ${amt} USD₮0 is within the ${f.b} USD₮0 trial.`)
+        : !s ? "Not a saved payee." : `Saved ${hours.toFixed(1)} h ago: still cooling off (${f.a} h), and ${amt} USD₮0 is over the ${f.b} USD₮0 trial.`;
     } else if (f.key === "breaker") {
       why = f.latched ? "Already blown. Nothing pays until the owner resets it." : ok ? "Not tripped." : "A payment to a stranger trips it, and it stays blown until the owner resets it.";
     } else if (f.key === "approval-2of3") {
-      why = ok ? (amt > f.a ? `Over ${f.a} USDT0 and approved by ${approvals} of 3.` : `Under the ${f.a} USDT0 approval threshold.`) : `Over ${f.a} USDT0: needs two of three approvers, has ${approvals}.`;
+      why = ok ? (amt > f.a ? `Over ${f.a} USD₮0 and approved by ${approvals} of 3.` : `Under the ${f.a} USD₮0 approval threshold.`) : `Over ${f.a} USD₮0: needs two of three approvers, has ${approvals}.`;
     }
     return { name: f.name, key: f.key, status: st, why };
   });

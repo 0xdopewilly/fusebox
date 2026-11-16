@@ -32,7 +32,7 @@ function bar(x: number, y: number, w: number, h: number, dir: "up" | "down" | "r
   return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`;
 }
 
-/** Paid above the baseline, stopped below it, per day (per week past 60 days); one shared USDT0 scale. */
+/** Paid above the baseline, stopped below it, per day (per week past 60 days); one shared USD₮0 scale. */
 function DaysChart({ days, onTip }: { days: { d: number; label: string; paid: number; stopped: number; nP: number; nS: number }[]; onTip: (t: Tip) => void }) {
   const [ref, W] = useWidth<HTMLDivElement>();
   const H = 220, top = 18, bottom = 30, left = 46;
@@ -47,7 +47,7 @@ function DaysChart({ days, onTip }: { days: { d: number; label: string; paid: nu
   return (
     <div ref={ref} className="spend-svg" onPointerLeave={() => onTip(null)}>
       {W > 0 && (
-        <svg width={W} height={H} role="img" aria-label={`Paid and stopped USDT0 per ${days.length > 0 && days[0].label.includes("wk") ? "week" : "day"}, ${days.length} periods`}>
+        <svg width={W} height={H} role="img" aria-label={`Paid and stopped USD₮0 per ${days.length > 0 && days[0].label.includes("wk") ? "week" : "day"}, ${days.length} periods`}>
           {tickP > 0 && <g><line x1={left} x2={W} y1={y0 - tickP * k} y2={y0 - tickP * k} className="sv-grid" /><text x={left - 8} y={y0 - tickP * k + 4} className="sv-tick" textAnchor="end">{usd(tickP)}</text></g>}
           {tickS > 0 && <g><line x1={left} x2={W} y1={y0 + tickS * k} y2={y0 + tickS * k} className="sv-grid" /><text x={left - 8} y={y0 + tickS * k + 4} className="sv-tick" textAnchor="end">{usd(tickS)}</text></g>}
           <line x1={left} x2={W} y1={y0} y2={y0} className="sv-base" />
@@ -57,7 +57,7 @@ function DaysChart({ days, onTip }: { days: { d: number; label: string; paid: nu
             const hp = d.paid * k, hs = d.stopped * k;
             const show = (e: React.PointerEvent | React.FocusEvent) => {
               const r = (e.currentTarget as SVGElement).ownerSVGElement!.getBoundingClientRect();
-              onTip({ x: r.left + cx, y: r.top + y0 - hp - 8, lines: [[d.label, ""], [`${usd(d.paid)} USDT0`, `paid · ${d.nP}`], [`${usd(d.stopped)} USDT0`, `stopped · ${d.nS}`]] });
+              onTip({ x: r.left + cx, y: r.top + y0 - hp - 8, lines: [[d.label, ""], [`${usd(d.paid)} USD₮0`, `paid · ${d.nP}`], [`${usd(d.stopped)} USD₮0`, `stopped · ${d.nS}`]] });
             };
             return (
               <g key={d.d}>
@@ -94,7 +94,7 @@ function RankBars({ rows, color, unit, onTip }: { rows: { label: string; sub?: s
                 <text x={0} y={y + 13} className="sv-lab">{r.label}</text>
                 {r.sub && <text x={0} y={y + 26} className="sv-sub">{r.sub}</text>}
                 <path d={bar(labelW, y + 4, w, bh, "right")} fill={color} />
-                <text x={labelW + w + 8} y={y + 14} className="sv-val">{unit === "USDT0" ? usd(r.v) : r.v}<tspan className="sv-sub"> {unit}</tspan></text>
+                <text x={labelW + w + 8} y={y + 14} className="sv-val">{unit === "USD₮0" ? usd(r.v) : r.v}<tspan className="sv-sub"> {unit}</tspan></text>
                 <rect x={0} y={y - 2} width={W} height={rowH} fill="transparent" onPointerMove={show} onPointerEnter={show} />
               </g>
             );
@@ -143,15 +143,15 @@ export default function SpendView({ wallet, refreshKey }: { wallet: Address; ref
     for (const r of paid) { const k = r.to.toLowerCase(); const x = by.get(k) ?? { v: 0, n: 0 }; x.v += r.a; x.n++; by.set(k, x); }
     const ranked = [...by.entries()].sort((a, b) => b[1].v - a[1].v);
     const top = ranked.slice(0, 6), rest = ranked.slice(6);
-    const payees = top.map(([a, x]) => ({ label: short(a), sub: saved.has(a) ? "saved payee" : "not saved now", v: x.v, tip: [[`${usd(x.v)} USDT0`, "paid"], [`${x.n}`, `payment${x.n === 1 ? "" : "s"}`], [a, ""]] as [string, string][] }));
-    if (rest.length) { const o = rest.reduce((t, [, x]) => ({ v: t.v + x.v, n: t.n + x.n }), { v: 0, n: 0 }); payees.push({ label: `${rest.length} others`, sub: "", v: o.v, tip: [[`${usd(o.v)} USDT0`, "paid"], [`${o.n}`, "payments"]] }); }
+    const payees = top.map(([a, x]) => ({ label: short(a), sub: saved.has(a) ? "saved payee" : "not saved now", v: x.v, tip: [[`${usd(x.v)} USD₮0`, "paid"], [`${x.n}`, `payment${x.n === 1 ? "" : "s"}`], [a, ""]] as [string, string][] }));
+    if (rest.length) { const o = rest.reduce((t, [, x]) => ({ v: t.v + x.v, n: t.n + x.n }), { v: 0, n: 0 }); payees.push({ label: `${rest.length} others`, sub: "", v: o.v, tip: [[`${usd(o.v)} USD₮0`, "paid"], [`${o.n}`, "payments"]] }); }
     // what each fuse stopped: a decision counts for every fuse that blew on it (one stopped payment can trip several)
     const line = stopped.filter((r) => r.s.length === h.names.length);
     const fuses = h.names.map((name, i) => {
       const hit = line.filter((r) => r.s[i] === 1);
       const sole = hit.filter((r) => r.s.filter((x) => x === 1).length === 1).length;
       return { label: name, v: hit.length, value: sum(hit), sole };
-    }).filter((f) => f.v > 0).sort((a, b) => b.v - a.v).map((f) => ({ label: f.label, sub: `${usd(f.value)} USDT0 refused`, v: f.v, tip: [[`${f.v}`, `payment${f.v === 1 ? "" : "s"} refused`], [`${usd(f.value)} USDT0`, "refused value"], [`${f.sole}`, "it alone said no"]] as [string, string][] }));
+    }).filter((f) => f.v > 0).sort((a, b) => b.v - a.v).map((f) => ({ label: f.label, sub: `${usd(f.value)} USD₮0 refused`, v: f.v, tip: [[`${f.v}`, `payment${f.v === 1 ? "" : "s"} refused`], [`${usd(f.value)} USD₮0`, "refused value"], [`${f.sole}`, "it alone said no"]] as [string, string][] }));
     return { rows, paid, stopped, days, payees, fuses, totals: { paid: sum(paid), stopped: sum(stopped), fees: sum(rows, "f"), payees: by.size }, earlier: stopped.length - line.length };
   }, [h, range]);
 
@@ -165,20 +165,20 @@ export default function SpendView({ wallet, refreshKey }: { wallet: Address; ref
       {!v ? <p className="m mute spend-wait">{err ? `Couldn't read the history just now (${err}).` : "Reading every decision from X Layer…"}</p> : !v.rows.length ? <p className="m mute spend-wait">No decisions in this range.</p> : (
         <>
           <div className="stats m mute spend-kpi">
-            <div>Paid<b>{usd(v.totals.paid)}<small>USDT0</small></b><span>{v.paid.length} payment{v.paid.length === 1 ? "" : "s"}</span></div>
-            <div>Stopped<b>{usd(v.totals.stopped)}<small>USDT0</small></b><span>{v.stopped.length} refused before anything moved</span></div>
+            <div>Paid<b>{usd(v.totals.paid)}<small>USD₮0</small></b><span>{v.paid.length} payment{v.paid.length === 1 ? "" : "s"}</span></div>
+            <div>Stopped<b>{usd(v.totals.stopped)}<small>USD₮0</small></b><span>{v.stopped.length} refused before anything moved</span></div>
             <div>Payees paid<b>{v.totals.payees}</b><span>distinct addresses</span></div>
-            <div>Fees<b>{usd(v.totals.fees)}<small>USDT0</small></b><span>to fuse designers</span></div>
+            <div>Fees<b>{usd(v.totals.fees)}<small>USD₮0</small></b><span>to fuse designers</span></div>
           </div>
           <div className="spend-grid">
             <div className="spend-card spend-wide">
-              <div className="spend-h m"><span>Per {v.days.length && v.days[0].label.startsWith("wk") ? "week" : "day"}, USDT0</span>
+              <div className="spend-h m"><span>Per {v.days.length && v.days[0].label.startsWith("wk") ? "week" : "day"}, USD₮0</span>
                 <span className="spend-legend"><i style={{ background: PAID }} />Paid (up)<i style={{ background: STOP }} />Stopped (down)</span></div>
               <DaysChart days={v.days} onTip={setTip} />
             </div>
             <div className="spend-card">
               <div className="spend-h m"><span>Where it went · top payees</span></div>
-              {v.payees.length ? <RankBars rows={v.payees} color={PAID} unit="USDT0" onTip={setTip} /> : <p className="m mute">Nothing paid in this range.</p>}
+              {v.payees.length ? <RankBars rows={v.payees} color={PAID} unit="USD₮0" onTip={setTip} /> : <p className="m mute">Nothing paid in this range.</p>}
             </div>
             <div className="spend-card">
               <div className="spend-h m"><span>What the fuses stopped</span></div>
@@ -188,9 +188,9 @@ export default function SpendView({ wallet, refreshKey }: { wallet: Address; ref
           </div>
           <details className="spend-table m">
             <summary>Show the numbers</summary>
-            <table><caption className="sr">Paid and stopped per period</caption><thead><tr><th>Period</th><th>Paid USDT0</th><th>Payments</th><th>Stopped USDT0</th><th>Refused</th></tr></thead>
+            <table><caption className="sr">Paid and stopped per period</caption><thead><tr><th>Period</th><th>Paid USD₮0</th><th>Payments</th><th>Stopped USD₮0</th><th>Refused</th></tr></thead>
               <tbody>{v.days.filter((d) => d.nP || d.nS).map((d) => <tr key={d.d}><td>{d.label}</td><td>{usd(d.paid)}</td><td>{d.nP}</td><td>{usd(d.stopped)}</td><td>{d.nS}</td></tr>)}</tbody></table>
-            <table><caption className="sr">Top payees</caption><thead><tr><th>Payee</th><th>Paid USDT0</th></tr></thead><tbody>{v.payees.map((p) => <tr key={p.label}><td>{p.label} {p.sub}</td><td>{usd(p.v)}</td></tr>)}</tbody></table>
+            <table><caption className="sr">Top payees</caption><thead><tr><th>Payee</th><th>Paid USD₮0</th></tr></thead><tbody>{v.payees.map((p) => <tr key={p.label}><td>{p.label} {p.sub}</td><td>{usd(p.v)}</td></tr>)}</tbody></table>
             <table><caption className="sr">Refusals per fuse</caption><thead><tr><th>Fuse</th><th>Refused</th><th>Value</th></tr></thead><tbody>{v.fuses.map((f) => <tr key={f.label}><td>{f.label}</td><td>{f.v}</td><td>{f.sub}</td></tr>)}</tbody></table>
           </details>
         </>

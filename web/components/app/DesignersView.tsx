@@ -9,7 +9,7 @@ const STEPS = [
   ["Design the circuit", "Write it as NAND gates (plus LATCH bits if it needs memory) with the Fusebox toolchain, which builds, simulates and exhaustively tests TAP-02 netlists. It reads one socket: the payment's inputs, laid out bit by bit."],
   ["Tape it out on TapeOut", "Mint one transistor per gate on an X Layer processor and call tapeout(). You get the circuit NFT. Our four fuses cost about 0.03 OKB in total."],
   ["List it in the registry", "registry.list(processor, circuitId, socket, netlistHash, fee, uri). The registry checks the processor's code, the gate budget and the netlist hash, then wallets can install it."],
-  ["Earn on every decision", "Each time a wallet's payment runs through your fuse, you earn your fee in USDT0, the no's included. Claim with claim(fuseId, to). Sell the NFT and the income moves with it."],
+  ["Earn on every decision", "Each time a wallet's payment runs through your fuse, you earn your fee in USD₮0, the no's included. Claim with claim(fuseId, to). Sell the NFT and the income moves with it."],
 ];
 
 export default function DesignersView() {
@@ -33,7 +33,7 @@ export default function DesignersView() {
           </div>
         ))}
       </section>
-      <div className="blockhead" data-a><h2 className="disp">Earnings</h2><span className="m mute">read from the registry · {data ? `protocol keeps ${data.protocolBps / 100}%, earned ${fmt(data.protocolEarned)} USDT0` : ""}</span></div>
+      <div className="blockhead" data-a><h2 className="disp">Earnings</h2><span className="m mute">read from the registry · {data ? `protocol keeps ${data.protocolBps / 100}%, earned ${fmt(data.protocolEarned)} USD₮0` : ""}</span></div>
       {!data ? <Loading label="Reading the fuse registry" error={error} /> : (
         <div style={{ overflowX: "auto" }} data-a tabIndex={0} role="region" aria-label="Earnings table">
           <table className="tbl">
