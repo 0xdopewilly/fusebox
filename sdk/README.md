@@ -83,6 +83,22 @@ that the Fusebox factory made the wallet, that its Decision allowed this payee a
 USDT0 moved. `x402.verifyFuseboxPayment()` does that check on its own, for your own stack. x402's `exact` scheme
 doesn't fit a Fusebox wallet: it's a contract that only pays through its fuses, so the on-chain Decision is the proof.
 
+## Pre-flight, for any wallet
+
+Not using a Fusebox wallet yet? Run a payment through any line of TapeOut circuits before your agent signs it from
+its own wallet. TapeOut's processor decides each fuse on X Layer, read-only and free; you send the context a
+Fusebox wallet would keep on-chain, and the latch state comes back for next time.
+
+```ts
+import { preflight } from "fusebox-sdk";
+const r = await preflight({
+  line: [{ fuseId: 1, a: 50 }, { fuseId: 2, a: 24, b: 2 }, { fuseId: 3 }, { fuseId: 4, a: 20 }],
+  payment: { amount: "2.5" },
+  context: { spentToday: "10", payee: { saved: true, hoursSinceSaved: 72 }, approvals: 0, state: lastState },
+});
+if (r.allowed) { lastState = r.state; /* sign it */ }
+```
+
 ## Approvals
 
 When an approval fuse is what said no, `check` and `pay` say so and give the page where approvers sign. When
@@ -115,6 +131,7 @@ await agent.freeze();                  // agent, approver or owner: stop everyth
 | `pay(to, amount, memo, { checkFirst?, notify? })` | `{ paid, sent, decisionId, txUrl, feePaid, fuses, summary, needsApproval? }` |
 | `fetch(url, init?, { maxPrice?, dryRun?, memo? })` | `{ response, payment?: { paid, price, payTo, summary, fuses, tx, settlement } }` (x402) |
 | `requestApproval(to, amount, memo?)` | alert the wallet's approvers about a payment an approval fuse holds |
+| `preflight({ line, payment, context })` | any wallet: a payment through a line of TapeOut circuits, with the next latch state |
 | `status()` / `fuses()` | the wallet and its line of fuses |
 | `history()` | decisions from Fusebox's indexed log (X Layer RPCs cap log ranges) |
 | `watch(onDecision, { pollingInterval? })` | returns a function that stops watching |

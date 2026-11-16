@@ -50,6 +50,16 @@ export default function SimulateView() {
   const listed = useMemo(() => [...(draft ? [draft.fuse] : []), ...(market?.fuses ?? []).filter((f) => f.listed).sort((a, b) => a.fuseId - b.fuseId)], [market, draft]);
   const [sel, setSel] = useState<Record<number, { on: boolean; v: Record<string, string> }>>({});
   const [rows, setRows] = useState<Row[]>(PRESETS.scam.rows);
+  // ?rows= (from plain-English guardrails): the proposal's own test payments, [memo, to, amount, approvals][]
+  useEffect(() => {
+    const r = new URLSearchParams(window.location.search).get("rows"); if (!r) return;
+    try {
+      const arr = JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(r.replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0)))) as [string, Payee, string, number][];
+      const ok = arr.filter((x) => Array.isArray(x) && ["saved", "new", "stranger"].includes(x[1]) && /^\d{1,9}(\.\d{1,6})?$/.test(String(x[2]))).slice(0, 12)
+        .map(([m, t, a, n]) => row(String(m).slice(0, 80), t, String(a), [n > 0, n > 1, n > 2]));
+      if (ok.length) setRows(ok);
+    } catch { /* a bad link keeps the default payments */ }
+  }, []);
   const [spent, setSpent] = useState("0"); const [hours, setHours] = useState("2");
   const [res, setRes] = useState<(SimStep | null)[]>([]);
   const [ran, setRan] = useState<{ fuses: SimFuse[]; rows: Row[]; block: bigint } | null>(null);

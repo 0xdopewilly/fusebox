@@ -1,0 +1,24 @@
+// fusebox_preflight over a real MCP client, and the SDK's preflight(), against an app (APP, default the live site).
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
+import { fileURLToPath } from "node:url";
+import { preflight } from "../../sdk/dist/index.js";
+const APP = process.env.APP || "https://fusebox-xlayer.vercel.app";
+let fails = 0; const check = (n, ok, d = "") => { if (!ok) fails++; console.log((ok ? "PASS" : "FAIL") + "  " + n + (d ? "  · " + d : "")); };
+const LINE = [{ fuseId: 1, a: 50 }, { fuseId: 2, a: 24, b: 2 }, { fuseId: 3 }, { fuseId: 4, a: 20 }];
+const ok = await preflight({ line: LINE, payment: { amount: 2.5 }, context: { spentToday: 10, payee: { saved: true, hoursSinceSaved: 72 } } }, { api: APP });
+check("sdk: a saved payee within every limit is allowed", ok.allowed && ok.fuses.length === 4, ok.summary);
+const no = await preflight({ line: LINE, payment: { amount: "1" } }, { api: APP });
+check("sdk: a stranger is stopped, the breaker's next state comes back", !no.allowed && no.state["2"] && no.fuses[2].blownAfter === true, no.summary.slice(0, 100));
+const again = await preflight({ line: LINE, payment: { amount: "1" }, context: { payee: { saved: true, hoursSinceSaved: 72 }, state: no.state } }, { api: APP });
+check("sdk: with that state sent back, the breaker remembers", !again.allowed && again.fuses[2].verdict === "blew");
+const bad = await preflight({ line: [{ fuseId: 9999 }], payment: { amount: "1" } }, { api: APP }).catch((e) => e.message);
+check("sdk: an unknown fuse is a clear error", /doesn't exist/.test(String(bad)), String(bad));
+const c = new Client({ name: "preflight-test", version: "0.0.0" });
+await c.connect(new StdioClientTransport({ command: process.execPath, args: [fileURLToPath(new URL("../index.mjs", import.meta.url))], env: { PATH: process.env.PATH, FUSEBOX_APP: APP } }));
+check("mcp: fusebox_preflight is listed", (await c.listTools()).tools.some((t) => t.name === "fusebox_preflight"));
+const r = await c.callTool({ name: "fusebox_preflight", arguments: { line: LINE.map((f) => ({ fuse_id: f.fuseId, a: f.a, b: f.b })), amount: "25", payee_saved: true, hours_since_saved: 72, approvals: 1 } });
+check("mcp: 25 USD₮0 with one approval is stopped by Two of Three", r.structuredContent?.allowed === false && r.structuredContent.fuses[3].verdict === "blew", r.content[0].text.split("\n")[0]);
+await c.close();
+console.log("\n" + (fails ? fails + " FAILED" : "ALL PASSED"));
+process.exit(fails ? 1 : 0);

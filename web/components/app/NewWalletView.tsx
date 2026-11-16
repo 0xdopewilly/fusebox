@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
+import GuardrailsCard from "./GuardrailsCard";
 import { decodeEventLog, isAddress, parseUnits, getAddress, toHex, type Address } from "viem";
 import { fuseboxFactoryAbi, fuseboxWalletAbi, fuseRegistryAbi } from "@/lib/abi";
 import { DEP, pub } from "@/lib/client-chain";
@@ -176,6 +177,12 @@ export default function NewWalletView() {
             <div>
               <h3>Pick the fuses</h3>
               <p className="lead">Each fuse is a TapeOut circuit on X Layer. A payment needs a yes from every fuse you splice in, and each check pays the fuse&apos;s designer.</p>
+              <GuardrailsCard onApply={(g) => {
+                setOn({ "daily-cap": g.line.dailyCap.on, "payee-guard": g.line.payeeGuard.on, breaker: g.line.breaker.on, "approval-2of3": g.line.twoOfThree.on });
+                setCap(String(g.line.dailyCap.cap)); setCool(String(g.line.payeeGuard.coolingHours)); setTrial(String(g.line.payeeGuard.trial)); setThr(String(g.line.twoOfThree.threshold));
+                if (g.payees.length) setPayees(g.payees);
+                if (g.approvers.length) setApprovers((cur) => [0, 1, 2].map((i) => g.approvers[i] ?? cur[i]));
+              }} />
               <div className="starters" role="group" aria-label="Start from a line">
                 {STARTERS.map((x) => {
                   const active = FUSES.every((f) => on[f.key] === x.on[f.key]) && (!x.on["daily-cap"] || cap === x.cap) && (!x.on["payee-guard"] || (cool === x.cool && trial === x.trial)) && (!x.on["approval-2of3"] || thr === x.thr);

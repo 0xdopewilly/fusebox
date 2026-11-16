@@ -7,6 +7,7 @@ MCP tools for an AI agent that pays through a [Fusebox](https://fusebox-xlayer.v
 | `fusebox_check` | Dry-runs a payment against every fuse and returns each verdict with its reason. It's free and read-only. |
 | `fusebox_pay` | Pays in USDT0 through the fuses with the agent's key, and reports paid or stopped, which fuse said no, the fee and the transaction link. |
 | `fusebox_status` | Returns the wallet's balance, prepaid fee balance, fuses (and whether any is blown), today's spend and the decision counts. |
+| `fusebox_preflight` | Checks a payment against any line of TapeOut circuits for any wallet (not just a Fusebox one): you pass the context, each circuit answers, and the latch state comes back for next time. Free and read-only. |
 | `fusebox_fetch` | Fetches a URL. If it asks for payment over x402 (a `fusebox` offer on X Layer), the price is paid through the fuses only if they all allow it, then the response comes back. `max_price` caps what it pays; `dry_run` only reports the price and the fuses' answer. |
 
 Without a key the server is read-only, and by default it points at **Atlas**, the public demo wallet, so you can try `fusebox_check` right away.

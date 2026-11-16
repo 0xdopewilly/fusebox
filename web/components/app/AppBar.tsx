@@ -27,7 +27,7 @@ export default function AppBar() {
   const active = (h: string) => (h === "/app" ? path === "/app" : path?.startsWith(h) || (h === "/app/market" && !!path?.startsWith("/app/fuse/")) || (h === "/app/try" && (!!path?.startsWith("/app/simulate") || !!path?.startsWith("/app/rob"))) || (h === "/app/designers" && !!path?.startsWith("/app/studio")));
   const { account } = useWallet();
   // phones show the page's name in the bar; the sections live in the dock at the bottom
-  const title = path === "/app" ? "Atlas" : path?.startsWith("/app/w/") ? "Wallet" : path?.startsWith("/app/try") ? "Try to scam it" : path?.startsWith("/app/market") ? "Fuse market" : path?.startsWith("/app/fuse/") ? "Fuse" : path?.startsWith("/app/simulate") ? "Line simulator" : path?.startsWith("/app/rob") ? "Rob the agent" : path?.startsWith("/app/x402") ? "Pay per call" : path?.startsWith("/app/studio") ? "Fuse Studio"
+  const title = path === "/app" ? "Atlas" : path?.startsWith("/app/w/") ? "Wallet" : path?.startsWith("/app/try") ? "Try to scam it" : path?.startsWith("/app/market") ? "Fuse market" : path?.startsWith("/app/fuse/") ? "Fuse" : path?.startsWith("/app/simulate") ? "Line simulator" : path?.startsWith("/app/rob") ? "Rob the agent" : path?.startsWith("/app/x402") ? "Pay per call" : path?.startsWith("/app/status") ? "Status" : path?.startsWith("/app/studio") ? "Fuse Studio"
     : path?.startsWith("/app/designers") ? "Sell a fuse" : path?.startsWith("/app/approve") ? "Approvals" : path?.startsWith("/app/new") ? "Wire up a wallet" : path?.startsWith("/app/mine") ? "My wallets" : "App";
   return (
     <header className="appbar">

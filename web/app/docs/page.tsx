@@ -26,6 +26,8 @@ const SECTIONS = [
   { id: "x402", title: "Pay per call (x402)", group: "Build" },
   { id: "frameworks", title: "Agent frameworks", group: "Build" },
   { id: "alerts", title: "Approver alerts", group: "Build" },
+  { id: "preflight", title: "Pre-flight for any wallet", group: "Build" },
+  { id: "guardrails", title: "Plain-English guardrails", group: "Build" },
   { id: "designers", title: "Sell a fuse", group: "Build" },
   { id: "contracts", title: "Contracts", group: "Reference" },
   { id: "security", title: "Security", group: "Reference" },
@@ -173,6 +175,7 @@ if (allowed) await agent.writeContract({ address: WALLET, abi: fuseboxWalletAbi,
                   <tr><td><code>fusebox_check</code></td><td>Dry-runs a payment against every fuse and returns each verdict with its reason. Free and read-only.</td></tr>
                   <tr><td><code>fusebox_pay</code></td><td>Pays in USD₮0 through the fuses with the agent&apos;s key; reports paid or stopped, which fuse said no, the fee and the transaction.</td></tr>
                   <tr><td><code>fusebox_status</code></td><td>The wallet&apos;s balance, fee balance, fuses (and whether any is blown), today&apos;s spend and decision counts.</td></tr>
+                  <tr><td><code>fusebox_preflight</code></td><td>Checks a payment against any line of TapeOut circuits for <i>any</i> wallet, with the context you supply; returns each verdict and the next latch state. Free and read-only.</td></tr>
                   <tr><td><code>fusebox_fetch</code></td><td>Fetches a URL; if it asks for payment over x402, pays the price through the fuses (only if they all allow it) and returns the response. <code>max_price</code> caps it, <code>dry_run</code> only reports.</td></tr>
                 </tbody>
               </table></div>
@@ -200,7 +203,7 @@ const r = await fb.pay("0x69dB…A6C4", "12.5", "Invoice INV-7790");
 if (!r.paid) console.log(r.summary);                  // "Not sent. Stopped: Daily Cap (…)"
 
 const stop = fb.watch((d) => { if (!d.paid) notify(d); });  // decisions as they land`}</Code>
-              <p className="small">Also <code>status()</code>, <code>history()</code>, <code>fetch(url)</code> for paid APIs (below), <code>requestApproval(to, amount, memo)</code>, <code>pending(approver)</code> and <code>approve(to, amount)</code> for approvers, and <code>freeze()</code>. Source and tests in <a href="https://github.com/0xdopewilly/fusebox/tree/main/sdk" target="_blank" rel="noreferrer">sdk/</a>.</p>
+              <p className="small">Also <code>status()</code>, <code>history()</code>, <code>fetch(url)</code> for paid APIs (below), <code>preflight(...)</code> for any wallet (below), <code>requestApproval(to, amount, memo)</code>, <code>pending(approver)</code> and <code>approve(to, amount)</code> for approvers, and <code>freeze()</code>. Source and tests in <a href="https://github.com/0xdopewilly/fusebox/tree/main/sdk" target="_blank" rel="noreferrer">sdk/</a>.</p>
             </section>
 
             <section id="x402">
@@ -251,6 +254,31 @@ export const character = { name: "Ledger", plugins: [fuseboxPlugin],
               <p className="small">Alerts are end-to-end encrypted web push (VAPID). The server stores each device&apos;s push subscription under the approver&apos;s address and nothing else; a device the push service reports gone is dropped.</p>
             </section>
 
+            <section id="preflight">
+              <h2>Pre-flight for any wallet</h2>
+              <p>Not every agent will move its money into a Fusebox wallet on day one. Pre-flight lets any agent, on any wallet, run a payment through a line of TapeOut circuits before it signs. Each verdict is the circuit&apos;s own <code>eval</code> (or <code>step</code>, for circuits with latches) on X Layer, read-only and free. A Fusebox wallet keeps the context on-chain; with pre-flight you send it: what was spent today, whether the payee is saved and since when, which approvers signed, and the latch state from your last call, which comes back updated so the Breaker remembers.</p>
+              <Code label="Any wallet · fusebox-sdk">{`import { preflight } from "fusebox-sdk";
+
+const r = await preflight({
+  line: [{ fuseId: 1, a: 50 }, { fuseId: 2, a: 24, b: 2 }, { fuseId: 3 }, { fuseId: 4, a: 20 }],
+  payment: { amount: "2.5" },
+  context: { spentToday: "10", payee: { saved: true, hoursSinceSaved: 72 }, approvals: 0, state: lastState },
+});
+if (!r.allowed) return;        // "Stopped by Payee Guard (the payee isn't in the payee book)…"
+lastState = r.state;           // the Breaker remembers next time
+await wallet.sendTransaction(…);`}</Code>
+              <p>Over HTTP it&apos;s <code>POST /api/preflight</code> with the same body (<code>GET</code> returns an example), and MCP agents get <code>fusebox_preflight</code>. Any listed fuse works, rivals and Studio designs included. Pre-flight is advisory: the agent can still sign without asking. When you want the circuits to be the only way money moves, that&apos;s what a Fusebox wallet is for.</p>
+            </section>
+
+            <section id="guardrails">
+              <h2>Plain-English guardrails</h2>
+              <p>The wizard&apos;s first decision, which fuses and what settings, is the hardest for someone new to it. On <Link href="/app/new">Wire up a wallet</Link> you can describe the agent instead (&ldquo;it pays our three suppliers, never more than 80 a day, anything over 30 needs me and my partner&rdquo;) and get a proposed line: each fuse on or off with its settings, a plain reason for each, and test payments that show the line working, including what it stops.</p>
+              <ul>
+                <li><b>Who proposes it.</b> Claude Haiku 5.5 on NEAR AI Cloud, through a strict tool call; the answer is validated and clamped to what the circuits accept (8-bit settings). If the model is unavailable, Fusebox&apos;s rule reader proposes from the same description, and says so.</li>
+                <li><b>Nothing is trusted blindly.</b> &ldquo;Test it on TapeOut&apos;s circuits&rdquo; opens the line simulator with the proposal&apos;s own test payments, and TapeOut&apos;s processor decides each one. &ldquo;Use this line&rdquo; fills the wizard, including any payee or approver addresses you mentioned, and you still review every number before you sign.</li>
+              </ul>
+            </section>
+
             <section id="designers">
               <h2>Sell a fuse</h2>
               <ol className="dsteps">
@@ -260,6 +288,7 @@ export const character = { name: "Ledger", plugins: [fuseboxPlugin],
                 <li><b>Earn on every decision</b>, the no&apos;s included. Claim with <code>claim(fuseId, to)</code>. Sell the NFT and the income moves with it. Wallet owners install your fuse from the <Link href="/app/market">fuse market</Link> in one signature.</li>
                 <li><b>Or skip the toolchain.</b> <Link href="/app/studio">Fuse Studio</Link> builds the circuit from rules (OR across groups, AND within one, or N strikes for the Breaker socket), compiles it to NAND gates with the same toolchain, proves the bytes against the rule on every input (2^24 for the Daily Cap socket), then mints the transistors, tapes it out and lists it from your wallet. Built there, Daily Cap and Two of Three come out byte-identical to circuits #15 and #18.</li>
                 <li><b>Describe it.</b> A listing&apos;s <code>metadataURI</code> holds a small <code>fusebox-fuse/1</code> JSON (name, summary, description, rule). The designers page writes it on X Layer itself as a <code>data:application/json;base64</code> URI, so the description needs no host; an https link to the same JSON works too. Every fuse gets its own page, e.g. <Link href="/app/fuse/1">/app/fuse/1</Link>.</li>
+                <li><b>Play gate golf.</b> The Studio&apos;s optimizer shrinks a rule&apos;s circuit (merging identical logic, folding constants, removing conditions another one already implies) and proves the smaller netlist gives the same answer on every input before it lets you tape it out. Fewer gates means fewer transistors to mint and less gas on every check, about 2,400 gas a gate. Fusebox&apos;s own eight circuits are already minimal; rules people write typically shrink by 5 to 75%.</li>
                 <li><b>Try before you tape out.</b> From the Studio, send a draft to the <Link href="/app/simulate">line simulator</Link>: it is compiled and evaluated in the browser from the same bytes TapeOut would store, next to listed fuses, on any sequence of payments. A draft is also a link you can share; it reopens in the Studio as designed.</li>
                 <li><b>Run it like a product.</b> From the designers page, change the fee (<code>setFee</code>), delist it from new installs (<code>setListed</code>) or link a page that explains it (<code>setMetadataURI</code>). A lower fee applies to everyone at once; a higher one only to wallets whose owner accepts it.</li>
               </ol>
@@ -293,6 +322,7 @@ export const character = { name: "Ledger", plugins: [fuseboxPlugin],
                 <li><b>Bad listings are refused:</b> wrong pinout, a different netlist, over 512 gates, memory where it isn&apos;t allowed, or references to other circuits.</li>
               </ul>
               <p className="small">Remaining trust: TapeOut&apos;s factory owner can upgrade code (fails closed), USD₮0&apos;s issuer can freeze addresses, and the wallet owner is fully trusted.</p>
+                          <p className="small">Live health of everything Fusebox depends on (X Layer&apos;s RPCs, TapeOut&apos;s processor trust, Atlas&apos;s fees, the AI agent, the x402 sellers, alerts) is on the <Link href="/app/status">status page</Link>, and as JSON at <code>/api/status</code>.</p>
             </section>
 
             <section id="faq">

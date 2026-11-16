@@ -4,6 +4,7 @@
 //   fusebox_pay     pay through the fuses with the agent key (needs FUSEBOX_AGENT_KEY)
 //   fusebox_status  the wallet's balance, fee balance, fuses and today's spend
 //   fusebox_fetch   fetch a URL; if it asks for payment (x402), pay its price through the fuses, then retry
+//   fusebox_preflight  check a payment against any line of TapeOut circuits, for any wallet (free, read-only)
 // Env: FUSEBOX_WALLET (default: Atlas, the public demo wallet), FUSEBOX_AGENT_KEY (optional; without it the
 // server is read-only), FUSEBOX_RPC (default https://rpc.xlayer.tech).
 import { readFileSync } from "node:fs";
@@ -136,7 +137,7 @@ async function offerOf(res) {
 }
 const excerpt = async (res) => { const t = await res.text().catch(() => ""); return t.length > 4000 ? t.slice(0, 4000) + "…" : t; };
 
-const server = new McpServer({ name: "fusebox", version: "0.3.0" });
+const server = new McpServer({ name: "fusebox", version: "0.4.0" });
 
 server.registerTool("fusebox_check", {
   title: "Check a payment against the fuses",
@@ -218,6 +219,28 @@ server.registerTool("fusebox_fetch", {
     let settlement; try { const h = second.headers.get("payment-response") ?? second.headers.get("x-payment-response"); settlement = h ? unb64json(h) : undefined; } catch {}
     const out = { ...base, paid: second.ok, status: second.status, decision: p.decision, tx: p.out.tx, fuses: p.out.fuses, settlement, body: await excerpt(second) };
     return text(out, second.ok ? `Paid ${price} USDT0 to ${payTo} for ${url} (decision #${p.decision}); it answered ${second.status}. ${p.out.tx}` : `Paid ${price} USDT0 (decision #${p.decision}) but ${url} answered ${second.status}. ${p.out.tx}`);
+  } catch (e) { return fail(e); }
+});
+
+server.registerTool("fusebox_preflight", {
+  title: "Pre-flight a payment against TapeOut circuits (any wallet)",
+  description: "Before signing a payment from ANY wallet, run it through a line of TapeOut circuits on X Layer: each circuit's own eval/step answers yes or no, free and read-only. You supply the context a Fusebox wallet would keep on-chain. Pass the returned state back next time so latches (the Breaker) remember. Shipped fuses: 1 Daily Cap (a = cap per UTC day, USD₮0), 2 Payee Guard (a = cooling-off hours, b = trial USD₮0), 3 Breaker, 4 Two of Three (a = approvals above, USD₮0). If it says no, don't sign.",
+  inputSchema: {
+    line: z.array(z.object({ fuse_id: z.number().int().positive(), a: z.number().int().min(0).max(255).optional(), b: z.number().int().min(0).max(255).optional() })).min(1).max(8).describe("Fuses by registry id with their settings"),
+    amount: z.string().describe("Payment amount in USD₮0, e.g. \"2.5\""),
+    spent_today: z.string().optional().describe("USD₮0 already paid today through this line"),
+    payee_saved: z.boolean().optional().describe("Is the payee in your payee book?"),
+    hours_since_saved: z.number().int().min(0).optional().describe("Hours since the payee was saved"),
+    approvals: z.number().int().min(0).max(3).optional().describe("How many of three approvers signed this exact payment"),
+    state: z.record(z.string(), z.string()).optional().describe("Latch state from the previous pre-flight's state"),
+  },
+}, async ({ line, amount, spent_today, payee_saved, hours_since_saved, approvals, state }) => {
+  try {
+    const body = { line: line.map((f) => ({ fuseId: f.fuse_id, a: f.a, b: f.b })), payment: { amount }, context: { spentToday: spent_today, payee: { saved: !!payee_saved, hoursSinceSaved: hours_since_saved }, approvals: approvals ?? 0, state } };
+    const r = await fetch(`${APP}/api/preflight`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(30_000) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error ?? `pre-flight ${r.status}`);
+    return text(j, j.summary);
   } catch (e) { return fail(e); }
 });
 

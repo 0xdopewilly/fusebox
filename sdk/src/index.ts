@@ -112,6 +112,42 @@ export interface FetchResult {
   };
 }
 
+/** Pre-flight: a payment run through a line of TapeOut circuits for any agent wallet (see preflight()). */
+export interface PreflightRequest {
+  /** fuses by registry id with their settings, e.g. [{ fuseId: 1, a: 50 }, { fuseId: 3 }] */
+  line: { fuseId: number; a?: number; b?: number }[];
+  payment: { amount: string | number; to?: string };
+  context?: {
+    /** USD₮0 already paid today through this line */
+    spentToday?: string | number;
+    payee?: { saved: boolean; hoursSinceSaved?: number };
+    /** which of three approvers signed this exact payment, or how many */
+    approvals?: [boolean, boolean, boolean] | number;
+    /** latch state from the previous result's `state` */
+    state?: Record<string, Hex>;
+  };
+}
+export interface PreflightResult {
+  allowed: boolean; block: number; summary: string;
+  fuses: { fuseId: number; name: string; socket: number; circuitId: number; processor: Address; settings: { a: number; b: number }; verdict: "pass" | "blew" | "error"; why: string; blownAfter?: boolean }[];
+  /** send this back as context.state next time, so latches (the Breaker) remember */
+  state: Record<string, Hex>;
+}
+
+/**
+ * Check a payment against a line of TapeOut circuits before an agent signs it from any wallet: no Fusebox wallet
+ * needed. Every verdict is TapeOut's own eval/step on X Layer, read-only and free; you supply the context a Fusebox
+ * wallet would keep on-chain (today's spend, the payee, approvals, latch state).
+ */
+export async function preflight(req: PreflightRequest, opts: { api?: string } = {}): Promise<PreflightResult> {
+  const api = (opts.api ?? "https://fusebox-xlayer.vercel.app").replace(/\/$/, "");
+  const body = { ...req, payment: { ...req.payment, amount: String(req.payment.amount) }, context: req.context ? { ...req.context, spentToday: req.context.spentToday === undefined ? undefined : String(req.context.spentToday) } : undefined };
+  const r = await fetch(`${api}/api/preflight`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(30_000) });
+  const j = (await r.json().catch(() => ({}))) as PreflightResult & { error?: string };
+  if (!r.ok) throw new FuseboxError(j.error ?? `Pre-flight unavailable (${r.status}).`);
+  return j;
+}
+
 export interface FuseboxOptions {
   /** the Fusebox wallet (default: Atlas, the public demo wallet) */
   wallet?: Address;

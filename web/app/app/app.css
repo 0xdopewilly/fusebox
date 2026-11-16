@@ -789,3 +789,52 @@ a.flt:hover { background: rgba(255, 255, 255, 0.02); }
 .rob-agent p, .rob-final p, .rob-idle { overflow-wrap: anywhere; }
 .rob-stage .wire-wrap { overflow-x: visible; }
 .rob-stage .wire-wrap svg { min-width: 0; }
+
+/* ---------- status */
+.sx-banner { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; border: 1px solid var(--hair2); background: var(--panel); padding: 18px 20px; margin-bottom: 36px; }
+.sx-banner b { color: var(--ink); font-size: 17px; font-weight: 500; }
+.sx-banner .m { font-size: 11px; margin-left: auto; }
+.sx-banner.warn { border-color: rgba(232, 177, 58, 0.5); } .sx-banner.down { border-color: rgba(255, 82, 50, 0.6); }
+.sx-dot { width: 10px; height: 10px; flex: none; }
+.sx-dot.ok { background: var(--lime); box-shadow: 0 0 10px rgba(187, 254, 47, 0.5); } .sx-dot.warn { background: #e8b13a; } .sx-dot.down { background: var(--red); }
+.sx-group { margin-bottom: 30px; }
+.sx-group h2 { font-size: 11px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--mute); padding-bottom: 10px; border-bottom: 1px solid var(--hair2); }
+.sx-group ul { list-style: none; margin: 0; padding: 0; }
+.sx-row { display: grid; grid-template-columns: 10px minmax(160px, 1.1fr) 90px minmax(140px, 1fr) minmax(0, 2.4fr); gap: 16px; align-items: center; padding: 14px 0; border-bottom: 1px solid var(--hair); }
+.sx-name { color: var(--ink); font-size: 15px; }
+.sx-level { font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; }
+.sx-level.ok { color: var(--lime); } .sx-level.warn { color: #e8b13a; } .sx-level.down { color: var(--red); }
+.sx-val { font-size: 12px; color: var(--ink); overflow-wrap: anywhere; }
+.sx-detail { color: var(--soft); font-size: 13.5px; line-height: 1.45; }
+@media (max-width: 900px) {
+  .sx-row { grid-template-columns: 10px 1fr auto; gap: 6px 12px; }
+  .sx-val { grid-column: 2 / 4; } .sx-detail { grid-column: 2 / 4; }
+  .sx-banner .m { margin-left: 24px; }
+}
+
+/* ---------- plain-English guardrails */
+.gr { border: 1px solid rgba(187, 254, 47, 0.35); background: var(--panel); padding: 18px 18px 20px; margin: 18px 0 22px; }
+.gr-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 12px; margin-bottom: 12px; }
+.gr-h b { color: var(--ink); font-size: 16px; font-weight: 500; }
+.gr-h .m { font-size: 11px; letter-spacing: 0.04em; }
+.gr-text { width: 100%; resize: vertical; min-height: 84px; background: #070707; border: 1px solid var(--hair2); color: var(--ink); font: 14.5px/1.5 var(--sans); padding: 12px; }
+.gr-text:focus { outline: none; border-color: var(--lime); }
+.gr-ex { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.gr-chip { border: 1px solid var(--hair2); background: transparent; color: var(--soft); font: inherit; font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; padding: 7px 10px; cursor: pointer; }
+.gr-chip:hover { border-color: var(--lime); color: var(--lime); }
+.gr-go { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 14px; }
+.gr-go .err { margin-top: 0; }
+.gr-out { margin-top: 18px; border-top: 1px solid var(--hair2); padding-top: 14px; }
+.gr-src { font-size: 10.5px; letter-spacing: 0.05em; margin-bottom: 8px; }
+.gr-rows { list-style: none; margin: 0; padding: 0; }
+.gr-rows li { display: grid; grid-template-columns: 10px 130px minmax(0, 1fr); gap: 4px 12px; align-items: baseline; padding: 10px 0; border-bottom: 1px solid var(--hair); }
+.gr-rows li b { color: var(--ink); font-weight: 500; font-size: 14px; }
+.gr-rows li .m { font-size: 11.5px; color: var(--lime); }
+.gr-rows li.off .m { color: var(--dim); } .gr-rows li.off b { color: var(--mute); }
+.gr-rows li p { grid-column: 2 / -1; color: var(--soft); font-size: 13.5px; line-height: 1.45; }
+.gr-dot { width: 8px; height: 8px; border: 1px solid var(--lime); align-self: center; }
+.gr-rows li.on .gr-dot { background: var(--lime); } .gr-rows li.off .gr-dot { border-color: var(--hair3); }
+.gr-note, .gr-tests { font-size: 11px; line-height: 1.6; margin-top: 10px; }
+.gr-sum { color: var(--soft); font-size: 14px; line-height: 1.5; margin-top: 10px; }
+.gr-act { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+@media (max-width: 560px) { .gr-rows li { grid-template-columns: 10px 1fr; } .gr-rows li .m { grid-column: 2; } .gr { padding: 16px 14px 18px; } }

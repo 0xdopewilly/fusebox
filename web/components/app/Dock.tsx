@@ -17,6 +17,7 @@ const MORE = [
   ["/app/simulate", "Line simulator", "Run TapeOut fuses on payments"],
   ["/app/studio", "Fuse Studio", "Build, prove and tape out a fuse"],
   ["/app/approve", "Approvals", "Sign off payments; alerts on this phone"],
+  ["/app/status", "Status", "Live health of every part"],
   ["/docs", "Docs", "How it works, contracts, MCP"],
   ["/onchain", "DeWEB edition", "The serverless page for 15.2.272.tape"],
   ["/", "Fusebox home", "The story, the fuses, the designers"],

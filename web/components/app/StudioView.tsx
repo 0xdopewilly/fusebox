@@ -7,6 +7,9 @@ import { DEP, pub } from "@/lib/client-chain";
 import { SOCKETS } from "@/lib/sockets";
 import { CONDS, compile, condOf, decodeDraft, encodeDraft, paramLabels, ruleProblem, ruleText, type Cond, type Rule } from "@/lib/studio";
 import { prove, type Proof } from "@/lib/studioProof";
+import { optimizeAsync, type Optimized } from "@/lib/circuits/optimize";
+import records from "@/lib/circuits/optimize-records.json";
+import ui from "./StudioOptimize.module.css";
 import { encodeMeta } from "@/lib/fuseMeta";
 import { decodeNetlist } from "@/lib/tap02";
 import { useTxQueue } from "@/lib/useTxQueue";
@@ -39,7 +42,32 @@ export default function StudioView() {
   const problem = ruleProblem(rule);
   const key = JSON.stringify(rule);
   const compiled = useMemo(() => { if (problem) return null; try { return compile(rule); } catch { return null; } }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
-  const overBudget = compiled ? compiled.net.gates > 512 : false;
+
+  // gate golf: shrink the netlist and prove the smaller one does exactly the same, in the background as you edit
+  const [opt, setOpt] = useState<{ key: string; r: Optimized } | null>(null);
+  const [optProgress, setOptProgress] = useState<number | null>(null);
+  const [useOpt, setUseOpt] = useState(true);
+  // which netlist the optimizer has finished with (even if it failed): proving waits for it, so the circuit can't
+  // change under a proof that's already running
+  const [optDone, setOptDone] = useState<string | null>(null);
+  useEffect(() => {
+    if (!compiled) return;
+    let live = true;
+    const t = setTimeout(async () => {
+      setOptProgress(0);
+      try {
+        const r = await optimizeAsync(compiled.net, (p) => { if (live) setOptProgress(p.stage === "proof" ? 0.95 : p.total ? Math.min(0.9, p.done / p.total) : 0.05); });
+        if (live) setOpt({ key: compiled.net.keccak, r });
+      } finally { if (live) { setOptProgress(null); setOptDone(compiled.net.keccak); } }
+    }, 350);
+    return () => { live = false; clearTimeout(t); };
+  }, [compiled]);
+  const optFor = opt && compiled && opt.key === compiled.net.keccak ? opt.r : null;
+  const optimized = !!optFor?.improved && optFor.proof?.equal === true;
+  // the netlist that gets proven against the rule and taped out: the optimized one when it's smaller, proven and chosen
+  const active = compiled ? (optimized && useOpt ? { ...compiled, net: optFor!.net } : compiled) : null;
+  const overBudget = active ? active.net.gates > 512 : false;
+  const settled = !!compiled && optDone === compiled.net.keccak;
 
   // the real wiring, drawn from the netlist bytes
   const cv = useRef<HTMLCanvasElement>(null);
@@ -48,12 +76,12 @@ export default function StudioView() {
   // the proof belongs to the exact netlist it checked
   const [proof, setProof] = useState<{ hash: string; p: Proof } | null>(null);
   const [progress, setProgress] = useState<number | null>(null);
-  const proven = !!compiled && proof?.hash === compiled.net.keccak && proof.p.mismatches === 0;
+  const proven = !!active && proof?.hash === active.net.keccak && proof.p.mismatches === 0;
   const runProof = async () => {
-    if (!compiled) return;
+    if (!active) return;
     setProgress(0);
-    const p = await prove(compiled, socket, (d, t) => setProgress(d / t));
-    setProof({ hash: compiled.net.keccak, p }); setProgress(null);
+    const p = await prove(active, socket, (d, t) => setProgress(d / t));
+    setProof({ hash: active.net.keccak, p }); setProgress(null);
   };
 
   // what it costs to tape out on TapeOut's processor, read live
@@ -74,9 +102,9 @@ export default function StudioView() {
     })().catch(() => {});
     return () => { on = false; };
   }, [account]);
-  const needN = compiled && cost ? BigInt(Math.max(0, compiled.net.nand - Number(cost.haveN))) : 0n;
-  const needL = compiled && cost ? BigInt(Math.max(0, compiled.net.latch - Number(cost.haveL))) : 0n;
-  const okbCost = cost && compiled ? (needN ? cost.price * needN + cost.pfee : 0n) + (needL ? cost.price * needL + cost.pfee : 0n) + cost.tape : null;
+  const needN = active && cost ? BigInt(Math.max(0, active.net.nand - Number(cost.haveN))) : 0n;
+  const needL = active && cost ? BigInt(Math.max(0, active.net.latch - Number(cost.haveL))) : 0n;
+  const okbCost = cost && active ? (needN ? cost.price * needN + cost.pfee : 0n) + (needL ? cost.price * needL + cost.pfee : 0n) + cost.tape : null;
 
   // describe it
   const [name, setName] = useState(""); const [summary, setSummary] = useState(""); const [fee, setFee] = useState("0.001");
@@ -95,12 +123,12 @@ export default function StudioView() {
   const [made, setMade] = useState<Ctx | null>(null);
   const blocker = !account ? "Connect the wallet that will own the circuit" : !compiled ? "Fix the rule first" : overBudget ? "Over the 512-gate budget" : !proven ? "Prove it first" : !name.trim() ? "Give it a name" : !feeOk ? "A fee from 0 to 1 USD₮0" : okbCost !== null && cost?.okb != null && cost.okb < okbCost ? `Needs ${formatEther(okbCost)} OKB plus gas; this wallet has ${formatEther(cost.okb)}` : null;
   const launch = async () => {
-    if (!compiled || !cost || !account) return;
-    const net = compiled.net;
+    if (!active || !cost || !account) return;
+    const net = active.net;
     const steps = [];
     if (needN > 0n) steps.push({ id: "nand", label: `Mint ${needN} NAND transistors`, detail: `${formatEther(cost.price * needN + cost.pfee)} OKB`, run: () => write(payable({ address: cost.T, abi: transistorsAbi, functionName: "mint", args: [0n, needN], value: cost.price * needN + cost.pfee })) });
     if (needL > 0n) steps.push({ id: "latch", label: `Mint ${needL} LATCH transistor${needL > 1n ? "s" : ""}`, detail: `${formatEther(cost.price * needL + cost.pfee)} OKB`, run: () => write(payable({ address: cost.T, abi: transistorsAbi, functionName: "mint", args: [1n, needL], value: cost.price * needL + cost.pfee })) });
-    steps.push({ id: "tape", label: "Tape it out on TapeOut", detail: `${net.gates} gates · ${formatEther(cost.tape)} OKB`, run: () => write(payable({ address: PROCESSOR, abi: tapeoutProcessorAbi, functionName: "tapeout", args: [net.hex as Hex, compiled.nIn, 1], value: cost.tape })),
+    steps.push({ id: "tape", label: "Tape it out on TapeOut", detail: `${net.gates} gates · ${formatEther(cost.tape)} OKB`, run: () => write(payable({ address: PROCESSOR, abi: tapeoutProcessorAbi, functionName: "tapeout", args: [net.hex as Hex, active.nIn, 1], value: cost.tape })),
       after: (r: { logs: { address: string; data: Hex; topics: Hex[] }[] }, c: Ctx) => { for (const l of r.logs) { if (l.address.toLowerCase() !== PROCESSOR.toLowerCase()) continue; try { const ev = decodeEventLog({ abi: tapeoutProcessorAbi, data: l.data, topics: l.topics as [Hex, ...Hex[]] }); if (ev.eventName === "TapedOut") c.circuitId = ev.args.circuitId; } catch {} } } });
     steps.push({ id: "list", label: "List it in the fuse market", detail: `${fee} USD₮0 a check, described on-chain`, run: (c: Ctx) => write({ address: DEP.registry as Address, abi: fuseRegistryAbi, functionName: "list", args: [PROCESSOR, c.circuitId!, socket, net.keccak as Hex, parseUnits(fee.trim(), 6), metaUri] }),
       after: (r: { logs: { address: string; data: Hex; topics: Hex[] }[] }, c: Ctx) => { for (const l of r.logs) { try { const ev = decodeEventLog({ abi: fuseRegistryAbi, data: l.data, topics: l.topics as [Hex, ...Hex[]] }); if (ev.eventName === "FuseListed") c.fuseId = Number(ev.args.fuseId); } catch {} } } });
@@ -189,12 +217,56 @@ export default function StudioView() {
         </div>
       </section>
 
+      <section className={ui.opt} data-a aria-label="Optimize">
+        <div className="sim-h m"><span className="lime">03</span> Optimize · gate golf</div>
+        {!compiled ? <p className="m mute">{problem ?? "Couldn't compile this rule."}</p>
+          : optProgress !== null || !optFor ? (
+            <div className={ui.working}>
+              <p className="m mute" role="status">Looking for a smaller circuit that does exactly the same… {optProgress !== null ? `${Math.round(optProgress * 100)}%` : ""}</p>
+              <div className="st-bar" aria-hidden="true"><i style={{ transform: `scaleX(${optProgress ?? 0})` }} /></div>
+            </div>
+          ) : (
+            <>
+              <div className={ui.compare}>
+                {[["As built", compiled.net], [optimized ? "Optimized" : "Optimized (no change)", optimized ? optFor.net : compiled.net]].map(([label, n]) => {
+                  const net = n as typeof compiled.net;
+                  return (
+                    <div key={label as string} className={`${ui.side} ${label === "Optimized" ? ui.win : ""}`}>
+                      <span className="m mute">{label as string}</span>
+                      <b className={ui.num}>{net.gates}</b>
+                      <span className="m">{net.nand} NAND{net.latch ? ` + ${net.latch} LATCH` : ""}</span>
+                      <dl className={`m ${ui.kv}`}>
+                        <dt>Gas per check</dt><dd>≈ {gasOf(net.gates).toLocaleString("en-US")}</dd>
+                        <dt>Transistors to mint</dt><dd>{net.gates}{cost ? ` · ${formatEther(cost.price * BigInt(net.gates))} OKB` : ""}</dd>
+                      </dl>
+                    </div>
+                  );
+                })}
+              </div>
+              <p className={`${optimized ? "lime" : "mute"} ${ui.verdict}`} role="status">
+                {optimized
+                  ? `${optFor.saved.gates} gates cut (${Math.round((100 * optFor.saved.gates) / compiled.net.gates)}%): ≈ ${(gasOf(compiled.net.gates) - gasOf(optFor.net.gates)).toLocaleString("en-US")} less gas on every check, and ${optFor.saved.gates} fewer transistors to mint. Proved identical on ${optFor.proof!.method === "exhaustive" ? `every one of the ${optFor.proof!.assignments.toLocaleString("en-US")} inputs${compiled.nState ? " and states" : ""}` : `all 2^${Math.round(Math.log2(optFor.proof!.assignments))} inputs, by comparing exact BDDs`}.`
+                  : optFor.kept === "the candidate failed the equivalence check" ? "A smaller candidate failed the equivalence check, so the original is kept."
+                  : "Already minimal: none of the rewrites finds a smaller circuit that does exactly the same."}
+              </p>
+              {optimized && (
+                <label className={`m ${ui.toggle}`}>
+                  <input type="checkbox" checked={useOpt} onChange={(e) => { setUseOpt(e.target.checked); setProof(null); }} />
+                  Tape out the optimized circuit {useOpt ? "" : "(using the circuit as built)"}
+                </label>
+              )}
+              {optFor.passes.length > 0 && <p className={`m mute ${ui.passes}`}>{optFor.passes.join(" · ")}</p>}
+            </>
+          )}
+        <p className="oc-say">Merges gates that compute the same function, drops conditions another condition already implies, and removes gates that can be tied to a constant without changing any answer. The interface, the latches and the state bits stay exactly as they were.</p>
+      </section>
+
       <section className="st-prove" data-a>
-        <div className="sim-h m"><span className="lime">03</span> Prove it · the bytes against the rule</div>
+        <div className="sim-h m"><span className="lime">04</span> Prove it · {active && active !== compiled ? "the optimized bytes" : "the bytes"} against the rule</div>
         <div className="st-prove-row">
-          <button className="btn lime" disabled={!compiled || progress !== null} onClick={runProof}><span>{progress !== null ? `Checking… ${Math.round(progress * 100)}%` : proven ? "Proven · run again" : "Prove it on every input"}</span> <span className="k">→</span></button>
+          <button className="btn lime" disabled={!active || progress !== null || !settled} onClick={runProof}><span>{!settled && active ? "Optimizing first…" : progress !== null ? `Checking… ${Math.round(progress * 100)}%` : proven ? "Proven · run again" : "Prove it on every input"}</span> <span className="k">→</span></button>
           {progress !== null && <div className="st-bar" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}><i style={{ transform: `scaleX(${progress})` }} /></div>}
-          {proof && compiled && proof.hash === compiled.net.keccak && (
+          {proof && active && proof.hash === active.net.keccak && (
             <p className={`m ${proof.p.mismatches ? "red" : "lime"}`} role="status">
               {proof.p.mismatches ? `${proof.p.mismatches.toLocaleString()} mismatches in ${proof.p.checked.toLocaleString()} inputs. First: ${JSON.stringify(proof.p.example?.fields)}` : `${proof.p.checked.toLocaleString()} inputs checked, 0 mismatches: ${proof.p.mode}.`}
             </p>
@@ -209,7 +281,7 @@ export default function StudioView() {
       </section>
 
       <section className="st-ship" data-a>
-        <div className="sim-h m"><span className="lime">04</span> Tape it out and list it</div>
+        <div className="sim-h m"><span className="lime">05</span> Tape it out and list it</div>
         <div className="st-ship-grid">
           <div className="st-fields">
             <label className="oc-f m"><span>Name</span><input aria-label="Fuse name" value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="e.g. Careful Cap" /></label>
@@ -243,6 +315,31 @@ export default function StudioView() {
           </div>
         </div>
       </section>
+
+      <section className={ui.records} data-a aria-labelledby="golf-records">
+        <div className="sim-h m"><span className="lime">06</span> <span id="golf-records">Gate golf records</span></div>
+        <div className={ui.tables}>
+          <div>
+            <p className="m mute">Fusebox&apos;s circuits, through the optimizer</p>
+            <table className={`m ${ui.table}`}>
+              <thead><tr><th>Circuit</th><th>Gates</th><th>After</th></tr></thead>
+              <tbody>{records.ours.map((x) => <tr key={x.title}><td>{x.title}{"circuit" in x && x.circuit ? <small> · TapeOut #{String(x.circuit)}</small> : x.kind === "rival" ? <small> · rival</small> : null}</td><td>{x.gates}</td><td className={x.improved ? "lime" : "mute"}>{x.improved ? x.optimized : "minimal"}</td></tr>)}</tbody>
+            </table>
+            <p className="m mute">Hand-built to the gate: none of them has a gate the optimizer can cut.</p>
+          </div>
+          <div>
+            <p className="m mute">Rules people write in the Studio</p>
+            <table className={`m ${ui.table}`}>
+              <thead><tr><th>Rule</th><th>Gates</th><th>After</th></tr></thead>
+              <tbody>{records.examples.map((x) => <tr key={x.title}><td>{x.title}</td><td>{x.gates}</td><td className="lime">{x.optimized} <small>−{Math.round((100 * (x.gates - x.optimized)) / x.gates)}%</small></td></tr>)}</tbody>
+            </table>
+            <p className="m mute">Every smaller circuit proved identical on every input. Gas ≈ {records.gasModel.base.toLocaleString("en-US")} + {records.gasModel.perGate.toLocaleString("en-US")} per gate, fitted to the four shipped fuses&apos; measured gas per check.</p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
+
+/** Gas per check, from the shipped fuses' measured gas (see records.gasModel). */
+const gasOf = (gates: number) => Math.round((records.gasModel.base + records.gasModel.perGate * gates) / 100) * 100;
