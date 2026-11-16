@@ -17,7 +17,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/0xdopewilly/fusebox",
+    "url": "git+https://github.com/0xdopewilly/fusebox.git",
     "directory": "mcp"
   },
   "homepage": "https://fusebox-xlayer.vercel.app",
