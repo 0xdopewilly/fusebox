@@ -4,6 +4,8 @@ import { useMarket } from "@/lib/useMarket";
 import { short, fmt, OKLINK } from "@/lib/hooks";
 import DesignerTools from "./DesignerTools";
 import Loading from "./Loading";
+import { Responsive } from "./m/useMobile";
+import SellMobile from "./m/SellMobile";
 
 const STEPS = [
   ["Design the circuit", "Write it as NAND gates (plus LATCH bits if it needs memory) with the Fusebox toolchain, which builds, simulates and exhaustively tests TAP-02 netlists. It reads one socket: the payment's inputs, laid out bit by bit."],
@@ -16,7 +18,7 @@ export default function DesignersView() {
   const { data, error } = useMarket();
   const byDesigner = new Map<string, { fuses: number; decisions: number; life: number; earned: number }>();
   data?.fuses.forEach((f) => { const d = byDesigner.get(f.designer) ?? { fuses: 0, decisions: 0, life: 0, earned: 0 }; d.fuses++; d.decisions += f.decisions; d.life += Number(f.lifetimeEarned); d.earned += Number(f.earned); byDesigner.set(f.designer, d); });
-  return (
+  return <Responsive mobile={data ? <SellMobile market={data} /> : <div className="page"><Loading label="Reading the fuse registry" error={error} /></div>} desktop={
     <div className="page">
       <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
       <section className="try-head">
@@ -53,5 +55,5 @@ export default function DesignersView() {
       )}
       <DesignerTools market={data} />
     </div>
-  );
+  } />;
 }

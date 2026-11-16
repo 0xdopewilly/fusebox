@@ -10,6 +10,10 @@ import { short, OKLINK } from "@/lib/hooks";
 import { useMarket } from "@/lib/useMarket";
 import { useWallet } from "./WalletProvider";
 import ConnectChoices from "./ConnectChoices";
+import { Responsive } from "./m/useMobile";
+import { PageChrome } from "./m/chrome";
+import { MRow, MSheet, MSticky, MChips } from "./m/ui";
+import { Glyph, Plate, type GlyphName } from "./Pixel";
 
 const erc20 = [
   { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "a", type: "address" }], outputs: [{ type: "uint256" }] },
@@ -143,7 +147,110 @@ export default function NewWalletView() {
   useEffect(() => { if (made?.wallet) setTimeout(() => document.querySelector(".done-card")?.scrollIntoView({ behavior: "smooth", block: "center" }), 150); }, [made?.wallet]);
 
   const toggle = (k: Key) => setOn({ ...on, [k]: !on[k] });
-  return (
+
+  // ---- phones: one step per screen, Back / Next under the thumb
+  const [step, setStep] = useState(0);
+  const [describe, setDescribe] = useState(false);
+  const STEPS = ["Owner", "Agent", "Fuses", "People", "Fund"];
+  const GL: Record<Key, GlyphName> = { "daily-cap": "mine", "payee-guard": "approve", breaker: "stop", "approval-2of3": "x402" };
+  const agentErr = !agent.trim() ? "Enter the address your agent signs with." : !isAddress(agent.trim(), { strict: false }) ? "That isn't an address." : account && agent.trim().toLowerCase() === account.toLowerCase() ? "Use a separate key for the agent, not your own." : null;
+  const blockNext = step === 1 && !!agentErr;
+  const activeStarter = STARTERS.find((x) => FUSES.every((f) => on[f.key] === x.on[f.key]) && (!x.on["daily-cap"] || cap === x.cap) && (!x.on["payee-guard"] || (cool === x.cool && trial === x.trial)) && (!x.on["approval-2of3"] || thr === x.thr));
+  const go = (n: number) => { setStep(n); window.scrollTo({ top: 0 }); };
+  const mobileView = (
+    <div className="mpage wzm">
+      <PageChrome title="Wire up" sub={made?.wallet ? "Done" : `Step ${step + 1} of ${STEPS.length} · ${STEPS[step]}`}
+        info={<><p>Your agent gets a key that can only pay through the fuses you pick. You stay the owner: you set the limits, save payees, and reset a blown fuse.</p><p>Each fuse is a TapeOut circuit on X Layer. A payment needs a yes from every fuse, and each check pays the fuse&apos;s designer. Everything runs on X Layer mainnet; gas is a tiny fraction of a cent.</p></>} />
+      <div className="wzm-prog" aria-hidden="true">{STEPS.map((s, i) => <i key={s} className={i <= step || made?.wallet ? "on" : ""} />)}</div>
+
+      {made?.wallet ? (
+        <div className="done-card">
+          <div className="mtitle">It&apos;s live.</div>
+          <p className="mcap" style={{ marginTop: 10 }}>Your wallet <span className="m lime">{short(made.wallet)}</span> is on X Layer with its fuses spliced in. Give your agent its address.</p>
+          <Link className="btn lime" style={{ marginTop: 16, justifyContent: "center", height: 52 }} href={`/app/w/${made.wallet}`}>Open my wallet <span className="k">→</span></Link>
+        </div>
+      ) : <>
+        {step === 0 && <>
+          <div><div className="mtitle">Connect the owner</div><p className="mcap" style={{ marginTop: 8 }}>The wallet you connect owns the new one. Only it can change fuses, limits and payees.</p></div>
+          {account ? <MRow icon={<Plate address={account} size={22} />} title={short(account)} sub="Owner · connected" chev={false} /> : <ConnectChoices cta="" />}
+        </>}
+        {step === 1 && <>
+          <div><div className="mtitle">Name the agent</div><p className="mcap" style={{ marginTop: 8 }}>The address your AI agent signs with. It can only ask this wallet to pay, through every fuse.</p></div>
+          <label className="mfield"><span className="m">Agent address</span><input aria-label="Agent address" value={agent} onChange={(e) => setAgent(e.target.value)} placeholder="0x…" spellCheck={false} /></label>
+          {agent.trim() && agentErr && <p className="mnote" style={{ color: "var(--red)" }}>{agentErr}</p>}
+        </>}
+        {step === 2 && <>
+          <div><div className="mtitle">Pick the fuses</div><p className="mcap" style={{ marginTop: 8 }}>Every payment must pass all of them.</p></div>
+          <MChips label="Start from a line" items={STARTERS.map((x) => [x.id, x.name] as const)} value={activeStarter?.id ?? null} onChange={(id) => { const x = STARTERS.find((s) => s.id === id)!; setOn(x.on); setCap(x.cap); setCool(x.cool); setTrial(x.trial); setThr(x.thr); }} />
+          {activeStarter && <p className="mnote">{activeStarter.why}</p>}
+          <MRow icon={<Glyph name="rob" size={16} />} title="Describe your agent instead" sub="Get a line of fuses, with reasons" onClick={() => setDescribe(true)} />
+          {FUSES.map((f) => (
+            <div key={f.key} className={`mcard mopt${on[f.key] ? " on" : ""}`}>
+              <div className="mopt-t">
+                <Glyph name={GL[f.key]} size={18} color={on[f.key] ? "var(--lime)" : "var(--dim)"} />
+                <span><b>{f.name}</b><small className="m">{Number(feeOf(f)) / 1e6} USD₮0 / check</small></span>
+                <Toggle on={on[f.key]} flip={() => toggle(f.key)} name={f.name} />
+              </div>
+              {on[f.key] && f.key === "daily-cap" && <label className="mfield"><span className="m">Cap per day · USD₮0</span><input aria-label="Cap per day (USD₮0)" value={cap} onChange={(e) => setCap(e.target.value)} inputMode="decimal" /></label>}
+              {on[f.key] && f.key === "payee-guard" && <div className="mopt-2"><label className="mfield"><span className="m">Cooling-off · h</span><input aria-label="Cooling-off (hours)" value={cool} onChange={(e) => setCool(e.target.value)} inputMode="decimal" /></label><label className="mfield"><span className="m">Trial · USD₮0</span><input aria-label="Trial amount (USD₮0)" value={trial} onChange={(e) => setTrial(e.target.value)} inputMode="decimal" /></label></div>}
+              {on[f.key] && f.key === "approval-2of3" && <label className="mfield"><span className="m">Approvals above · USD₮0</span><input aria-label="Approvals above (USD₮0)" value={thr} onChange={(e) => setThr(e.target.value)} inputMode="decimal" /></label>}
+              {!on[f.key] && <p className="mnote">{f.say}</p>}
+            </div>
+          ))}
+          <Link className="m lime" href={simLink}>Test this line on sample payments →</Link>
+        </>}
+        {step === 3 && <>
+          <div><div className="mtitle">Payees and approvers</div><p className="mcap" style={{ marginTop: 8 }}>{on["payee-guard"] || on.breaker ? "Saved payees go straight through Payee Guard and the Breaker." : "Payees you save now; you can add more later."}</p></div>
+          <div className="mlabel m"><span>Saved payees</span><span>{goodPayees.length}</span></div>
+          {payees.map((p, i) => <div className="mfield-row" key={i}><label className="mfield"><span className="sr">Saved payee {i + 1} address</span><input aria-label={`Saved payee ${i + 1} address`} value={p} onChange={(e) => setPayees(payees.map((x, k) => (k === i ? e.target.value : x)))} placeholder="0x…" spellCheck={false} /></label><button className="mfield-x" onClick={() => setPayees(payees.filter((_, k) => k !== i))} aria-label={`Remove saved payee ${i + 1}`}>✕</button></div>)}
+          <button className="btn" style={{ justifyContent: "center" }} onClick={() => setPayees([...payees, ""])}>+ Add a payee</button>
+          {on["approval-2of3"] && <>
+            <div className="mlabel m"><span>Approvers · two of three sign over {clamp(thr)} USD₮0</span></div>
+            {approvers.map((a, i) => <label className="mfield" key={i}><span className="sr">Approver {i + 1} address</span><input aria-label={`Approver ${i + 1} address`} value={a} onChange={(e) => setApprovers(approvers.map((x, k) => (k === i ? e.target.value : x)))} placeholder={`Approver ${i + 1} · 0x…`} spellCheck={false} /></label>)}
+          </>}
+        </>}
+        {step === 4 && <>
+          <div><div className="mtitle">Fund it</div><p className="mcap" style={{ marginTop: 8 }}>Fees come from a prepaid balance; payments come from the wallet.</p></div>
+          {bal && <div className="mstats" style={{ gridTemplateColumns: "1fr 1fr" }}><div><span className="m">You have</span><b>{(Number(bal.usdt) / 1e6).toFixed(2)}<small>USD₮0</small></b></div><div><span className="m">Gas</span><b>{(Number(bal.okb) / 1e18).toFixed(4)}<small>OKB</small></b></div></div>}
+          <div className="mopt-2">
+            <label className="mfield"><span className="m">Fee balance · USD₮0</span><input aria-label="Fee balance (USD₮0)" value={deposit} onChange={(e) => setDeposit(e.target.value)} inputMode="decimal" /></label>
+            <label className="mfield"><span className="m">Wallet float · USD₮0</span><input aria-label="Wallet float (USD₮0)" value={float} onChange={(e) => setFloat(e.target.value)} inputMode="decimal" /></label>
+          </div>
+          <div className="mcard" style={{ padding: 14 }}><div className="mkv">
+            <span>Fuses</span><span>{Object.values(on).filter(Boolean).length} · {(Number(perDecision) / 1e6).toFixed(4)} USD₮0 a payment</span>
+            <span>Fees cover</span><span>{perDecision && depositUnits > 0n ? `${Number(depositUnits / perDecision)} decisions` : "—"}</span>
+            <span>Daily cap</span><span>{on["daily-cap"] ? `${clamp(cap)} USD₮0` : "off"}</span>
+            <span>Approvals over</span><span>{on["approval-2of3"] ? `${clamp(thr)} USD₮0` : "off"}</span>
+            <span>Saved payees</span><span>{goodPayees.length}</span>
+          </div></div>
+          {q.steps.length > 0 && <ul className="txs">{q.steps.map((s) => (
+            <li key={s.id} className={s.state}><span className="dot" /><span>{s.label}{s.detail ? <span className="m mute" style={{ display: "block", marginTop: 3 }}>{s.detail}</span> : null}</span>
+              <span className="st">{s.hash ? <a href={`${OKLINK}/tx/${s.hash}`} target="_blank" rel="noreferrer">{s.state === "done" ? "Done ↗" : "Mining ↗"}</a> : s.state === "sign" ? "Sign" : s.state === "skip" ? "Not needed" : s.state === "error" ? "Failed" : ""}</span>
+              {s.error && <span className="e">{s.error}</span>}</li>))}</ul>}
+          {!q.running && problems.length > 0 && <p className="mnote" style={{ color: "var(--red)" }}>{problems[0]}</p>}
+        </>}
+        {step === 4 && !q.steps.length && <p className="m mute">Each step is one transaction you sign.</p>}
+        <MSticky>
+          {step > 0 && <button className="btn fit" onClick={() => go(step - 1)} disabled={q.running}>Back</button>}
+          {step < STEPS.length - 1
+            ? <button className="btn lime" disabled={blockNext} onClick={() => go(step + 1)}>Next · {STEPS[step + 1]} <span className="k">→</span></button>
+            : failed ? <button className="btn lime" onClick={retry} disabled={q.running}>{q.running ? "Working…" : "Retry the failed step"}</button>
+            : <button className="btn lime" onClick={launch} disabled={q.running || problems.length > 0}>{q.running ? "Sign in your wallet…" : "Wire it up"} <span className="k">→</span></button>}
+        </MSticky>
+      </>}
+      <MSheet open={describe} onClose={() => setDescribe(false)} title="Describe your agent">
+        <GuardrailsCard onApply={(g) => {
+          setOn({ "daily-cap": g.line.dailyCap.on, "payee-guard": g.line.payeeGuard.on, breaker: g.line.breaker.on, "approval-2of3": g.line.twoOfThree.on });
+          setCap(String(g.line.dailyCap.cap)); setCool(String(g.line.payeeGuard.coolingHours)); setTrial(String(g.line.payeeGuard.trial)); setThr(String(g.line.twoOfThree.threshold));
+          if (g.payees.length) setPayees(g.payees);
+          if (g.approvers.length) setApprovers((cur) => [0, 1, 2].map((i) => g.approvers[i] ?? cur[i]));
+          setDescribe(false);
+        }} />
+      </MSheet>
+    </div>
+  );
+
+  return <Responsive mobile={mobileView} desktop={
     <div className="page">
       <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
       <section className="try-head">
@@ -296,5 +403,5 @@ export default function NewWalletView() {
         </div>
       )}
     </div>
-  );
+  } />;
 }

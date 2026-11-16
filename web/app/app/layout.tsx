@@ -2,6 +2,7 @@ import "./app.css";
 import AppBar from "@/components/app/AppBar";
 import WalletProvider from "@/components/app/WalletProvider";
 import Dock from "@/components/app/Dock";
+import { ChromeProvider } from "@/components/app/m/chrome";
 
 export const metadata = {
   title: "Fusebox app · Atlas, a live agent wallet on X Layer",
@@ -13,10 +14,12 @@ export const metadata = {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <WalletProvider>
-      <AppBar />
-      <div className="wipe" aria-hidden="true" />
-      <main id="main">{children}</main>
-      <Dock />
+      <ChromeProvider>
+        <AppBar />
+        <div className="wipe" aria-hidden="true" />
+        <main id="main">{children}</main>
+        <Dock />
+      </ChromeProvider>
     </WalletProvider>
   );
 }

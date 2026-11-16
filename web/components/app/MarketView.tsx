@@ -9,6 +9,8 @@ import Netlist from "@/components/landing/Netlist";
 import ChainNetlist from "./ChainNetlist";
 import Loading from "./Loading";
 import MarketInstall from "./MarketInstall";
+import { Responsive } from "./m/useMobile";
+import { MarketMobile } from "./m/MarketMobile";
 
 const SAY: Record<string, string> = {
   "daily-cap": "No more than the owner's cap in a UTC day, however the agent is asked.",
@@ -21,8 +23,8 @@ export default function MarketView() {
   const { data, error } = useMarket();
   const root = useRef<HTMLDivElement>(null);
   useGSAP(() => {
-    if (!data || reduced()) return;
-    root.current!.querySelectorAll<HTMLElement>(".fz").forEach((row, k) => {
+    if (!data || !root.current || reduced()) return;
+    root.current.querySelectorAll<HTMLElement>(".fz").forEach((row, k) => {
       const gates = row.querySelectorAll<SVGElement>(".gate");
       const dep = (n: Element) => Number(n.getAttribute("data-depth"));
       // one clip sweep per schematic reads as the signal flowing left to right, without measuring hundreds of paths
@@ -32,7 +34,7 @@ export default function MarketView() {
       row.addEventListener("mouseenter", () => gsap.fromTo(gates, { fill: "#bbfe2f" }, { fill: "#fff", duration: 0.09, yoyo: true, repeat: 1, stagger: (i) => dep(gates[i]) * 0.04, overwrite: true }));
     });
   }, { dependencies: [!!data] });
-  return (
+  return <Responsive mobile={data ? <MarketMobile data={data} /> : <div className="page"><Loading label="Reading the fuse registry" error={error} /></div>} desktop={
     <div className="page" ref={root}>
       <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
       <section className="try-head">
@@ -79,5 +81,5 @@ export default function MarketView() {
         </>
       )}
     </div>
-  );
+  } />;
 }

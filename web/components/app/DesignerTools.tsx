@@ -15,7 +15,7 @@ const SOCKETS: Record<number, [number, string]> = { 24: [1, "Daily Cap"], 33: [2
 interface Info { owner: Address; nIn: number; nOut: number; nState: number; gates: number; hash: Hex }
 
 /** Price, listing and description link for one fuse you own. A fee rise only reaches wallets that accept it. */
-function ManageFuse({ f, busy, run }: { f: Market["fuses"][number]; busy: boolean; run: (label: string, fn: () => Promise<Hex>) => void }) {
+export function ManageFuse({ f, busy, run }: { f: Market["fuses"][number]; busy: boolean; run: (label: string, fn: () => Promise<Hex>) => void }) {
   const { write } = useWallet();
   const R = { address: DEP.registry as Address, abi: fuseRegistryAbi } as const;
   const [fee, setFee] = useState(f.fee);
@@ -59,15 +59,11 @@ function ManageFuse({ f, busy, run }: { f: Market["fuses"][number]; busy: boolea
   );
 }
 
-/** For designers: claim what your fuses earned, manage their price and listing, and list a circuit you've taped out. */
-export default function DesignerTools({ market }: { market: Market | null }) {
+/** Listing a taped-out circuit: the form's state, what's wrong with it (or null), and the registry call it signs. */
+export function useListCircuit(market: Market | null) {
   const { account, write } = useWallet();
-  const q = useTxQueue<object>();
-  const [proc, setProc] = useState(DEP.processor); const [cid, setCid] = useState(""); const [fee, setFee] = useState("0.001"); const [fname, setFname] = useState(""); const [fsum, setFsum] = useState("");
+  const [proc, setProc] = useState<string>(DEP.processor); const [cid, setCid] = useState(""); const [fee, setFee] = useState("0.001"); const [fname, setFname] = useState(""); const [fsum, setFsum] = useState("");
   const [info, setInfo] = useState<Info | null>(null); const [infoErr, setInfoErr] = useState<string | null>(null);
-  const mine = market && account ? market.fuses.filter((f) => f.designer.toLowerCase() === account.toLowerCase()) : [];
-  const claimable = mine.filter((f) => Number(f.earned) > 0);
-
   useEffect(() => {
     setInfo(null); setInfoErr(null);
     if (!isAddress(proc, { strict: false }) || !/^\d+$/.test(cid)) return;
@@ -82,6 +78,17 @@ export default function DesignerTools({ market }: { market: Market | null }) {
   const listed = info && market?.fuses.find((f) => f.processor.toLowerCase() === proc.toLowerCase() && f.circuitId === Number(cid));
   const problem = !account ? "Connect the wallet that owns the circuit NFT." : !info ? (infoErr ?? "Enter a processor and circuit id.") : listed ? `Already listed as fuse #${listed.fuseId}.`
     : info.owner.toLowerCase() !== account.toLowerCase() ? `The circuit belongs to ${short(info.owner)}, not your connected wallet.` : !socket ? `${info.nIn} inputs doesn't match a Fusebox socket (24, 33, 4 or 19).` : info.nOut !== 1 ? "Fuses answer with exactly one output." : info.gates > 512 ? "Over the 512-gate budget." : !(Number(fee) >= 0) ? "Enter a fee." : null;
+  const submit = () => write({ address: DEP.registry as Address, abi: fuseRegistryAbi, functionName: "list", args: [getAddress(proc.toLowerCase()), BigInt(cid), socket![0], info!.hash, parseUnits(fee || "0", 6), fname.trim() || fsum.trim() ? encodeMeta({ name: fname.trim() || undefined, summary: fsum.trim() || undefined, designer: short(account!) }) : ""] });
+  return { proc, setProc, cid, setCid, fee, setFee, fname, setFname, fsum, setFsum, info, socket, problem, submit };
+}
+
+/** For designers: claim what your fuses earned, manage their price and listing, and list a circuit you've taped out. */
+export default function DesignerTools({ market }: { market: Market | null }) {
+  const { account, write } = useWallet();
+  const q = useTxQueue<object>();
+  const { proc, setProc, cid, setCid, fee, setFee, fname, setFname, fsum, setFsum, info, socket, problem, submit } = useListCircuit(market);
+  const mine = market && account ? market.fuses.filter((f) => f.designer.toLowerCase() === account.toLowerCase()) : [];
+  const claimable = mine.filter((f) => Number(f.earned) > 0);
   const last = q.steps[q.steps.length - 1];
 
   return (
@@ -143,7 +150,7 @@ export default function DesignerTools({ market }: { market: Market | null }) {
         <div className="summary">
           <div className="sh2 m"><span className="mute">Designer</span><span className="lime">{account ? short(account) : "not connected"}</span></div>
           <div className="go">
-            <button className="btn lime" disabled={q.running || !!problem} onClick={() => q.start([{ id: "list", label: "List the circuit", run: () => write({ address: DEP.registry as Address, abi: fuseRegistryAbi, functionName: "list", args: [getAddress(proc.toLowerCase()), BigInt(cid), socket![0], info!.hash, parseUnits(fee || "0", 6), fname.trim() || fsum.trim() ? encodeMeta({ name: fname.trim() || undefined, summary: fsum.trim() || undefined, designer: short(account!) }) : ""] }) }], {})}>List it as a fuse <span className="k">→</span></button>
+            <button className="btn lime" disabled={q.running || !!problem} onClick={() => q.start([{ id: "list", label: "List the circuit", run: submit }], {})}>List it as a fuse <span className="k">→</span></button>
             {problem && <div className="warn2">{problem}</div>}
             {last && <p className="m mute" style={{ marginTop: 10 }}>{last.label}: {last.state === "done" ? "done" : last.state === "error" ? last.error : last.state === "skip" ? "not needed" : "sign in your wallet…"}{last.hash ? <> · <a className="lime" href={`${OKLINK}/tx/${last.hash}`} target="_blank" rel="noreferrer">tx ↗</a></> : null}</p>}
           </div>

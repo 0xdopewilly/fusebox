@@ -12,6 +12,8 @@ import OwnerConsole from "./OwnerConsole";
 import DecisionTools from "./DecisionTools";
 import SpendView from "./SpendView";
 import Loading from "./Loading";
+import { Responsive } from "./m/useMobile";
+import WalletMobile from "./m/WalletMobile";
 
 /** A number that rolls to its new value whenever it changes. */
 function Count({ value, d = 6, className }: { value: number; d?: number; className?: string }) {
@@ -69,7 +71,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
   const detailRef = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLDivElement>(null);
 
-  useGSAP(() => { if (data && !reduced()) gsap.from(root.current!.querySelectorAll("[data-b]"), { y: 26, autoAlpha: 0, duration: 0.9, stagger: 0.08, ease: "snap" }); }, { dependencies: [!!data] });
+  useGSAP(() => { if (data && root.current && !reduced()) gsap.from(root.current.querySelectorAll("[data-b]"), { y: 26, autoAlpha: 0, duration: 0.9, stagger: 0.08, ease: "snap" }); }, { dependencies: [!!data] });
   useGSAP(() => { if (sel !== null && detailRef.current && !reduced()) gsap.fromTo(detailRef.current, { height: 0, autoAlpha: 0 }, { height: "auto", autoAlpha: 1, duration: 0.6, ease: "snap" }); }, { dependencies: [sel] });
 
   const live: WireStatus[] = useMemo(() => (data ? data.fuses.map((f) => (f.latched ? "latched" : "pass")) : []), [data]);
@@ -90,7 +92,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
       ? <p className="more-note m mute">The latest {a.decisions.length} of {a.counts.decisions}. Every one is on X Layer: <a href={`${OKLINK}/address/${a.wallet}`} target="_blank" rel="noreferrer">full history on OKLink ↗</a></p>
       : null;
 
-  return (
+  return <Responsive mobile={<WalletMobile a={a} fresh={fresh} />} desktop={
     <div className="page" ref={root}>
       <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
       <h1 className="sr">{a.isAtlas ? "Atlas, the public Fusebox demo wallet" : `Fusebox wallet ${short(a.wallet)}`}</h1>
@@ -212,5 +214,5 @@ export default function WalletView({ address, from }: { address?: string; from?:
           <ul>{a.approvers.map((p, i) => <li key={p}>{short(p)}<span>seat {i + 1}</span></li>)}</ul></div>
       </div>
     </div>
-  );
+  } />;
 }

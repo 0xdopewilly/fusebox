@@ -4,6 +4,7 @@ import { gsap, useGSAP, reduced } from "@/lib/gsap";
 import { useAtlas, short } from "@/lib/hooks";
 import type { CheckResult } from "@/lib/atlas";
 import LineWire, { type WireStatus } from "./LineWire";
+import { PageChrome } from "./m/chrome";
 
 const SUPPLIER = "0x69dB89385E8a69278a49335C432d0c70ec86A6C4";
 const PRESETS: [string, string][] = [
@@ -62,7 +63,8 @@ export default function RobView({ mode }: { mode: { mode: "llm" | "scripted"; la
   return (
     <div className="page">
       <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
-      <section className="try-head">
+      <PageChrome title="Rob the agent" sub="An AI agent reads your scam" info={<p>Write what a scammer would send Atlas&apos;s payables agent: a fake invoice, new bank details, a boss in a hurry, an instruction hidden in the text. The agent reads it and decides. Whatever it tries to pay then goes through Atlas&apos;s fuses on X Layer, read-only: nothing ever moves.</p>} />
+      <section className="try-head m-hide">
         <h1 className="disp" data-a>Rob the <span className="lime">[agent]</span>.</h1>
         <p data-a>Write what a scammer would send Atlas&apos;s payables agent: a fake invoice, new bank details, a boss in a hurry, an instruction hidden in the text. The agent reads it and decides. Whatever it tries to pay then goes through Atlas&apos;s fuses, real circuits taped out on TapeOut, on X Layer and read-only: nothing ever moves.</p>
       </section>

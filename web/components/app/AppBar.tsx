@@ -10,6 +10,8 @@ import Connect from "./Connect";
 import { openPanel } from "./Dock";
 import { useWallet } from "./WalletProvider";
 import { short } from "@/lib/hooks";
+import { useChrome } from "./m/chrome";
+import { MSheet } from "./m/ui";
 
 const TABS = [["/app", "Wallet", "Wallet"], ["/app/try", "Try to scam it", "Try"], ["/app/market", "Fuse market", "Market"], ["/app/designers", "Designers", "Sell"]] as const;
 
@@ -26,11 +28,14 @@ export default function AppBar() {
   }, [path]);
   const active = (h: string) => (h === "/app" ? path === "/app" : path?.startsWith(h) || (h === "/app/market" && !!path?.startsWith("/app/fuse/")) || (h === "/app/try" && (!!path?.startsWith("/app/simulate") || !!path?.startsWith("/app/rob"))) || (h === "/app/designers" && !!path?.startsWith("/app/studio")));
   const { account } = useWallet();
+  const chrome = useChrome();
+  const [info, setInfo] = useState(false);
+  useEffect(() => { setInfo(false); }, [path]);
   // phones show the page's name in the bar; the sections live in the dock at the bottom
   const title = path === "/app" ? "Atlas" : path?.startsWith("/app/w/") ? "Wallet" : path?.startsWith("/app/try") ? "Try to scam it" : path?.startsWith("/app/market") ? "Fuse market" : path?.startsWith("/app/fuse/") ? "Fuse" : path?.startsWith("/app/simulate") ? "Line simulator" : path?.startsWith("/app/rob") ? "Rob the agent" : path?.startsWith("/app/x402") ? "Pay per call" : path?.startsWith("/app/status") ? "Status" : path?.startsWith("/app/studio") ? "Fuse Studio"
     : path?.startsWith("/app/designers") ? "Sell a fuse" : path?.startsWith("/app/approve") ? "Approvals" : path?.startsWith("/app/new") ? "Wire up a wallet" : path?.startsWith("/app/mine") ? "My wallets" : "App";
   return (
-    <header className="appbar">
+    <header className={`appbar${chrome?.back ? " has-back" : ""}`}>
       <Link className="logo" href="/" data-cursor="Home"><Logo />FUSEBOX</Link>
       <span className="m slash">/ app</span>
       <nav className="tabs-nav m" ref={nav} aria-label="App sections">
@@ -44,7 +49,12 @@ export default function AppBar() {
         {source && <span className={`badge ${source === "mainnet" ? "main" : "warn"}`}>{source === "mainnet" ? "X Layer mainnet" : source === "fork" ? "Mainnet fork · rehearsal" : "Rehearsal snapshot"}</span>}
         <span className="mute blk"><span className="live" />Block {block ? <Digits value={block.toLocaleString("en-US")} /> : "—"}</span>
       </div>
-      <span className="pg disp">{title}</span>
+      <span className="pg">
+        {chrome?.back && <Link className="pg-back" href={chrome.back} aria-label="Back">←</Link>}
+        <span className="pg-tt">{chrome ? <h1 className="pg-t disp">{chrome.title ?? title}</h1> : <span className="pg-t disp">{title}</span>}{chrome?.sub && <span className="pg-sub m">{chrome.sub}</span>}</span>
+      </span>
+      {chrome?.info && <button className="pg-i" onClick={() => setInfo(true)} aria-label="About this screen">i</button>}
+      {chrome?.info && <MSheet open={info} onClose={() => setInfo(false)} title={chrome.title ?? title}><div className="ms-info">{chrome.info}</div></MSheet>}
       <button className={`chip-acct m${account ? " on" : ""}`} onClick={openPanel} aria-label={account ? "Account and pages" : "Connect a wallet"}>{account ? <><span className="live" />{short(account)}</> : "Connect"}</button>
       <Connect />
     </header>

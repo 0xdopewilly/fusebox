@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fusebox mobile · app screens</title>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Geist:wght@300..800&family=Geist+Mono:wght@400..700&display=swap" rel="stylesheet" />
+<style>
+  :root { --bg:#000; --card:#0b0b0b; --ink:#f2f2ee; --soft:#c9c9c4; --mute:#9d9d98; --dim:#5d5d59; --hair:rgba(255,255,255,.08); --hair2:rgba(255,255,255,.14); --hair3:rgba(255,255,255,.26); --lime:#bbfe2f; --lime-ink:#0c1400; --red:#ff5232;
+    --display:"Archivo",system-ui,sans-serif; --sans:"Geist",system-ui,sans-serif; --mono:"Geist Mono",ui-monospace,monospace; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:#2a2a28; font-family:var(--sans); color:var(--ink); -webkit-font-smoothing:antialiased; }
+  .board { display:flex; flex-wrap:wrap; gap:48px 40px; padding:56px 48px 64px; }
+  .col { display:flex; flex-direction:column; gap:14px; width:390px; }
+  .cap { font:600 13px/1.4 var(--mono); letter-spacing:.08em; text-transform:uppercase; color:#e9e9e4; } .cap b { color:var(--lime); margin-right:10px; }
+  .note { font:400 13.5px/1.55 var(--sans); color:#b9b9b4; }
+  body.solo { background:#000; } body.solo .board { padding:0; } body.solo .cap, body.solo .note { display:none; }
+
+  .phone { width:390px; height:844px; position:relative; overflow:hidden; background:#000; display:flex; flex-direction:column; }
+  .m { font:500 10.5px/1.4 var(--mono); letter-spacing:.1em; text-transform:uppercase; } .mute { color:var(--mute); } .dimc { color:var(--dim); } .lime { color:var(--lime); } .red { color:var(--red); }
+  .live { display:inline-block; width:6px; height:6px; background:var(--lime); margin-right:8px; vertical-align:1px; box-shadow:0 0 0 3px rgba(187,254,47,.16); }
+  svg.px { display:block; shape-rendering:crispEdges; }
+
+  /* app bar */
+  .bar { height:56px; flex:none; display:flex; align-items:center; gap:10px; padding:0 16px; border-bottom:1px solid var(--hair); }
+  .bar h1 { font:800 21px/1 var(--display); font-stretch:112%; text-transform:uppercase; letter-spacing:-.01em; flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .bar .sub { display:block; font:500 9.5px/1 var(--mono); letter-spacing:.12em; color:var(--mute); margin-top:5px; text-transform:uppercase; }
+  .chip { height:32px; display:inline-flex; align-items:center; gap:8px; padding:0 10px; border:1px solid var(--hair3); font:500 11px/1 var(--mono); letter-spacing:.04em; }
+  .ib { width:32px; height:32px; display:grid; place-items:center; border:1px solid var(--hair3); color:var(--soft); font:600 13px/1 var(--mono); }
+  .scroll { flex:1; overflow:hidden; padding:14px 16px 0; display:flex; flex-direction:column; gap:14px; }
+
+  /* dock (as shipped) */
+  .dock { position:absolute; left:12px; right:12px; bottom:14px; height:62px; display:grid; grid-template-columns:repeat(5,1fr); background:#070707; border:1px solid var(--hair3); z-index:5; }
+  .dock div { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:7px; font:500 9.5px/1 var(--mono); letter-spacing:.1em; color:var(--mute); text-transform:uppercase; }
+  .dock div + div { border-left:1px solid var(--hair); } .dock div.on { color:var(--ink); box-shadow:inset 0 2px 0 var(--lime); }
+  .cart { width:34px; height:14px; border:1px solid var(--dim); position:relative; } .cart::before, .cart::after { content:""; position:absolute; top:-2px; bottom:-2px; width:6px; border:1px solid var(--dim); background:#000; } .cart::before { left:-1px; } .cart::after { right:-1px; }
+  .dock .on .cart { border-color:var(--lime); }
+  .sticky { position:absolute; left:16px; right:16px; bottom:88px; z-index:4; display:flex; gap:8px; }
+  .fade { position:absolute; left:0; right:0; bottom:0; height:190px; background:linear-gradient(180deg, transparent, #000 45%); z-index:3; pointer-events:none; }
+  .btn { height:52px; flex:1; display:flex; align-items:center; justify-content:center; gap:10px; font:600 12px/1 var(--mono); letter-spacing:.1em; text-transform:uppercase; border:1px solid var(--hair3); color:var(--ink); background:#000; }
+  .btn.lime { background:var(--lime); color:var(--lime-ink); border-color:var(--lime); } .btn.sm { height:40px; flex:none; padding:0 14px; }
+
+  /* shared pieces */
+  .seg { display:grid; grid-auto-flow:column; grid-auto-columns:1fr; border:1px solid var(--hair3); height:40px; flex:none; }
+  .seg span { display:flex; align-items:center; justify-content:center; font:500 10.5px/1 var(--mono); letter-spacing:.1em; text-transform:uppercase; color:var(--mute); }
+  .seg span + span { border-left:1px solid var(--hair2); } .seg span.on { background:var(--lime); color:var(--lime-ink); font-weight:600; }
+  .rows { border-top:1px solid var(--hair); }
+  .row { display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px; min-height:62px; padding:10px 0; border-bottom:1px solid var(--hair); }
+  .row .ico { width:38px; height:38px; display:grid; place-items:center; background:#111; border:1px solid var(--hair2); }
+  .row b { display:block; font:600 15px/1.2 var(--sans); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row small { display:block; margin-top:5px; font:500 10.5px/1.3 var(--mono); letter-spacing:.06em; color:var(--mute); text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .row .tr { text-align:right; } .row .tr b { font:700 16px/1 var(--display); font-variant-numeric:tabular-nums; } .row .tr small { margin-top:6px; }
+  .row .chev { color:var(--dim); font:400 16px/1 var(--mono); margin-left:6px; }
+  .tag { display:inline-flex; align-items:center; height:20px; padding:0 7px; font:600 9.5px/1 var(--mono); letter-spacing:.1em; text-transform:uppercase; }
+  .tag.ok { background:rgba(187,254,47,.14); color:var(--lime); } .tag.no { background:rgba(255,82,50,.14); color:var(--red); }
+  .stat3 { display:grid; grid-template-columns:repeat(3,1fr); border:1px solid var(--hair2); }
+  .stat3 div { padding:10px 11px 11px; display:flex; flex-direction:column; gap:7px; } .stat3 div + div { border-left:1px solid var(--hair2); }
+  .stat3 .v { font:700 19px/1 var(--display); font-variant-numeric:tabular-nums; } .stat3 .v small { font:500 10px/1 var(--mono); color:var(--mute); margin-left:3px; letter-spacing:.04em; }
+  .lbl { display:flex; justify-content:space-between; align-items:baseline; }
+  .lbl b { font:800 15px/1 var(--display); font-stretch:108%; text-transform:uppercase; letter-spacing:.01em; }
+  .card { background:var(--card); border:1px solid var(--hair2); }
+  .hero { background:var(--lime); color:var(--lime-ink); padding:16px; clip-path:polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%); }
+  .hero .m { color:rgba(12,20,0,.64); }
+  .hero .big { font:800 46px/.95 var(--display); letter-spacing:-.02em; font-variant-numeric:tabular-nums; margin-top:8px; }
+  .hero .big small { font:600 13px/1 var(--mono); letter-spacing:.06em; margin-left:6px; }
+  .hero .foot { display:flex; justify-content:space-between; margin-top:14px; color:rgba(12,20,0,.75); }
+  .hero .dots { height:2px; margin:14px 0 0; background-image:radial-gradient(circle, rgba(12,20,0,.55) 1px, transparent 1.2px); background-size:6px 2px; }
+  .qa { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+  .qa div { height:70px; border:1px solid var(--hair2); background:var(--card); display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px; font:500 10px/1 var(--mono); letter-spacing:.08em; text-transform:uppercase; color:var(--soft); text-align:center; }
+  .qa div.warn { border-color:rgba(255,82,50,.4); color:var(--red); }
+  .chips { display:flex; gap:8px; overflow:hidden; flex:none; }
+  .chips span { flex:none; height:34px; display:inline-flex; align-items:center; gap:7px; padding:0 12px; border:1px solid var(--hair2); font:500 13.5px/1 var(--sans); color:var(--soft); white-space:nowrap; }
+  .chips span.on { border-color:var(--lime); color:var(--ink); background:rgba(187,254,47,.08); }
+  .cap1 { font:400 14.5px/1.45 var(--sans); color:var(--soft); }
+  .info { width:22px; height:22px; border:1px solid var(--hair3); display:inline-grid; place-items:center; font:600 11px/1 var(--mono); color:var(--soft); vertical-align:middle; margin-left:8px; }
+  .thumb { width:58px; height:44px; background:#0a0a0a; border:1px solid var(--hair2); position:relative; overflow:hidden; }
+  .field { border:1px solid var(--hair3); height:48px; display:flex; align-items:center; justify-content:space-between; padding:0 14px; font:500 16px/1 var(--mono); }
+  .field small { font:500 10px/1 var(--mono); letter-spacing:.1em; color:var(--mute); text-transform:uppercase; }
+  .tog { width:44px; height:26px; border:1px solid var(--hair3); position:relative; flex:none; } .tog::after { content:""; position:absolute; top:3px; left:3px; width:18px; height:18px; background:var(--dim); }
+  .tog.on { border-color:var(--lime); background:rgba(187,254,47,.12); } .tog.on::after { left:21px; background:var(--lime); }
+  .opt { padding:13px 14px; display:flex; flex-direction:column; gap:10px; }
+  .opt .t { display:flex; align-items:center; gap:12px; } .opt .t b { font:600 15.5px/1.2 var(--sans); flex:1; } .opt .t b small { display:block; font:500 10.5px/1 var(--mono); letter-spacing:.06em; color:var(--mute); margin-top:6px; text-transform:uppercase; }
+  .opt.on { border-color:rgba(187,254,47,.55); }
+  .prog { display:grid; grid-template-columns:repeat(5,1fr); gap:4px; flex:none; } .prog i { height:3px; background:var(--hair2); } .prog i.on { background:var(--lime); }
+  .verdict { border:1px solid var(--red); background:rgba(255,82,50,.06); padding:14px; }
+  .verdict b { display:block; font:800 22px/1.05 var(--display); font-stretch:108%; text-transform:uppercase; color:var(--red); }
+  .fz { display:grid; grid-template-columns:1fr auto; gap:6px 10px; margin-top:12px; font:500 12px/1.2 var(--mono); letter-spacing:.04em; }
+  .pay { display:flex; flex-direction:column; }
+  .pay > div { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-bottom:1px solid var(--hair); }
+  .pay > div:last-child { border-bottom:0; }
+  .pay .k { font:500 10px/1 var(--mono); letter-spacing:.12em; color:var(--mute); text-transform:uppercase; }
+  .pay .v { font:500 14px/1.3 var(--sans); text-align:right; max-width:230px; }
+</style>
+</head>
+<body>
+<div class="board">
+
+<!-- 1 · WALLET -->
+<div class="col" id="s1"><div class="cap"><b>1</b>Wallet · Atlas</div>
+<div class="phone">
+  <div class="bar"><span data-plate="0x0db0457715a6445d8a65f820d717a6b39be66800" data-c="#bbfe2f" data-s="28"></span><div style="flex:1"><h1>Atlas</h1><span class="sub">Demo agent wallet · 4 fuses</span></div><span class="ib" style="font-family:var(--display);font-weight:800">i</span></div>
+  <div class="scroll">
+    <div class="hero">
+      <div class="lbl"><span class="m">In the wallet</span><span class="m"><span class="live" style="background:#0c1400;box-shadow:none"></span>Line closed</span></div>
+      <div class="big">0.0900<small>USD₮0</small></div>
+      <div class="dots"></div>
+      <div class="foot m"><span>Spent today 0.01 / 50</span><span>Fees left ≈ 16</span></div>
+    </div>
+    <div class="qa">
+      <div><span data-g="rob" data-s="18"></span>Try a scam</div>
+      <div><span data-g="new" data-s="18"></span>Add funds</div>
+      <div><span data-g="status" data-s="18"></span>OKLink</div>
+      <div class="warn"><span data-g="stop" data-s="18" data-c="#ff5232"></span>Freeze</div>
+    </div>
+    <div class="seg"><span class="on">Activity</span><span>Fuses</span><span>Spend</span><span>Owner</span></div>
+    <div class="rows">
+      <div class="row"><span class="ico"><span data-g="approve" data-s="16"></span></span><span><b>x402 price feed</b><small>#6 · saved payee · 2 h ago</small></span><span class="tr"><b>0.0100</b><small><span class="tag ok">Paid</span></small></span></div>
+      <div class="row"><span class="ico"><span data-g="stop" data-s="16" data-c="#ff5232"></span></span><span><b>Q4 bulk order, pay today</b><small>#4 · Daily cap blew · 13 h</small></span><span class="tr"><b>60.00</b><small><span class="tag no">Stopped</span></small></span></div>
+      <div class="row"><span class="ico"><span data-g="stop" data-s="16" data-c="#ff5232"></span></span><span><b>Urgent refund, support ticket</b><small>#2 · stranger · 13 h</small></span><span class="tr"><b>2.50</b><small><span class="tag no">Stopped</span></small></span></div>
+      <div class="row"><span class="ico"><span data-g="approve" data-s="16"></span></span><span><b>Invoice INV-7792, Kano Cotton</b><small>#5 · saved payee · 13 h</small></span><span class="tr"><b>0.05</b><small><span class="tag ok">Paid</span></small></span></div>
+    </div>
+  </div>
+  <div class="fade"></div>
+  <div class="dock"><div class="on"><i class="cart"></i>Wallet</div><div><i class="cart"></i>Try</div><div><i class="cart"></i>Market</div><div><i class="cart"></i>Sell</div><div><i class="cart"></i>0x1e91</div></div>
+</div>
+<p class="note">The balance is the hero, the four things you do sit right under it, and the rest of the old 7-screen page splits into four tabs. Activity is a list you tap for the full verdict (every fuse, the transaction) in a sheet. Explanations live behind the i button.</p></div>
+
+<!-- 2 · MARKET -->
+<div class="col" id="s2"><div class="cap"><b>2</b>Market</div>
+<div class="phone">
+  <div class="bar"><div style="flex:1"><h1>Fuse market</h1><span class="sub">TapeOut circuits you can install</span></div><span class="ib" style="font-family:var(--display);font-weight:800">i</span></div>
+  <div class="scroll">
+    <div class="stat3"><div><span class="m mute">Fuses</span><span class="v">4</span></div><div><span class="m mute">Decisions</span><span class="v">24</span></div><div><span class="m mute">Paid out</span><span class="v">0.024<small>USD₮0</small></span></div></div>
+    <div class="chips"><span class="on">All</span><span>Limits</span><span>Payees</span><span>Approvals</span><span>Breakers</span></div>
+    <div class="rows">
+      <div class="row"><span class="thumb" data-net="a"></span><span><b>Daily Cap</b><small>Caps spend per UTC day · #15</small></span><span class="tr"><b>0.001</b><small>per check</small></span></div>
+      <div class="row"><span class="thumb" data-net="b"></span><span><b>Payee Guard</b><small>Saved payees + a trial · #16</small></span><span class="tr"><b>0.001</b><small>per check</small></span></div>
+      <div class="row"><span class="thumb" data-net="c"></span><span><b>Breaker</b><small>Blows on a stranger · #17</small></span><span class="tr"><b>0.0005</b><small>per check</small></span></div>
+      <div class="row"><span class="thumb" data-net="d"></span><span><b>Two of Three</b><small>Big payments need 2 signers · #18</small></span><span class="tr"><b>0.002</b><small>per check</small></span></div>
+    </div>
+    <div class="card" style="padding:14px;display:flex;align-items:center;gap:12px;border-style:dashed"><span data-g="studio" data-s="20"></span><span style="flex:1"><b style="font:600 15px/1.2 var(--sans)">Your fuse here</b><span class="m mute" style="display:block;margin-top:6px">Design one, earn per decision</span></span><span class="chev dimc">→</span></div>
+  </div>
+  <div class="fade"></div>
+  <div class="dock"><div><i class="cart"></i>Wallet</div><div><i class="cart"></i>Try</div><div class="on"><i class="cart"></i>Market</div><div><i class="cart"></i>Sell</div><div><i class="cart"></i>0x1e91</div></div>
+</div>
+<p class="note">A store, not a brochure: three numbers, filter chips, and one row per fuse with its netlist as the thumbnail and its price. Tapping a row opens the fuse's own screen (what it does, test it, install). The paragraphs move to the i button.</p></div>
+
+<!-- 3 · SELL -->
+<div class="col" id="s3"><div class="cap"><b>3</b>Sell</div>
+<div class="phone">
+  <div class="bar"><div style="flex:1"><h1>Sell a fuse</h1><span class="sub">Earn on every decision</span></div><span class="ib" style="font-family:var(--display);font-weight:800">i</span></div>
+  <div class="scroll">
+    <div class="hero">
+      <div class="lbl"><span class="m">Ready to claim</span><span class="m">4 fuses listed</span></div>
+      <div class="big">0.0243<small>USD₮0</small></div>
+      <div class="dots"></div>
+      <div class="foot m" style="align-items:center"><span>24 decisions · 90% to you</span><span style="background:#0c1400;color:#bbfe2f;height:30px;display:inline-flex;align-items:center;padding:0 12px">Claim all</span></div>
+    </div>
+    <div class="seg"><span class="on">My fuses</span><span>List new</span><span>How it works</span></div>
+    <div class="rows">
+      <div class="row"><span class="ico"><span data-g="mine" data-s="16"></span></span><span><b>Daily Cap</b><small>6 decisions · 0.001 / check</small></span><span class="tr"><b>0.0054</b><small>to claim</small></span></div>
+      <div class="row"><span class="ico"><span data-g="approve" data-s="16"></span></span><span><b>Payee Guard</b><small>6 decisions · 0.001 / check</small></span><span class="tr"><b>0.0054</b><small>to claim</small></span></div>
+      <div class="row"><span class="ico"><span data-g="stop" data-s="16"></span></span><span><b>Breaker</b><small>6 decisions · 0.0005 / check</small></span><span class="tr"><b>0.0027</b><small>to claim</small></span></div>
+      <div class="row"><span class="ico"><span data-g="x402" data-s="16"></span></span><span><b>Two of Three</b><small>6 decisions · 0.002 / check</small></span><span class="tr"><b>0.0108</b><small>to claim</small></span></div>
+    </div>
+    <p class="m mute" style="text-align:center">Tap a fuse to change its price or listing</p>
+  </div>
+  <div class="fade"></div>
+  <div class="sticky"><span class="btn">Open Fuse Studio</span><span class="btn lime">List a fuse →</span></div>
+  <div class="dock"><div><i class="cart"></i>Wallet</div><div><i class="cart"></i>Try</div><div><i class="cart"></i>Market</div><div class="on"><i class="cart"></i>Sell</div><div><i class="cart"></i>0x1e91</div></div>
+</div>
+<p class="note">Earnings first, as a key card with one Claim button. Your fuses are rows; price, listing text and delisting open in a sheet for the fuse you tap, instead of four forms stacked open. The 4-step explainer is its own tab.</p></div>
+
+<!-- 4 · WIRE UP -->
+<div class="col" id="s4"><div class="cap"><b>4</b>Wire up · step 3 of 5</div>
+<div class="phone">
+  <div class="bar"><span class="ib">←</span><div style="flex:1"><h1>Wire up</h1><span class="sub">Step 3 of 5 · Fuses</span></div><span class="m mute">Exit</span></div>
+  <div class="scroll">
+    <div class="prog"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div>
+    <div><div style="font:800 30px/1 var(--display);font-stretch:108%;text-transform:uppercase;letter-spacing:-.01em">Pick the fuses</div><p class="cap1" style="margin-top:8px">Every payment must pass all of them.</p></div>
+    <div class="card opt on"><div class="t"><span data-g="mine" data-s="18"></span><b>Daily Cap<small>0.001 USD₮0 / check</small></b><i class="tog on"></i></div><div class="field"><small>Cap per day</small><span>50</span></div></div>
+    <div class="card opt on"><div class="t"><span data-g="approve" data-s="18"></span><b>Payee Guard<small>0.001 / check · 24 h cooling-off</small></b><i class="tog on"></i></div></div>
+    <div class="card opt on"><div class="t"><span data-g="stop" data-s="18"></span><b>Breaker<small>0.0005 / check</small></b><i class="tog on"></i></div></div>
+    <div class="card opt"><div class="t"><span data-g="x402" data-s="18" data-c="#5d5d59"></span><b>Two of Three<small>0.002 / check · approvals over 20</small></b><i class="tog"></i></div></div>
+  </div>
+  <div class="fade"></div>
+  <div class="sticky"><span class="btn" style="flex:none;width:110px">Back</span><span class="btn lime">Next · Fund it →</span></div>
+  <div class="dock"><div class="on"><i class="cart"></i>Wallet</div><div><i class="cart"></i>Try</div><div><i class="cart"></i>Market</div><div><i class="cart"></i>Sell</div><div><i class="cart"></i>0x1e91</div></div>
+</div>
+<p class="note">A real flow: one step per screen (Owner · Agent · Fuses · Payees · Fund), a progress bar, and Back/Next pinned to your thumb. Each fuse is a toggle card; its one setting appears when it's on. The plain-English describer becomes a "Describe your agent instead" option on this step.</p></div>
+
+<!-- 5 · TRY -->
+<div class="col" id="s5"><div class="cap"><b>5</b>Try to scam it · after a run</div>
+<div class="phone">
+  <div class="bar"><div style="flex:1"><h1>Try to scam it</h1><span class="sub">Atlas · real check() on X Layer</span></div><span class="ib" style="font-family:var(--display);font-weight:800">i</span></div>
+  <div class="scroll">
+    <div class="chips"><span>Pay the supplier</span><span class="on">Refund, new address</span><span>One letter off</span><span>Padded</span></div>
+    <div class="card pay">
+      <div><span class="k">To</span><span class="v">0x7c3e…d41b <span class="tag no" style="margin-left:6px">Stranger</span></span></div>
+      <div><span class="k">Amount</span><span class="v" style="font:700 20px/1 var(--display)">2.50 <span class="m mute">USD₮0</span></span></div>
+      <div><span class="k">Agent was told</span><span class="v">“Urgent refund for a customer, ticket #4471”</span></div>
+    </div>
+    <div class="verdict">
+      <span class="m red">Verdict · block 76,082,740</span>
+      <b style="margin-top:8px">Stopped at Payee Guard</b>
+      <div class="fz"><span>Daily Cap</span><span class="tag ok">Holds</span><span>Payee Guard</span><span class="tag no">Blew</span><span>Breaker</span><span class="tag no">Blew</span><span>Two of Three</span><span class="tag ok">Holds</span></div>
+      <p class="m mute" style="margin-top:12px">Nothing moved · 4 circuits answered</p>
+    </div>
+  </div>
+  <div class="fade"></div>
+  <div class="sticky"><span class="btn lime">Run it again →</span></div>
+  <div class="dock"><div><i class="cart"></i>Wallet</div><div class="on"><i class="cart"></i>Try</div><div><i class="cart"></i>Market</div><div><i class="cart"></i>Sell</div><div><i class="cart"></i>0x1e91</div></div>
+</div>
+<p class="note">Pick a trick from chips, see the payment as one card, run it with the pinned button. The verdict is one card with a line per fuse; the animated fuse line becomes a tap-to-watch replay, so the screen fits without scrolling.</p></div>
+
+</div>
+<script>
+  const G = {
+    mine: [".#####.", ".......", "#######", "#.....#", "#...###", "#.....#", "#######"],
+    new: ["...#...", "...#...", "...#...", "#######", "...#...", "...#...", "...#..."],
+    approve: [".......", "......#", ".....#.", "#...#..", ".#.#...", "..#....", "......."],
+    studio: ["####...", "#...#..", "#....#.", "#....##", "#....#.", "#...#..", "####..."],
+    rob: ["...#...", ".#####.", ".#...#.", "###.###", ".#...#.", ".#####.", "...#..."],
+    x402: ["..###..", ".#...#.", "#..#..#", "#.###.#", "#..#..#", ".#...#.", "..###.."],
+    status: [".......", "..#....", "..#....", ".#.#..#", "#..#.#.", "...##..", "......."],
+    stop: ["..###..", ".#...#.", "#....##", "#...#.#", "#..#..#", ".##...#", "..###.."],
+  };
+  const px = (rows, color, size) => { const c = size / rows.length; let r = ""; rows.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === "#") r += `<rect x="${x * c}" y="${y * c}" width="${c - 0.6}" height="${c - 0.6}"/>`; })); return `<svg class="px" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" fill="${color}">${r}</svg>`; };
+  document.querySelectorAll("[data-g]").forEach((el) => { el.innerHTML = px(G[el.dataset.g], el.dataset.c || "#bbfe2f", +(el.dataset.s || 14)); });
+  document.querySelectorAll("[data-plate]").forEach((el) => { const n = [...el.dataset.plate.slice(2)].map((h) => parseInt(h, 16)); const rows = Array.from({ length: 8 }, (_, y) => { const h = Array.from({ length: 4 }, (_, x) => ((n[(y * 4 + x) % n.length] + y + x) % 3 === 0 ? "#" : ".")); return [...h, ...h.slice().reverse()].join(""); }); el.innerHTML = px(rows, el.dataset.c, +el.dataset.s); });
+  // netlist thumbnails: dot columns with a few wires, seeded per fuse
+  document.querySelectorAll("[data-net]").forEach((el) => {
+    const seed = el.dataset.net.charCodeAt(0); let s = seed * 9301;
+    const rnd = () => ((s = (s * 9301 + 49297) % 233280) / 233280);
+    let svg = `<svg width="58" height="44" viewBox="0 0 58 44">`;
+    const cols = 6 + (seed % 4);
+    for (let c = 0; c < cols; c++) { const n = 2 + Math.floor(rnd() * 5); for (let k = 0; k < n; k++) { const x = 6 + c * (46 / cols), y = 6 + rnd() * 32; svg += `<rect x="${x}" y="${y}" width="2" height="2" fill="#bbfe2f" opacity="${0.5 + rnd() * 0.5}"/>`; if (rnd() > 0.55) svg += `<line x1="${x + 1}" y1="${y + 1}" x2="${x + 8}" y2="${6 + rnd() * 32}" stroke="#bbfe2f" stroke-opacity=".28" stroke-width=".6"/>`; } }
+    el.innerHTML = svg + `</svg>`;
+  });
+  const solo = new URLSearchParams(location.search).get("s");
+  if (solo) { document.body.classList.add("solo"); document.querySelectorAll(".col").forEach((c) => { if (c.id !== "s" + solo) c.remove(); }); }
+</script>
+</body>
+</html>

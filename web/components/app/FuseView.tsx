@@ -9,6 +9,8 @@ import Netlist from "@/components/landing/Netlist";
 import ChainNetlist from "./ChainNetlist";
 import MarketInstall from "./MarketInstall";
 import Loading from "./Loading";
+import { Responsive } from "./m/useMobile";
+import { FuseMobile } from "./m/MarketMobile";
 
 /** "Daily Cap" → Daily [Cap]. ; one word → [Breaker]. */
 function Title({ name }: { name: string }) {
@@ -35,7 +37,7 @@ export default function FuseView({ id }: { id: number }) {
   const name = meta?.name ?? f.name;
   const src = metaSource(f.metadataURI);
   const since = f.listedAt ? new Date(f.listedAt * 1000).toISOString().slice(0, 10) : "—";
-  return (
+  return <Responsive mobile={<FuseMobile data={data} f={f} />} desktop={
     <div className="page">
       {grid}
       <section className="try-head">
@@ -93,5 +95,5 @@ export default function FuseView({ id }: { id: number }) {
       </section>
       <div className="fv-back m"><Link className="lime" href="/app/market">← Every fuse</Link>{f.onAtlas ? <> · <Link className="lime" href="/app">Running on Atlas →</Link></> : null}</div>
     </div>
-  );
+  } />;
 }

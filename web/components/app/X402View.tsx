@@ -4,6 +4,7 @@ import type { Address } from "viem";
 import type { PaymentRequired } from "@/lib/x402core";
 import type { CheckResult } from "@/lib/atlas";
 import { short, OKLINK } from "@/lib/hooks";
+import { PageChrome } from "./m/chrome";
 
 export interface Offer { path: string; name: string; seller: string; price: string; payTo: Address; blurb: string; honest: boolean; url: string; offer: PaymentRequired | null }
 
@@ -96,13 +97,14 @@ export default function X402View({ offers, origin }: { offers: Offer[]; origin: 
   return (
     <div className="page">
       <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
-      <section className="try-head">
+      <PageChrome title="Pay per call" sub="x402 through the fuses" info={<><p>Agents pay for APIs with x402: the server answers 402 with a price, the agent pays and asks again. With Fusebox the price goes through the wallet&apos;s fuses first, so a scam price list is stopped like a scam invoice, before anything moves.</p>{STEPS.map(([h, p], i) => <p key={h}><b>0{i + 1} · {h}.</b> {p}</p>)}</>} />
+      <section className="try-head m-hide">
         <h1 className="disp" data-a>Pay <span className="lime">[per call]</span>.</h1>
         <p data-a>Agents pay for APIs with x402: the server answers <span className="m lime">402</span> with a price, the agent pays and asks again. With Fusebox the price goes through the wallet&apos;s fuses first (logic circuits taped out on TapeOut), so a scam price list is stopped like a scam invoice, before anything moves.</p>
       </section>
 
       <h2 className="sr">How a paid call works</h2>
-      <ol className="x4-steps" data-a>
+      <ol className="x4-steps m-hide" data-a>
         {STEPS.map(([h, p], i) => <li key={h}><span className="m lime">0{i + 1}</span><b className="m">{h}</b><p>{p}</p></li>)}
       </ol>
 
@@ -118,7 +120,7 @@ export default function X402View({ offers, origin }: { offers: Offer[]; origin: 
         </div>
       </section>
 
-      <section className="x4-why" data-a>
+      <section className="x4-why m-hide" data-a>
         <div><h3 className="m lime">Why a scheme of its own</h3><p>x402&apos;s <span className="m">exact</span> scheme has the payer sign a USD₮0 transfer off-chain. A Fusebox wallet is a contract that only pays through its fuses, so it can&apos;t sign one, and shouldn&apos;t: that signature would skip the fuses. In the <span className="m">fusebox</span> scheme the on-chain Decision is the proof.</p></div>
         <div><h3 className="m lime">What the seller checks</h3><p>The factory made the paying wallet (<span className="m">isWallet</span>), its Decision allowed this payee and price, USD₮0 really moved, the memo carries this offer&apos;s nonce, and the transaction hasn&apos;t bought anything before.</p></div>
         <div><h3 className="m lime">What the agent can&apos;t do</h3><p>Pay a seller its owner never saved, pay over the daily cap, or pay a big price without two approvers, however the API words its offer. The fuses don&apos;t read the offer. They read the payee, the amount and the wallet.</p></div>

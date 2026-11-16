@@ -10,6 +10,7 @@ import Loading from "./Loading";
 import { compile, decodeDraft, paramLabels } from "@/lib/studio";
 import { load } from "@/lib/circuits/tap02";
 import type { MarketFuse } from "@/lib/market";
+import { PageChrome } from "./m/chrome";
 
 type Row = SimPayment & { key: number };
 let k = 0;
@@ -126,7 +127,8 @@ export default function SimulateView() {
   return (
     <div className="page">
       {grid}
-      <section className="try-head">
+      <PageChrome title="Line simulator" sub="Real eval() on X Layer · free" info={<p>Pick fuses and their limits, line up the payments an agent might be asked to make, and run them through TapeOut&apos;s circuits. Every verdict is a real eval call on X Layer: free, no wallet, and nothing moves.</p>} />
+      <section className="try-head m-hide">
         <h1 className="disp" data-a>Test a <span className="lime">[line]</span>.</h1>
         <p data-a>Pick fuses and their limits, line up the payments an agent might be asked to make, and run them through TapeOut&apos;s circuits. Every verdict is a real <span className="m lime">eval</span> call on X Layer: free, no wallet, and nothing moves.</p>
       </section>

@@ -4,6 +4,12 @@ import { gsap, useGSAP, reduced } from "@/lib/gsap";
 import { useAtlas, short, OKLINK } from "@/lib/hooks";
 import type { CheckResult } from "@/lib/atlas";
 import LineWire, { type WireStatus } from "./LineWire";
+import { Responsive } from "./m/useMobile";
+import { PageChrome } from "./m/chrome";
+import { MChips, MRow, MSticky } from "./m/ui";
+import { Glyph } from "./Pixel";
+
+const SHORT: Record<string, string> = { bank: "New bank details", letter: "One letter off", padded: "Padded invoice", ceo: "The CEO needs it", refund: "Refund, new address", twice: "Sent twice", legit: "Pay the supplier ✓" };
 
 interface Trick { id: string; label: string; to: (s: string) => string; amount: string; memo: string; legit?: boolean; gap?: boolean }
 const rand = () => "0x" + Array.from(crypto.getRandomValues(new Uint8Array(20)), (b) => b.toString(16).padStart(2, "0")).join("");
@@ -42,7 +48,7 @@ export default function TryView() {
       const j = await r.json();
       if (!r.ok) { setErr(j.error || "Something went wrong."); return; }
       setRes(j); setRun({ id: Date.now(), status: (j as CheckResult).fuses.map((f) => (f.status === "pass" ? "pass" : "blew")) });
-      out.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      (out.current ?? document.getElementById("m-verdict"))?.scrollIntoView({ behavior: "smooth", block: "center" });
     } catch { setErr("Couldn't reach the server. Try again."); } finally { setBusy(false); }
   };
 
@@ -51,7 +57,42 @@ export default function TryView() {
   const t = TRICKS.find((x) => x.id === trick);
   const firstBad = res?.fuses.find((f) => f.status !== "pass");
   const fuses = (data?.fuses ?? [{ name: "Daily Cap" }, { name: "Payee Guard" }, { name: "Breaker" }, { name: "Two of Three" }]).map((f) => ({ name: f.name, meta: "" }));
-  return (
+  const saved = to.toLowerCase() === supplier.toLowerCase();
+  const mobileView = (
+    <div className="mpage">
+      <PageChrome title="Try to scam it" sub="Atlas · real check() on X Layer"
+        info={<>
+          <p>Pick a trick or write your own payment, the way an AI agent might be talked into it. Atlas&apos;s four TapeOut circuits answer through its real check() on X Layer: free, no wallet, and nothing moves.</p>
+          <p>The fuses never read the agent&apos;s story. However convincing it is, they only see the payee, the amount and the wallet&apos;s state.</p>
+          <p><a href={`${OKLINK}/address/${data?.wallet ?? ""}`} target="_blank" rel="noreferrer">Atlas on OKLink ↗</a></p>
+        </>} />
+      <MChips label="Pick a trick" items={TRICKS.map((x) => [x.id, SHORT[x.id] ?? x.label] as const)} value={trick} onChange={(id) => { pick(TRICKS.find((x) => x.id === id)!); setRes(null); }} />
+      <div className="mcard mpay">
+        <label className="mfield"><span className="m">Pay to {to ? <span className={`mtag ${saved ? "ok" : "no"}`} style={{ marginLeft: 8 }}>{saved ? "Saved supplier" : "Stranger"}</span> : null}</span><input aria-label="Pay to" value={to} onChange={(e) => { setTo(e.target.value); setTrick(null); setRes(null); }} spellCheck={false} /></label>
+        <label className="mfield"><span className="m">Amount · USD₮0</span><input aria-label="Amount, USD₮0" value={amount} onChange={(e) => { setAmount(e.target.value); setTrick(null); setRes(null); }} inputMode="decimal" /></label>
+        <label className="mfield"><span className="m">What the agent was told</span><textarea aria-label="What the agent was told" rows={2} value={memo} onChange={(e) => { setMemo(e.target.value); setTrick(null); }} /></label>
+      </div>
+      {err && <p className="mnote" style={{ color: "var(--red)" }} role="alert">{err}</p>}
+      <div id="m-verdict" aria-live="polite">
+        {res && (
+          <div className={`mverdict ${res.allowed ? "ok" : "no"}`}>
+            <span className="m">Verdict · block {res.block.toLocaleString("en-US")}</span>
+            <b>{res.allowed ? "Every fuse holds. Atlas would pay." : `Stopped at ${firstBad?.name}`}</b>
+            <div className="mrows">{res.fuses.map((f) => <MRow key={f.name} title={f.name} sub={f.why} value={<span className={`mtag ${f.status === "pass" ? "ok" : "no"}`}>{f.status === "pass" ? "Holds" : "Blew"}</span>} chev={false} className="tall" />)}</div>
+            <span className="m mute">{res.allowed ? "4 of 4 said yes" : `Nothing moved · ${res.fuses.filter((f) => f.status !== "pass").length} of 4 said no`}</span>
+          </div>
+        )}
+        {res && t?.gap && res.allowed && <p className="mnote"><b>No fuse on this line checks for duplicate invoices.</b> Anyone can design one, tape it out and earn on every check.</p>}
+        {res && t?.legit && res.allowed && <p className="mnote"><b>Real payments still go through:</b> a saved supplier, inside the cap, gets paid in the same call.</p>}
+      </div>
+      <div className="mrows">
+        <MRow href="/app/rob" icon={<Glyph name="rob" size={16} />} title="Let an AI agent read your scam" sub="Rob the agent" />
+        <MRow href="/app/simulate" icon={<Glyph name="sim" size={16} />} title="Test your own line of fuses" sub="Line simulator" />
+      </div>
+      <MSticky><button className="btn lime" onClick={go} disabled={busy || data?.source === "snapshot"}>{busy ? "Asking X Layer…" : res ? "Run it again" : "Run it through the fuses"} <span className="k">→</span></button></MSticky>
+    </div>
+  );
+  return <Responsive mobile={mobileView} desktop={
     <div className="page">
       <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
       <section className="try-head">
@@ -100,5 +141,5 @@ export default function TryView() {
         </div>
       </section>
     </div>
-  );
+  } />;
 }

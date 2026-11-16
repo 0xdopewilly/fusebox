@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { Status, Level } from "@/lib/status";
+import { PageChrome } from "./m/chrome";
 
 const WORD: Record<Level, string> = { ok: "Normal", warn: "Degraded", down: "Down" };
 const BANNER: Record<Level, string> = { ok: "Everything is working.", warn: "Working, with something to watch.", down: "Something is down." };
@@ -18,7 +19,8 @@ export default function StatusView({ initial }: { initial: Status }) {
   return (
     <div className="page">
       <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
-      <section className="try-head">
+      <PageChrome title="Status" sub="Every part, checked live" info={<p>Every part Fusebox depends on, checked live: X Layer&apos;s RPCs, TapeOut&apos;s processor, Atlas&apos;s fuses and prepaid fees, the AI agent, the x402 sellers and approver alerts.</p>} />
+      <section className="try-head m-hide">
         <h1 className="disp" data-a>System <span className="lime">[status]</span>.</h1>
         <p data-a>Every part Fusebox depends on, checked live: X Layer&apos;s RPCs, TapeOut&apos;s processor, Atlas&apos;s fuses and prepaid fees, the AI agent, the x402 sellers and approver alerts.</p>
       </section>

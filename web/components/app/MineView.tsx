@@ -7,6 +7,10 @@ import { short, OKLINK } from "@/lib/hooks";
 import type { FleetWallet } from "@/app/api/fleet/route";
 import { useWallet } from "./WalletProvider";
 import ConnectChoices from "./ConnectChoices";
+import { Responsive } from "./m/useMobile";
+import { PageChrome } from "./m/chrome";
+import { MHero, MRow, MStats } from "./m/ui";
+import { Glyph, Plate } from "./Pixel";
 import Loading from "./Loading";
 
 const ago = (t: number) => { const s = Math.max(0, Date.now() / 1000 - t); return s < 90 ? "just now" : s < 5400 ? `${Math.round(s / 60)} min ago` : s < 129600 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} d ago`; };
@@ -46,7 +50,31 @@ export default function MineView() {
     alerts: rows.filter((r) => r.status !== "live").length,
   } : null;
 
-  return (
+  const mobileView = (
+    <div className="mpage">
+      <PageChrome title="My wallets" sub={rows ? `${rows.length} wallet${rows.length === 1 ? "" : "s"} · your fleet` : "Your fleet"}
+        info={<p>Every Fusebox wallet your connected address owns, as one fleet: the money, the fees left, what&apos;s blown and what the agents did today. Read from X Layer; nothing is signed just to look.</p>} />
+      {!account ? <><p className="mcap">Connect the wallet that owns them. Nothing is signed just to look.</p><ConnectChoices /></>
+        : !rows ? <Loading label="Finding your wallets in the factory" error={err} /> : <>
+          {t && <MHero label="In your wallets" right={`${rows.length} wallet${rows.length === 1 ? "" : "s"}`} value={usd(t.balance)} unit="USD₮0"
+            foot={<><span>Fees {usd(t.fees)}</span><span>{t.today} decisions today</span></>} tone={t.alerts ? "bad" : undefined} />}
+          {t && rows.length > 0 && <MStats items={[["Live", live.length], ["Stopped today", <span key="s" style={{ color: t.stopped ? "var(--red)" : undefined }}>{t.stopped}</span>], ["Need a look", <span key="a" style={{ color: t.alerts ? "#e8b13a" : undefined }}>{t.alerts}</span>]]} />}
+          <div className="mrows">
+            {rows.map((r) => {
+              const [label] = STATUS[r.status];
+              return <MRow key={r.wallet} href={r.isAtlas ? "/app" : `/app/w/${r.wallet}`} icon={<Plate address={r.wallet} size={22} />}
+                title={r.isAtlas ? "Atlas" : short(r.wallet)} sub={`${label} · ${r.fuses} fuse${r.fuses === 1 ? "" : "s"}${r.blown.length ? ` · ${r.blown.join(", ")} blown` : ""}`}
+                value={usd(r.balance)} valueSub={r.covers === null ? "USD₮0" : `fees ≈ ${r.covers}`} />;
+            })}
+          </div>
+          <MRow href="/app/new" className="dashed" icon={<Glyph name="new" size={18} />} title={rows.length ? "Wire up another" : "Wire up your first wallet"} sub="Give an agent its own wallet with fuses" />
+          {rows.length > 0 && <button className={`btn danger${armed ? " armed" : ""}`} style={{ justifyContent: "center", height: 48 }} disabled={!live.length || q.running} onClick={() => (armed ? freezeAll() : setArmed(true))}>{armed ? `Freeze all ${live.length}? Tap again` : "Freeze every agent"}</button>}
+          {cur && <p className={`m ${cur.state === "error" ? "red" : "mute"}`} role="status">{cur.label}: {cur.state === "done" ? "done" : cur.state === "error" ? cur.error : cur.state === "mine" ? "confirming…" : "sign in your wallet…"}</p>}
+        </>}
+    </div>
+  );
+
+  return <Responsive mobile={mobileView} desktop={
     <div className="page">
       <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
       <section className="try-head">
@@ -103,5 +131,5 @@ export default function MineView() {
         </>
       )}
     </div>
-  );
+  } />;
 }

@@ -7,6 +7,10 @@ import { useAtlas, short, fmt, OKLINK } from "@/lib/hooks";
 import { useTxQueue } from "@/lib/useTxQueue";
 import { useWallet } from "./WalletProvider";
 import ConnectChoices from "./ConnectChoices";
+import { Responsive } from "./m/useMobile";
+import { PageChrome } from "./m/chrome";
+import { MLabel, MRow, MSticky } from "./m/ui";
+import { Glyph, Plate } from "./Pixel";
 import ApprovalInbox from "./ApprovalInbox";
 import ApproverAlerts from "./ApproverAlerts";
 
@@ -55,7 +59,40 @@ export default function ApproveView() {
   };
   const last = q.steps[q.steps.length - 1];
 
-  return (
+  const mobileView = (
+    <div className="mpage">
+      <PageChrome title="Approvals" sub="Two of three sign big payments"
+        info={<p>Above its threshold, a wallet with the Two of Three fuse pays only what two of its three approvers have signed off: this exact payee, this exact amount. Approvals expire {Math.round(ttl / 3600)} hours after the first one.</p>} />
+      {account && <ApproverAlerts account={account} />}
+      {account && <ApprovalInbox account={account} onPick={(r) => { setWallet(r.wallet); setTo(r.to); setAmount(r.amount); setTimeout(() => document.getElementById("m-approve")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); }} />}
+      <MLabel>Approve a payment</MLabel>
+      <div id="m-approve" />
+      {waiting.length > 0 && <div className="mrows">
+        {waiting.slice(0, 6).map((d) => <MRow key={d.id} onClick={() => { setTo(d.to); setAmount(d.amount); }} className={payee?.toLowerCase() === d.to.toLowerCase() && amount === d.amount ? "sel" : ""}
+          icon={<Glyph name="stop" size={16} color="var(--red)" />} title={d.memo || "No memo"} sub={`#${d.id} · to ${short(d.to)}`} value={fmt(d.amount, 2)} valueSub="USD₮0" chev={false} />)}
+      </div>}
+      <div className="mcard mpay">
+        <label className="mfield"><span className="m">Pay to</span><input aria-label="Pay to" value={to} onChange={(e) => setTo(e.target.value)} placeholder="0x…" spellCheck={false} /></label>
+        <label className="mfield"><span className="m">Amount · USD₮0</span><input aria-label="Amount, USD₮0" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" /></label>
+        <details className="mdetails"><summary className="m">Wallet · {valid ? short(wallet) : "—"}</summary><label className="mfield"><span className="sr">Wallet</span><input aria-label="Wallet" value={wallet} onChange={(e) => setWallet(e.target.value)} spellCheck={false} /></label></details>
+        {threshold !== null && amt && Number(amount) <= threshold && <p className="mnote">{amount} USD₮0 is under the {threshold} USD₮0 threshold, so Two of Three already lets it through.</p>}
+        {two < 0 && data && <p className="mnote">This wallet has no Two of Three fuse.</p>}
+      </div>
+      <MLabel right={<span className={count >= 2 ? "lime" : ""}>{count} of 2 needed</span>}>Approvers</MLabel>
+      <div className="mrows">
+        {(seats ?? [null, null, null]).map((s, i) => <MRow key={i} icon={s ? <Plate address={s} size={22} /> : <span />} title={s ? short(s) : "—"} sub={`Seat ${i + 1}${mySeat === i ? " · you" : ""}`}
+          value={<span className={`mtag ${(mask >> i) & 1 ? "ok" : "dim"}`}>{(mask >> i) & 1 ? "Signed" : "Not yet"}</span>} chev={false} />)}
+      </div>
+      {count >= 2 && <div className="mverdict ok"><b>Cleared</b><p className="mcap">Two approvers signed this exact payment. When the agent retries it, Two of Three holds.</p></div>}
+      {last && <p className="m mute" role="status">{last.label}: {last.state === "done" ? "done" : last.state === "error" ? last.error : "sign in your wallet…"}{last.hash ? <> · <a className="lime" href={`${OKLINK}/tx/${last.hash}`} target="_blank" rel="noreferrer">tx ↗</a></> : null}</p>}
+      {!account ? <ConnectChoices />
+        : mySeat < 0 ? <p className="mnote">Your connected wallet {short(account)} isn&apos;t one of this wallet&apos;s approvers.</p>
+        : !payee || !amt ? <p className="mnote">Pick a stopped payment, or enter the payee and amount.</p>
+        : <MSticky>{approvedByMe ? <button className="btn" disabled={q.running} onClick={() => act("revokeApproval")}>Revoke my approval</button> : <button className="btn lime" disabled={q.running} onClick={() => act("approvePayment")}>Approve as seat {mySeat + 1} <span className="k">→</span></button>}</MSticky>}
+    </div>
+  );
+
+  return <Responsive mobile={mobileView} desktop={
     <div className="page">
       <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
       <section className="try-head">
@@ -114,5 +151,5 @@ export default function ApproveView() {
         </div>
       </section>
     </div>
-  );
+  } />;
 }

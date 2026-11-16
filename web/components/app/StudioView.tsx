@@ -17,6 +17,7 @@ import { short, OKLINK } from "@/lib/hooks";
 import { arcs } from "./ChainNetlist";
 import { useWallet } from "./WalletProvider";
 import ConnectChoices from "./ConnectChoices";
+import { PageChrome } from "./m/chrome";
 
 const transistorsAbi = [
   { type: "function", name: "mint", stateMutability: "payable", inputs: [{ name: "id", type: "uint256" }, { name: "amount", type: "uint256" }], outputs: [] },
@@ -144,7 +145,8 @@ export default function StudioView() {
   return (
     <div className="page">
       {grid}
-      <section className="try-head">
+      <PageChrome title="Fuse Studio" sub="Build, prove, tape out" info={<p>Build a fuse from rules, prove it against every input, and tape it out on TapeOut from your own wallet. It lists in the market with its description on-chain, and earns you its fee on every check, the no&apos;s included.</p>} />
+      <section className="try-head m-hide">
         <h1 className="disp" data-a>Fuse <span className="lime">[studio]</span>.</h1>
         <p data-a>Build a fuse from rules, prove it against every input, and tape it out on TapeOut from your own wallet. It lists in the market with its description on-chain, and earns you its fee on every check, the no&apos;s included.</p>
       </section>
