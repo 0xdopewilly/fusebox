@@ -7,6 +7,9 @@ import { runLine, type Payee, type SimFuse, type SimPayment, type SimStep } from
 import { pub } from "@/lib/client-chain";
 import { gsap, reduced } from "@/lib/gsap";
 import Loading from "./Loading";
+import { compile, decodeDraft, paramLabels } from "@/lib/studio";
+import { load } from "@/lib/circuits/tap02";
+import type { MarketFuse } from "@/lib/market";
 
 type Row = SimPayment & { key: number };
 let k = 0;
@@ -35,7 +38,16 @@ const okAmt = (s: string) => /^\d+(\.\d{1,6})?$/.test(s.trim());
 /** Pick fuses and settings, line up payments, and run them through TapeOut's real circuits on X Layer. */
 export default function SimulateView() {
   const { data: market, error } = useMarket();
-  const listed = useMemo(() => (market?.fuses ?? []).filter((f) => f.listed).sort((a, b) => a.fuseId - b.fuseId), [market]);
+  // a Fuse Studio draft (?draft=…) joins the list as fuse -1, evaluated in the browser from its own TAP-02 bytes
+  const [draft, setDraft] = useState<{ fuse: MarketFuse; circuit: ReturnType<typeof load>; code: string } | null>(null);
+  useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("draft"); if (!code) return;
+    const d = decodeDraft(code); if (!d) return;
+    const c = compile(d.rule);
+    const name = `Draft · ${d.name || "untitled"}`;
+    setDraft({ code, circuit: load(c.net.bytes, c.nIn, 1), fuse: { fuseId: -1, key: "draft", name, processor: "0x0000000000000000000000000000000000000000", circuitId: 0, designer: "0x0000000000000000000000000000000000000000", socket: d.rule.socket, gates: c.net.gates, nState: c.nState, fee: "0", listed: true, decisions: 0, earned: "0", lifetimeEarned: "0", metadataURI: "", onAtlas: false, netlistHash: c.net.keccak as `0x${string}`, nIn: c.nIn, listedAt: 0, original: false, meta: { name, params: paramLabels(d.rule) } } });
+  }, []);
+  const listed = useMemo(() => [...(draft ? [draft.fuse] : []), ...(market?.fuses ?? []).filter((f) => f.listed).sort((a, b) => a.fuseId - b.fuseId)], [market, draft]);
   const [sel, setSel] = useState<Record<number, { on: boolean; v: Record<string, string> }>>({});
   const [rows, setRows] = useState<Row[]>(PRESETS.scam.rows);
   const [spent, setSpent] = useState("0"); const [hours, setHours] = useState("2");
@@ -46,17 +58,21 @@ export default function SimulateView() {
 
   // the line starts as the four shipped fuses (or what ?f=id:a:b,… asks for)
   useEffect(() => {
-    if (!listed.length || Object.keys(sel).length) return;
-    // read once in the browser, like the approve page (a Suspense boundary would hold back the page's reveal)
+    // set up every listed fuse not set up yet: the draft can arrive before the market does, and vice versa
+    const missing = listed.filter((f) => !sel[f.fuseId]);
+    if (!missing.length) return;
+    // read in the browser, like the approve page (a Suspense boundary would hold back the page's reveal)
     const ask = new Map((new URLSearchParams(window.location.search).get("f") ?? "").split(",").filter(Boolean).map((t) => { const [id, a, b] = t.split(":"); return [Number(id), { a, b }] as const; }));
-    const next: typeof sel = {};
-    for (const f of listed) {
+    const next: typeof sel = { ...sel };
+    for (const f of missing) {
       const fields = fieldsFor(f.socket, f.original ? undefined : f.meta?.params);
       const want = ask.get(f.fuseId);
-      next[f.fuseId] = { on: ask.size ? !!want : f.original, v: Object.fromEntries(fields.map((x) => [x.k, (x.k === "a" ? want?.a : want?.b) ?? String(x.def)])) };
+      // with a draft, it stands in for the shipped fuse of its socket
+      const on = f.fuseId === -1 ? true : ask.size ? !!want : f.original && !(draft && draft.fuse.socket === f.socket);
+      next[f.fuseId] = { on, v: Object.fromEntries(fields.map((x) => [x.k, (x.k === "a" ? want?.a : want?.b) ?? String(x.def)])) };
     }
     setSel(next);
-  }, [listed, sel]);
+  }, [listed, sel, draft]);
 
   const line = listed.filter((f) => sel[f.fuseId]?.on);
   const problems: string[] = [];
@@ -64,7 +80,7 @@ export default function SimulateView() {
     const fields = fieldsFor(f.socket, f.original ? undefined : f.meta?.params);
     const v: { a: number; b: number } = { a: 0, b: 0 };
     for (const x of fields) { const r = readField(x, sel[f.fuseId].v[x.k] ?? ""); if ("error" in r) problems.push(`${f.meta?.name ?? f.name}: ${r.error}`); else v[x.k] = r.n; }
-    return { fuseId: f.fuseId, name: f.meta?.name ?? f.name, socket: f.socket, processor: f.processor, circuitId: f.circuitId, nState: f.nState, ...v };
+    return { fuseId: f.fuseId, name: f.meta?.name ?? f.name, socket: f.socket, processor: f.processor, circuitId: f.circuitId, nState: f.nState, ...v, local: f.fuseId === -1 ? draft?.circuit : undefined };
   });
   if (!line.length) problems.push("Splice in at least one fuse");
   if (!rows.length) problems.push("Add a payment");
@@ -197,7 +213,9 @@ export default function SimulateView() {
             <p className="sim-sum">
               {stopped === 0 ? "Every payment went through: this line didn't stop anything here." : `${stopped} of ${ran.rows.length} stopped before a cent moved.`}{" "}
               Each check costs the fuse&apos;s fee on a real wallet ({ran.fuses.reduce((t, f) => t + Number(market.fuses.find((x) => x.fuseId === f.fuseId)?.fee ?? 0), 0).toFixed(4)} USDT0 a decision for this line).{" "}
-              <Link className="lime" href={`/app/new?f=${ran.fuses.map((f) => [f.fuseId, f.a, f.b].join(":")).join(",")}`}>Wire up a wallet with this line →</Link>
+              {ran.fuses.some((f) => f.fuseId === -1)
+                ? <Link className="lime" href={`/app/studio?draft=${draft?.code ?? ""}`}>Back to the Studio to tape it out →</Link>
+                : <Link className="lime" href={`/app/new?f=${ran.fuses.map((f) => [f.fuseId, f.a, f.b].join(":")).join(",")}`}>Wire up a wallet with this line →</Link>}
             </p>
           )}
         </section>

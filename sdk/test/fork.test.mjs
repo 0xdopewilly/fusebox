@@ -77,3 +77,27 @@ test("history: every decision, oldest first", async () => {
   assert.ok(h.every((d, i) => i === 0 || d.id > h[i - 1].id));
   assert.equal(h.at(-1).memo === undefined, true);
 });
+
+test("approvals: a payment over the threshold says where to sign, and shows in the approver's pending list", async () => {
+  reset();
+  cast("rpc", "evm_increaseTime", "86400"); cast("rpc", "evm_mine"); // a new UTC day: only Two of Three stands in the way
+  const r = await agent.pay(SUPPLIER, "25", "Over the threshold");
+  assert.equal(r.sent, false);
+  assert.ok(r.needsApproval?.url.includes("/app/approve?wallet="), r.summary);
+  const recorded = await agent.pay(SUPPLIER, "25", "Recorded so the approvers see it", { checkFirst: false });
+  assert.equal(recorded.paid, false);
+  await new Promise((r) => setTimeout(r, 5000));
+  const waiting = await reader.pending(APPROVER);
+  assert.ok(waiting.some((w) => w.amount === "25" && w.to.toLowerCase() === SUPPLIER.toLowerCase() && w.signed === 0), JSON.stringify(waiting.map((w) => w.amount)));
+});
+
+test("pay: an empty fee balance is explained, not sent", async () => {
+  const fee = (await reader.status()).feeBalance;
+  // leave less than one decision's worth, then put it back
+  const keep = 1000n, have = BigInt(Math.round(Number(fee) * 1e6));
+  if (have > keep) cast("send", ADDRESSES.atlas, "withdrawFeeBalance(uint256,address)", String(have - keep), OWNER, "--from", OWNER, "--unlocked");
+  await assert.rejects(agent.pay(SUPPLIER, "0.1", "Out of fees", { checkFirst: false }), /fee balance .* can't cover one decision .* top it up/);
+  cast("send", ADDRESSES.usdt0, "approve(address,uint256)", "0x852a278322667BB86A2665a38CbC5Bfd551B20d7", "5000000", "--from", OWNER, "--unlocked");
+  cast("send", "0x852a278322667BB86A2665a38CbC5Bfd551B20d7", "deposit(address,uint256)", ADDRESSES.atlas, "5000000", "--from", OWNER, "--unlocked");
+  assert.ok(Number((await reader.status()).feeBalance) >= 5);
+});

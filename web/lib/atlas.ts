@@ -74,7 +74,7 @@ export async function getHistory(addr: Address) {
     const uri = await client.readContract({ address: DEPLOYMENT.registry, abi: fuseRegistryAbi, functionName: "metadataURI", args: [s.fuseId] }).catch(() => "");
     return (uri && decodeDataUri(uri)?.name) || byKey;
   }));
-  return { rows: hist.rows, payees: hist.payees, names };
+  return { rows: hist.rows, payees: hist.payees, names, sockets: slots.map((s) => Number(s.socket)), settings: slots.map((s) => ({ a: Number(s.params.a), b: Number(s.params.b) })) };
 }
 
 // ------------------------------------------------------------------ snapshot

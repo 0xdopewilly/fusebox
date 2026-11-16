@@ -138,3 +138,10 @@ export function fuseboxLogs(head: number): Promise<RawLog[]> {
   })().finally(() => { inflight = null; });
   return inflight;
 }
+
+/** Every wallet the Fusebox factory has created, from its WalletCreated events (Atlas included). */
+export async function factoryWallets(head: number): Promise<Address[]> {
+  const out = new Set<string>([DEPLOYMENT.atlas.toLowerCase()]);
+  for (const l of await fuseboxLogs(head)) if (l.topics[0] === TOPIC.walletCreated && l.address === DEPLOYMENT.factory.toLowerCase() && l.topics[1]) out.add(("0x" + l.topics[1].slice(26)).toLowerCase());
+  return [...out] as Address[];
+}

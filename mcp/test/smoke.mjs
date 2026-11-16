@@ -13,6 +13,7 @@ console.log("tools:", tools.map((t) => t.name).join(", "));
 const call = async (name, args = {}) => { const r = await client.callTool({ name, arguments: args }); console.log(`\n${name}(${JSON.stringify(args)})${r.isError ? " ERROR" : ""}\n  ${r.content[0].text.split("\n")[0]}`); return r; };
 await call("fusebox_check", { to: "0x1111111111111111111111111111111111111111", amount: "2.5" });
 await call("fusebox_check", { to: "0x69dB89385E8a69278a49335C432d0c70ec86A6C4", amount: "0.05" });
+await call("fusebox_check", { to: "0x69dB89385E8a69278a49335C432d0c70ec86A6C4", amount: "25" }); // over Two of Three's threshold: says where approvers sign
 await call("fusebox_status");
 if (process.argv[2] === "pay") {
   await call("fusebox_pay", { to: "0x69dB89385E8a69278a49335C432d0c70ec86A6C4", amount: "0.05", memo: "Invoice INV-7801, Kano Cotton (MCP smoke test)" });

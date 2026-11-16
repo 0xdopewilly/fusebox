@@ -26,6 +26,18 @@ type Key = (typeof FUSES)[number]["key"];
 interface Ctx { wallet?: Address; block?: number }
 const clamp = (v: string) => Math.max(0, Math.min(254, Math.floor(Number(v) || 0)));
 
+/** Starting points: a whole line with its limits, and why it fits that kind of agent. */
+const STARTERS: { id: string; name: string; why: string; on: Record<Key, boolean>; cap: string; cool: string; trial: string; thr: string }[] = [
+  { id: "invoice", name: "Invoice agent", why: "Pays a known set of suppliers. New bank details get a test payment, never the invoice; big ones need two people.",
+    on: { "daily-cap": true, "payee-guard": true, breaker: true, "approval-2of3": true }, cap: "50", cool: "24", trial: "2", thr: "20" },
+  { id: "procure", name: "Procurement bot", why: "Larger, less frequent orders. A higher cap and threshold, a longer cooling-off for a new vendor.",
+    on: { "daily-cap": true, "payee-guard": true, breaker: true, "approval-2of3": true }, cap: "200", cool: "72", trial: "5", thr: "50" },
+  { id: "refund", name: "Refund desk", why: "Pays customers it has never paid before, so no payee book or Breaker: the daily cap and approvals carry the weight.",
+    on: { "daily-cap": true, "payee-guard": false, breaker: false, "approval-2of3": true }, cap: "100", cool: "24", trial: "2", thr: "10" },
+  { id: "allowance", name: "Small allowance", why: "For a new or experimental agent: a few USDT0 a day, saved payees only, one stranger blows it.",
+    on: { "daily-cap": true, "payee-guard": true, breaker: true, "approval-2of3": false }, cap: "10", cool: "24", trial: "1", thr: "20" },
+];
+
 function Toggle({ on, flip, name }: { on: boolean; flip: () => void; name: string }) {
   return <span className={`tg${on ? " on" : ""}`} role="checkbox" aria-checked={on} aria-label={`Splice in ${name}`} tabIndex={0} onClick={flip} onKeyDown={(e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); flip(); } }} data-cursor={on ? "Remove" : "Add"} />;
 }
@@ -164,6 +176,22 @@ export default function NewWalletView() {
             <div>
               <h3>Pick the fuses</h3>
               <p className="lead">Each fuse is a TapeOut circuit on X Layer. A payment needs a yes from every fuse you splice in, and each check pays the fuse&apos;s designer.</p>
+              <div className="starters" role="group" aria-label="Start from a line">
+                {STARTERS.map((x) => {
+                  const active = FUSES.every((f) => on[f.key] === x.on[f.key]) && (!x.on["daily-cap"] || cap === x.cap) && (!x.on["payee-guard"] || (cool === x.cool && trial === x.trial)) && (!x.on["approval-2of3"] || thr === x.thr);
+                  const f = FUSES.filter((y) => x.on[y.key]).map((y) => (y.key === "daily-cap" ? `${y.id}:${x.cap}` : y.key === "payee-guard" ? `${y.id}:${x.cool}:${x.trial}` : y.key === "approval-2of3" ? `${y.id}:${x.thr}` : `${y.id}`)).join(",");
+                  return (
+                    <div key={x.id} className={`starter${active ? " on" : ""}`}>
+                      <button onClick={() => { setOn(x.on); setCap(x.cap); setCool(x.cool); setTrial(x.trial); setThr(x.thr); }} aria-pressed={active}>
+                        <b>{x.name}</b>
+                        <span className="m mute">{FUSES.filter((y) => x.on[y.key]).map((y) => y.name).join(" · ")}</span>
+                        <span className="starter-why">{x.why}</span>
+                      </button>
+                      <Link className="m lime" href={`/app/simulate?f=${f}`}>Test it →</Link>
+                    </div>
+                  );
+                })}
+              </div>
               {FUSES.map((f) => (
                 <div className="fopt" key={f.key}>
                   <Toggle on={on[f.key]} flip={() => toggle(f.key)} name={f.name} />

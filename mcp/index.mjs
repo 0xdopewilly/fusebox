@@ -19,6 +19,9 @@ const RPC = process.env.FUSEBOX_RPC || "https://rpc.xlayer.tech";
 const WALLET = getAddress(process.env.FUSEBOX_WALLET || ATLAS);
 const KEY = process.env.FUSEBOX_AGENT_KEY;
 const EXPLORER = "https://www.oklink.com/xlayer";
+const APP = process.env.FUSEBOX_APP || "https://fusebox-xlayer.vercel.app";
+/** where the wallet's approvers sign this exact payment (Two of Three) */
+const approvalUrl = (to, amount) => `${APP}/app/approve?wallet=${WALLET}&to=${to}&amount=${amount}`;
 const chain = defineChain({ id: 196, name: "X Layer", nativeCurrency: { name: "OKB", symbol: "OKB", decimals: 18 }, rpcUrls: { default: { http: [RPC] } }, contracts: { multicall3: { address: "0xcA11bde05977b3631167028862bE2a173976CA11" } } });
 const pub = createPublicClient({ chain, transport: http(RPC), batch: { multicall: true } });
 const agent = KEY ? privateKeyToAccount(KEY.startsWith("0x") ? KEY : `0x${KEY}`) : null;
@@ -33,9 +36,15 @@ async function fuses() {
   const n = Number(await pub.readContract({ ...W, functionName: "fuseCount" }));
   return Promise.all(Array.from({ length: n }, async (_, i) => {
     const s = await pub.readContract({ ...W, functionName: "slotAt", args: [BigInt(i)] });
-    const spent = await pub.readContract({ ...W, functionName: "spentToday", args: [BigInt(i)] });
+    const registry = await pub.readContract({ ...W, functionName: "registry" });
+    const [spent, fee] = await Promise.all([
+      pub.readContract({ ...W, functionName: "spentToday", args: [BigInt(i)] }),
+      pub.readContract({ address: registry, abi: ABI.registry, functionName: "feeOf", args: [s.fuseId] }).catch(() => s.maxFee),
+    ]);
     const [key, name] = SOCKET[Number(s.socket)] ?? [`socket-${s.socket}`, `Fuse ${i + 1}`];
-    return { slot: i, key, name, circuitId: Number(s.circuitId), processor: s.processor, a: Number(s.params.a), b: Number(s.params.b), latched: s.nState > 0 && s.state !== "0x" && BigInt(s.state) !== 0n, spentToday: Number(usd(spent)) };
+    // what a check of this fuse costs: the lower of the designer's fee and the one the owner accepted
+    const feeCap = Number(usd(fee < s.maxFee ? fee : s.maxFee));
+    return { slot: i, key, name, circuitId: Number(s.circuitId), processor: s.processor, a: Number(s.params.a), b: Number(s.params.b), latched: s.nState > 0 && s.state !== "0x" && BigInt(s.state) !== 0n, spentToday: Number(usd(spent)), feeCap };
   }));
 }
 
@@ -65,7 +74,7 @@ const parseAmount = (a) => { if (!/^\d{1,9}(\.\d{1,6})?$/.test(String(a)) || Num
 const text = (obj, summary) => ({ content: [{ type: "text", text: `${summary}\n\n${JSON.stringify(obj, null, 2)}` }], structuredContent: obj });
 const fail = (e) => ({ isError: true, content: [{ type: "text", text: e.message || String(e) }] });
 
-const server = new McpServer({ name: "fusebox", version: "0.1.0" });
+const server = new McpServer({ name: "fusebox", version: "0.2.0" });
 
 server.registerTool("fusebox_check", {
   title: "Check a payment against the fuses",
@@ -77,8 +86,9 @@ server.registerTool("fusebox_check", {
     const [[allowed, status], fs, block] = await Promise.all([pub.readContract({ ...W, functionName: "check", args: [USDT0, payee, amt] }), fuses(), pub.getBlockNumber()]);
     const verdicts = await explain(fs, status, payee, amt);
     const no = verdicts.filter((v) => v.verdict === "blew");
-    const summary = allowed ? `Every fuse holds: the wallet would pay ${amount} USDT0 to ${payee}.` : `Stopped: ${no.map((v) => `${v.fuse} (${v.why})`).join("; ")}. Nothing would move.`;
-    return text({ allowed, wallet: WALLET, to: payee, amount, block: Number(block), fuses: verdicts }, summary);
+    const needs = !allowed && fs.some((f, i) => f.key === "approval-2of3" && verdicts[i].verdict === "blew");
+    const summary = allowed ? `Every fuse holds: the wallet would pay ${amount} USDT0 to ${payee}.` : `Stopped: ${no.map((v) => `${v.fuse} (${v.why})`).join("; ")}. Nothing would move.${needs && no.length === 1 ? ` Two of the wallet's approvers can sign this exact payment at ${approvalUrl(payee, amount)}; retry once they have.` : ""}`;
+    return text({ allowed, wallet: WALLET, to: payee, amount, block: Number(block), fuses: verdicts, ...(needs ? { approval_url: approvalUrl(payee, amount) } : {}) }, summary);
   } catch (e) { return fail(e); }
 });
 
@@ -91,6 +101,11 @@ server.registerTool("fusebox_pay", {
     if (!signer) throw new Error("This server is read-only: set FUSEBOX_AGENT_KEY to the agent's private key to pay.");
     const payee = parseTo(to), amt = parseAmount(amount);
     if (!(await pub.readContract({ ...W, functionName: "isAgent", args: [agent.address] }))) throw new Error(`${agent.address} isn't an agent of ${WALLET}.`);
+    // decisions are charged from the prepaid fee balance: explain an empty one instead of sending a doomed tx
+    const registry = await pub.readContract({ ...W, functionName: "registry" });
+    const [fee, slots] = await Promise.all([pub.readContract({ address: registry, abi: ABI.registry, functionName: "feeBalance", args: [WALLET] }), fuses()]);
+    const per = slots.reduce((t, f) => t + Number(f.feeCap ?? 0), 0);
+    if (per > 0 && Number(usd(fee)) + 1e-9 < per) throw new Error(`The wallet's prepaid fee balance (${usd(fee)} USDT0) can't cover one decision (${per.toFixed(6)} USDT0): ask the owner to top it up.`);
     const hash = await signer.writeContract({ ...W, functionName: "pay", args: [USDT0, payee, amt, memo], gas: 3_000_000n });
     const r = await pub.waitForTransactionReceipt({ hash, timeout: 120_000 });
     if (r.status !== "success") throw new Error(`The transaction reverted: ${EXPLORER}/tx/${hash}`);
@@ -99,9 +114,10 @@ server.registerTool("fusebox_pay", {
     const fs = await fuses();
     const verdicts = fs.map((f, i) => ({ fuse: f.name, verdict: STATUS[d.status[i]] === "pass" ? "holds" : "blew" }));
     const blew = verdicts.filter((v) => v.verdict === "blew").map((v) => v.fuse);
-    const out = { paid: d.allowed, decision: Number(d.decisionId), to: payee, amount, memo, fuses: verdicts, feePaid: usd(d.feePaid), tx: `${EXPLORER}/tx/${hash}` };
+    const needs = !d.allowed && fs.some((f, i) => f.key === "approval-2of3" && verdicts[i].verdict === "blew");
+    const out = { paid: d.allowed, decision: Number(d.decisionId), to: payee, amount, memo, fuses: verdicts, feePaid: usd(d.feePaid), tx: `${EXPLORER}/tx/${hash}`, ...(needs ? { approval_url: approvalUrl(payee, amount) } : {}) };
     const summary = d.allowed ? `Paid ${amount} USDT0 to ${payee} (decision #${out.decision}). Fees ${out.feePaid} USDT0. ${out.tx}`
-      : `Stopped by ${blew.join(", ")}: nothing moved (decision #${out.decision}). Ask the wallet's owner before trying again. ${out.tx}`;
+      : `Stopped by ${blew.join(", ")}: nothing moved (decision #${out.decision}). ${needs && blew.length === 1 ? `It needs two of the wallet's approvers: they can sign at ${out.approval_url}, then retry.` : "Ask the wallet's owner before trying again."} ${out.tx}`;
     return text(out, summary);
   } catch (e) { return fail(e); }
 });

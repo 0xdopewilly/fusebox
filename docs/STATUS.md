@@ -33,6 +33,9 @@ The app always shows the live figures.
 | Owners and designers | An owner console on every wallet page (all ~20 owner calls), install from the market, designer price/listing/description tools, per-fuse pages, Atom feeds, CSV export and browser alerts. Fuse descriptions are `fusebox-fuse/1` JSON stored on-chain as data URIs. |
 | Fuse Studio (`/app/studio`) | Rules (OR across groups, AND within one; N strikes for the Breaker socket) compiled with the circuits toolchain, proved in the browser (2^24 inputs in about 2 s), then mint, tape-out and listing from the designer's wallet, with an on-chain description. Daily Cap, Per-Payment Cap and Two of Three rebuild byte-identical to the circuits on TapeOut. |
 | Line simulator (`/app/simulate`) | Any listed fuses and settings, payments in order, every verdict from TapeOut's `eval`/`step` on X Layer with spend and latch state carried forward. |
+| Approver inbox (`/app/approve`) | Every payment an approval fuse stopped, across all wallets where the connected address holds a seat, until a later decision pays it; signatures so far; one-tap approve and revoke; an Atom feed per approver. The SDK and MCP point agents to it. |
+| Fleet view (`/app/mine`) | All of an owner's wallets: balances, fees left and decisions covered, blown fuses, today's activity, status flags, freeze every agent. |
+| Starter lines and Studio drafts | The wizard starts from four tested lines; Studio drafts run in the simulator in the browser (identical to their taped-out twin) and travel as links. |
 | Spending analytics | Paid vs stopped per day (one scale), top payees, what each fuse stopped, a range filter, tooltips and a table view; colours validated for colour-blind separation on the dark surface. |
 | SDK (`sdk/`) | `fusebox-sdk`: check, pay (checked first by default), approve, freeze, watch, history, status. |
 | Rival fuses (`circuits/src/rivals.ts`) | Per-Payment Cap (37 NAND), Strict Payee Book (39), Two-Strike Breaker (16 NAND + 2 LATCH), Lead Approver (43). Exhaustively tested, taped out and listed on a mainnet fork, and paid through end to end. The mainnet tape-out (about 0.02 OKB) waits on funds. |
@@ -51,6 +54,8 @@ The app always shows the live figures.
 | Rival fuses (fork) | 17 flows: a wallet running all four rivals, one strike vs two, reset, names, setting labels, CSV, the fuse page. |
 | Simulator vs wallet (fork) | 24 payments across the shipped and rival lines: every fuse's verdict in the simulator equals a real wallet's. |
 | Fuse Studio (fork) | 17 flows: a rule built in the UI, proved on 2^24 inputs, minted, taped out and listed; TapeOut's processor gives the rule's answers; a 3-strike breaker from the Studio runs in a real wallet (strikes 1-2 refused without blowing, 3 blows, reset clears). |
+| Approver inbox (fork) | 11 flows: stopped by Two of Three, in the right inbox and nobody else's, approved in the UI, second signature, cleared, the retry paid, moved to paid-after-approval, the feed. |
+| Fleet, starters, drafts (fork) | 14 flows, including a Studio draft evaluated in the browser matching its taped-out twin on TapeOut payment for payment. |
 | SDK (fork) | 6 groups: status, check, pay (not sent / sent / forced), approve, freeze, watch, history. |
 | Safari engine | WebKit 18.2 on 12 pages at iPhone and desktop sizes: no script errors and no sideways overflow. |
 | Accessibility | axe-core finds 0 violations on every page at desktop and phone sizes. Lighthouse accessibility scores 100. |

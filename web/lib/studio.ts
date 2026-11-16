@@ -141,3 +141,20 @@ export function bitsFromFields(socket: number, f: Fields): number[] {
   for (const p of pinsOf(socket)) for (let k = 0; k < p.width; k++) bits.push(((f[p.name] ?? 0) >> k) & 1);
   return bits;
 }
+
+/** A draft as a URL-safe string: the rule and its name, so a design can be shared or tested before it's taped out. */
+export function encodeDraft(r: Rule, name = ""): string {
+  const json = JSON.stringify({ s: r.socket, g: r.groups.map((g) => g.map((c) => [c.kind, c.k])), n: r.strikes, name: name.slice(0, 40) });
+  const b64 = typeof btoa === "function" ? btoa(unescape(encodeURIComponent(json))) : Buffer.from(json, "utf8").toString("base64");
+  return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+export function decodeDraft(s: string): { rule: Rule; name: string } | null {
+  try {
+    const b64 = s.replace(/-/g, "+").replace(/_/g, "/");
+    const json = typeof atob === "function" ? decodeURIComponent(escape(atob(b64))) : Buffer.from(b64, "base64").toString("utf8");
+    const j = JSON.parse(json) as { s: number; g: [string, number][][]; n: number; name?: string };
+    const rule: Rule = { socket: Number(j.s), groups: (j.g ?? []).map((g) => g.map(([kind, k]) => ({ kind: String(kind), k: Number(k) }))), strikes: Number(j.n) || 1 };
+    if (![1, 2, 3, 4].includes(rule.socket) || ruleProblem(rule)) return null;
+    return { rule, name: typeof j.name === "string" ? j.name.slice(0, 40) : "" };
+  } catch { return null; }
+}

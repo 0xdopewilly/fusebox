@@ -5,7 +5,7 @@ import { decodeEventLog, formatEther, parseUnits, type Address, type Hex } from 
 import { fuseRegistryAbi, tapeoutProcessorAbi } from "@/lib/abi";
 import { DEP, pub } from "@/lib/client-chain";
 import { SOCKETS } from "@/lib/sockets";
-import { CONDS, compile, condOf, paramLabels, ruleProblem, ruleText, type Cond, type Rule } from "@/lib/studio";
+import { CONDS, compile, condOf, decodeDraft, encodeDraft, paramLabels, ruleProblem, ruleText, type Cond, type Rule } from "@/lib/studio";
 import { prove, type Proof } from "@/lib/studioProof";
 import { encodeMeta } from "@/lib/fuseMeta";
 import { decodeNetlist } from "@/lib/tap02";
@@ -80,6 +80,13 @@ export default function StudioView() {
 
   // describe it
   const [name, setName] = useState(""); const [summary, setSummary] = useState(""); const [fee, setFee] = useState("0.001");
+  // a shared draft (?draft=…) opens as it was designed
+  useEffect(() => {
+    const d = decodeDraft(new URLSearchParams(window.location.search).get("draft") ?? ""); if (!d) return;
+    setSocket(d.rule.socket); setGroups(d.rule.groups); setStrikes(d.rule.strikes); setName(d.name);
+  }, []);
+  const draftCode = problem ? "" : encodeDraft(rule, name);
+  const [copied, setCopied] = useState(false);
   const text = ruleText(rule);
   const feeOk = /^\d+(\.\d{1,6})?$/.test(fee.trim()) && Number(fee) <= 1;
   const metaUri = encodeMeta({ name: name.trim() || undefined, summary: (summary.trim() || `Allows a payment when ${text}.`).slice(0, 200), rule: text.slice(0, 160), designer: account ? short(account) : undefined, params: paramLabels(rule) });
@@ -194,6 +201,11 @@ export default function StudioView() {
           )}
         </div>
         <p className="oc-say">The netlist is decoded from its own TAP-02 bytes and run, 32 inputs at a time, against the rule written in plain code. The same bytes are what TapeOut stores and what the registry pins by hash.</p>
+        <div className="st-draft m">
+          <Link className={`dt-btn${draftCode ? "" : " off"}`} href={draftCode ? `/app/simulate?draft=${draftCode}` : "#"} aria-disabled={!draftCode}>Try it on payments in the simulator →</Link>
+          <button className="dt-btn" disabled={!draftCode} onClick={() => { navigator.clipboard?.writeText(`${location.origin}/app/studio?draft=${draftCode}`); setCopied(true); setTimeout(() => setCopied(false), 1600); }}>{copied ? "Draft link copied" : "Copy a link to this draft"}</button>
+          <span className="mute">Both are free: nothing is taped out until you say so below.</span>
+        </div>
       </section>
 
       <section className="st-ship" data-a>

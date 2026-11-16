@@ -48,6 +48,17 @@ const s = await fb.status();   // balance, prepaid fees, each fuse (and whether 
 const h = await fb.history();  // every decision, oldest first
 ```
 
+## Approvals
+
+When an approval fuse is what said no, `check` and `pay` say so and give the page where approvers sign:
+
+```ts
+const r = await agent.pay(payee, "40", "Q4 bulk order");
+if (r.needsApproval) notifyApprovers(r.needsApproval.url); // then retry once two have signed
+
+const waiting = await fb.pending(approverAddress); // everything waiting on this approver, across wallets
+```
+
 ## Approve and freeze
 
 ```ts
@@ -68,6 +79,7 @@ await agent.freeze();                  // agent, approver or owner: stop everyth
 | `history()` | decisions from Fusebox's indexed log (X Layer RPCs cap log ranges) |
 | `watch(onDecision, { pollingInterval? })` | returns a function that stops watching |
 | `approve(to, amount)` / `freeze()` | approver sign-off, emergency stop |
+| `pending(approver)` | payments waiting on an approver, across wallets |
 | `xLayer`, `ADDRESSES`, the contract ABIs | for your own viem calls |
 
 Amounts are USDT0 with up to 6 decimals. Fuses from any designer work; ones that aren't Fusebox's own are named

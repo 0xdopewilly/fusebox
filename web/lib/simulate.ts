@@ -3,6 +3,8 @@ import { parseUnits, toHex, type Address, type Hex } from "viem";
 import { tapeoutProcessorAbi } from "./abi";
 import { pub } from "./client-chain";
 import { SOCKETS } from "./sockets";
+import { beat, type Circuit } from "./circuits/tap02";
+import { bitsFromFields } from "./studio";
 
 /**
  * Runs a sequence of payments through a line of fuses using TapeOut's own processor on X Layer: every verdict is
@@ -11,7 +13,11 @@ import { SOCKETS } from "./sockets";
  * from paid payments only, payee age in hours saturated at 255, the Breaker's "suspect" = not in the payee book,
  * and latch state carried forward after every decision, paid or stopped.
  */
-export interface SimFuse { fuseId: number; name: string; socket: number; processor: Address; circuitId: number; nState: number; a: number; b: number }
+export interface SimFuse {
+  fuseId: number; name: string; socket: number; processor: Address; circuitId: number; nState: number; a: number; b: number;
+  /** a Fuse Studio draft: evaluated here from its own TAP-02 bytes instead of on TapeOut (it isn't taped out yet) */
+  local?: Circuit;
+}
 export type Payee = "saved" | "new" | "stranger";
 export interface SimPayment { memo: string; to: Payee; amount: string; seats: [boolean, boolean, boolean] }
 export type Verdict = "pass" | "blew" | "error";
@@ -53,7 +59,14 @@ export async function runLine(fuses: SimFuse[], payments: SimPayment[], opts: { 
     const p = payments[i];
     const spentBefore = Number(spent) / 1e6;
     const res = await Promise.all(fuses.map(async (f, k) => {
-      const inputs = packInputs(f.socket, inputsFor(f, p, spent, opts.newPayeeHours));
+      const fields = inputsFor(f, p, spent, opts.newPayeeHours);
+      if (f.local) {
+        const st = Array.from({ length: f.nState }, (_, i) => (parseInt(state[k].slice(2) || "0", 16) >> i) & 1);
+        const r = beat(f.local, st, bitsFromFields(f.socket, fields));
+        const next = f.nState ? toHex(new Uint8Array([r.newState.reduce((v, b, i) => v | (b << i), 0)])) : undefined;
+        return { v: (r.outputs[0] ? "pass" : "blew") as Verdict, next };
+      }
+      const inputs = packInputs(f.socket, fields);
       try {
         if (f.nState > 0) {
           const [next, o] = await pub.readContract({ address: f.processor, abi: tapeoutProcessorAbi, functionName: "step", args: [BigInt(f.circuitId), state[k], inputs] });
@@ -70,6 +83,11 @@ export async function runLine(fuses: SimFuse[], payments: SimPayment[], opts: { 
       if (r.next === undefined || r.v === "error") return;
       state[k] = r.next;
       const f = fuses[k];
+      if (f.local) {
+        const st = Array.from({ length: f.nState }, (_, i) => (parseInt(state[k].slice(2) || "0", 16) >> i) & 1);
+        latched[k] = beat(f.local, st, bitsFromFields(f.socket, { set: 0, clear: 0, attempt: 1, suspect: 0 })).outputs[0] === 0;
+        return;
+      }
       try {
         const [, o] = await pub.readContract({ address: f.processor, abi: tapeoutProcessorAbi, functionName: "step", args: [BigInt(f.circuitId), state[k], packInputs(f.socket, { set: 0, clear: 0, attempt: 1, suspect: 0 })] });
         latched[k] = !okOut(o);

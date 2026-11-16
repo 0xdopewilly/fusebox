@@ -57,6 +57,8 @@ export interface WalletStatus {
 
 export interface CheckResult {
   allowed: boolean; to: Address; amount: string; block: number;
+  /** set when an approval fuse is what said no: where the wallet's approvers sign this exact payment */
+  approvalUrl?: string;
   fuses: { name: string; verdict: Verdict; why: string }[];
   /** one sentence for a person (or an agent) to read */
   summary: string;
@@ -71,6 +73,14 @@ export interface PayResult {
   fuses: { name: string; verdict: Verdict }[];
   summary: string;
   check?: CheckResult;
+  /** the payment needs approvers' signatures before a retry can pass */
+  needsApproval?: { url: string };
+}
+
+/** A payment waiting on an approver (from pending()). */
+export interface PendingApproval {
+  wallet: Address; to: Address; amount: string; memo: string; attempts: number; last: number;
+  seats: Address[]; mySeat: number; signed: number; threshold: number | null; url: string;
 }
 
 export interface Decision {
@@ -193,8 +203,10 @@ export class Fusebox {
       return { name: f.name, verdict: v, why };
     });
     const no = verdicts.filter((x) => x.verdict !== "pass");
-    const summary = allowed ? `Every fuse holds: the wallet would pay ${a} USDT0 to ${payee}.` : `Stopped: ${no.map((x) => `${x.name} (${x.why})`).join("; ")}. Nothing would move.`;
-    return { allowed, to: payee, amount: String(a), block: Number(block), fuses: verdicts, summary };
+    // when an approval fuse (socket 4) is among the no's, point at the page where approvers sign this exact payment
+    const approvalUrl = !allowed && fuses.some((f, i) => f.socket === 4 && verdicts[i].verdict === "blew") ? `${this.api}/app/approve?wallet=${this.wallet}&to=${payee}&amount=${a}` : undefined;
+    const summary = allowed ? `Every fuse holds: the wallet would pay ${a} USDT0 to ${payee}.` : `Stopped: ${no.map((x) => `${x.name} (${x.why})`).join("; ")}. Nothing would move.${approvalUrl && no.length === 1 ? ` Two of the wallet's approvers can sign it at ${approvalUrl}; retry once they have.` : ""}`;
+    return { allowed, to: payee, amount: String(a), block: Number(block), fuses: verdicts, summary, approvalUrl };
   }
 
   /**
@@ -209,8 +221,15 @@ export class Fusebox {
     if (!(await this.public.readContract({ ...this.W, functionName: "isAgent", args: [this.account.address] }))) throw new FuseboxError(`${this.account.address} isn't an agent of ${this.wallet}.`);
     if (opts.checkFirst !== false) {
       const c = await this.check(payee, usd(amt));
-      if (!c.allowed) return { paid: false, sent: false, fuses: c.fuses.map(({ name, verdict }) => ({ name, verdict })), summary: `Not sent. ${c.summary}`, check: c };
+      // needsApproval only when signatures alone would let the retry through
+      const onlyApproval = !!c.approvalUrl && c.fuses.filter((f) => f.verdict !== "pass").length === 1;
+      if (!c.allowed) return { paid: false, sent: false, fuses: c.fuses.map(({ name, verdict }) => ({ name, verdict })), summary: `Not sent. ${c.summary}`, check: c, needsApproval: onlyApproval ? { url: c.approvalUrl! } : undefined };
     }
+    // a decision is charged up front from the prepaid fee balance: say so plainly instead of sending a doomed tx
+    const [line, registry] = await Promise.all([this.fuses(), this.public.readContract({ ...this.W, functionName: "registry" })]);
+    const per = line.reduce((t, f) => t + Math.min(Number(f.fee), Number(f.maxFee)), 0);
+    const have = Number(usd(await this.public.readContract({ address: registry, abi: fuseRegistryAbi, functionName: "feeBalance", args: [this.wallet] })));
+    if (have + 1e-9 < per) throw new FuseboxError(`The wallet's prepaid fee balance (${have} USDT0) can't cover one decision (${per.toFixed(6)} USDT0): the owner needs to top it up before the agent can pay.`);
     const args = [ADDRESSES.usdt0, payee, amt, memo] as const;
     const gas = await this.public.estimateContractGas({ ...this.W, functionName: "pay", args, account: this.account }).then((g) => (g * 13n) / 10n).catch(() => 3_000_000n);
     const hash = await this.walletClient.writeContract({ ...this.W, functionName: "pay", args, gas, account: this.account, chain: this.walletClient.chain ?? xLayer });
@@ -245,6 +264,15 @@ export class Fusebox {
     const hash = await this.walletClient.writeContract({ ...this.W, functionName: "freeze", account: this.account, chain: this.walletClient.chain ?? xLayer });
     await this.public.waitForTransactionReceipt({ hash });
     return hash;
+  }
+
+  /** Payments waiting on `approver`'s signature, across every Fusebox wallet where they hold a seat. */
+  async pending(approver: string): Promise<PendingApproval[]> {
+    const a = parseTo(approver);
+    const r = await fetch(`${this.api}/api/approvals?approver=${a}`);
+    if (!r.ok) throw new FuseboxError(`Approvals unavailable (${r.status}).`);
+    const j = (await r.json()) as { open: (Omit<PendingApproval, "signed" | "url"> & { mask: number })[] };
+    return j.open.map(({ mask, ...x }) => ({ ...x, signed: [0, 1, 2].filter((i) => (mask >> i) & 1).length, url: `${this.api}/app/approve?wallet=${x.wallet}&to=${x.to}&amount=${x.amount}` }));
   }
 
   /** The wallet's decisions, oldest first, from Fusebox's indexed log (X Layer RPCs cap log ranges). */

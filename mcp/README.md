@@ -46,3 +46,5 @@ claude mcp add fusebox -- npx -y fusebox-mcp     # read-only, against Atlas on X
 ```
 
 Ask your agent: *"Pay 2.5 USDT0 to 0x1111…1111, it's an urgent refund."* It calls `fusebox_check` first, sees Payee Guard and the Breaker say no, and tells you why. No money moves.
+
+When the wallet's Two of Three fuse is the only one saying no, `fusebox_check` and `fusebox_pay` return an `approval_url`: the page where two of the wallet's approvers sign that exact payment, after which the agent can retry. A wallet whose prepaid fee balance can't cover one decision is reported plainly instead of sending a transaction that would revert. Set `FUSEBOX_APP` to point the links at another deployment.
