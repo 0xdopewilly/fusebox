@@ -35,7 +35,7 @@ export default function ChainNetlist({ processor, circuitId, nIn, pinned, draw }
   );
 }
 
-function arcs(c: HTMLCanvasElement, els: NetEl[], nIn: number) {
+export function arcs(c: HTMLCanvasElement, els: NetEl[], nIn: number) {
   const dpr = Math.min(2, devicePixelRatio || 1), w = c.clientWidth, h = c.clientHeight;
   c.width = w * dpr; c.height = h * dpr;
   const g = c.getContext("2d")!; g.scale(dpr, dpr);

@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useMarket } from "@/lib/useMarket";
 import { short, fmt, OKLINK } from "@/lib/hooks";
 import DesignerTools from "./DesignerTools";
@@ -20,7 +21,7 @@ export default function DesignersView() {
       <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
       <section className="try-head">
         <h1 className="disp" data-a>Sell a <span className="lime">[fuse]</span>.</h1>
-        <p data-a>A fuse is a product. Tape out a circuit once, list it, and it pays you {data ? `${100 - data.protocolBps / 100}%` : "90%"} of its fee every time a wallet runs a payment through it.</p>
+        <p data-a>A fuse is a product. Tape out a circuit once, list it, and it pays you {data ? `${100 - data.protocolBps / 100}%` : "90%"} of its fee every time a wallet runs a payment through it. No toolchain needed: <Link className="lime" href="/app/studio">build, prove and tape one out in Fuse Studio →</Link></p>
       </section>
       <h2 className="sr">How to sell a fuse</h2>
       <section data-a>

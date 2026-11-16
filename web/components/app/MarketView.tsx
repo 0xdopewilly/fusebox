@@ -73,7 +73,7 @@ export default function MarketView() {
             <div className="fz" style={{ borderStyle: "dashed" }}>
               <div><div className="ix" style={{ color: "var(--dim)" }}>+</div></div>
               <div style={{ gridColumn: "2 / 5" }}><h3 style={{ color: "var(--mute)" }}>Your fuse here</h3><p className="say">Duplicate-invoice checks, business-hours only, per-payee caps, velocity limits. Design it as a NAND circuit, tape it out, list it, and earn from every decision it makes.</p></div>
-              <div style={{ gridColumn: "5 / 7", display: "flex", alignItems: "center" }}><Link className="btn lime" href="/app/designers" data-cursor="Earn"><span className="roll"><span>Sell a fuse</span><span aria-hidden="true">Sell a fuse</span></span> <span className="k">→</span></Link></div>
+              <div style={{ gridColumn: "5 / 7", display: "flex", alignItems: "center" }}><Link className="btn lime" href="/app/studio" data-cursor="Earn"><span className="roll"><span>Sell a fuse</span><span aria-hidden="true">Sell a fuse</span></span> <span className="k">→</span></Link></div>
             </div>
           </div>
         </>

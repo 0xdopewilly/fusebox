@@ -22,6 +22,7 @@ const SECTIONS = [
   { id: "fees", title: "Fees and budgets", group: "Concepts" },
   { id: "wallet", title: "The wallet API", group: "Build" },
   { id: "mcp", title: "MCP tools", group: "Build" },
+  { id: "sdk", title: "TypeScript SDK", group: "Build" },
   { id: "designers", title: "Sell a fuse", group: "Build" },
   { id: "contracts", title: "Contracts", group: "Reference" },
   { id: "security", title: "Security", group: "Reference" },
@@ -177,6 +178,22 @@ if (allowed) await agent.writeContract({ address: WALLET, abi: fuseboxWalletAbi,
               </table></div>
             </section>
 
+            <section id="sdk">
+              <h2>TypeScript SDK</h2>
+              <p>For agents and services that don&apos;t speak MCP, <code>fusebox-sdk</code> is a typed client built on viem. <code>pay</code> checks first and doesn&apos;t send a payment the fuses would refuse, since a refused payment is still recorded and its checks are still paid for.</p>
+              <Code label="Install">{`npm install fusebox-sdk viem`}</Code>
+              <Code label="Check, pay, follow">{`import { Fusebox } from "fusebox-sdk";
+
+const fb = new Fusebox({ wallet: "0xYourFuseboxWallet", account: process.env.FUSEBOX_AGENT_KEY });
+
+const c = await fb.check("0x69dB…A6C4", "12.5");      // every fuse's verdict and why, free
+const r = await fb.pay("0x69dB…A6C4", "12.5", "Invoice INV-7790");
+if (!r.paid) console.log(r.summary);                  // "Not sent. Stopped: Daily Cap (…)"
+
+const stop = fb.watch((d) => { if (!d.paid) notify(d); });  // decisions as they land`}</Code>
+              <p className="small">Also <code>status()</code>, <code>history()</code>, <code>approve(to, amount)</code> for approvers and <code>freeze()</code>. Source and tests in <a href="https://github.com/0xdopewilly/fusebox/tree/main/sdk" target="_blank" rel="noreferrer">sdk/</a>.</p>
+            </section>
+
             <section id="designers">
               <h2>Sell a fuse</h2>
               <ol className="dsteps">
@@ -184,6 +201,7 @@ if (allowed) await agent.writeContract({ address: WALLET, abi: fuseboxWalletAbi,
                 <li><b>Tape it out</b> on an X Layer TapeOut processor: mint one transistor per gate and call <code>tapeout(netlist, nIn, nOut)</code>. You get the circuit NFT.</li>
                 <li><b>List it</b> on the <Link href="/app/designers">designers page</Link>, or call <code>registry.list(processor, circuitId, socket, netlistHash, fee, uri)</code>. The registry checks the pinout, the gate budget (512), the state rules and the netlist hash against the chain.</li>
                 <li><b>Earn on every decision</b>, the no&apos;s included. Claim with <code>claim(fuseId, to)</code>. Sell the NFT and the income moves with it. Wallet owners install your fuse from the <Link href="/app/market">fuse market</Link> in one signature.</li>
+                <li><b>Or skip the toolchain.</b> <Link href="/app/studio">Fuse Studio</Link> builds the circuit from rules (OR across groups, AND within one, or N strikes for the Breaker socket), compiles it to NAND gates with the same toolchain, proves the bytes against the rule on every input (2^24 for the Daily Cap socket), then mints the transistors, tapes it out and lists it from your wallet. Built there, Daily Cap and Two of Three come out byte-identical to circuits #15 and #18.</li>
                 <li><b>Describe it.</b> A listing&apos;s <code>metadataURI</code> holds a small <code>fusebox-fuse/1</code> JSON (name, summary, description, rule). The designers page writes it on X Layer itself as a <code>data:application/json;base64</code> URI, so the description needs no host; an https link to the same JSON works too. Every fuse gets its own page, e.g. <Link href="/app/fuse/1">/app/fuse/1</Link>.</li>
                 <li><b>Run it like a product.</b> From the designers page, change the fee (<code>setFee</code>), delist it from new installs (<code>setListed</code>) or link a page that explains it (<code>setMetadataURI</code>). A lower fee applies to everyone at once; a higher one only to wallets whose owner accepts it.</li>
               </ol>

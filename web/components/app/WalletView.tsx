@@ -10,6 +10,7 @@ import LineWire, { type WireStatus } from "./LineWire";
 import Netlist from "@/components/landing/Netlist";
 import OwnerConsole from "./OwnerConsole";
 import DecisionTools from "./DecisionTools";
+import SpendView from "./SpendView";
 import Loading from "./Loading";
 
 /** A number that rolls to its new value whenever it changes. */
@@ -153,6 +154,8 @@ export default function WalletView({ address, from }: { address?: string; from?:
           </div>
         )}
       </div>
+
+      <SpendView wallet={a.wallet} refreshKey={a.counts.decisions} />
 
       <div className="blockhead" data-b><h2 className="disp">Decisions</h2><span className="m mute">{a.counts.decisions} on-chain · {a.counts.allowed} paid · {a.counts.blocked} stopped</span></div>
       <div data-b><DecisionTools wallet={a.wallet} rows={a.decisions} fresh={fresh} names={a.fuses.map((x) => x.name)} /></div>

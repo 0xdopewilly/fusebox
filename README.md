@@ -6,10 +6,10 @@ Fusebox wires an AI agent's wallet through small logic circuits taped out on [Ta
 
 - **Live site:** https://fusebox-xlayer.vercel.app
 - **Live app:** https://fusebox-xlayer.vercel.app/app (Atlas, a real agent wallet on X Layer mainnet)
-- **For agents:** `claude mcp add fusebox -- npx -y fusebox-mcp` ([npm](https://www.npmjs.com/package/fusebox-mcp))
+- **For agents:** `claude mcp add fusebox -- npx -y fusebox-mcp` ([npm](https://www.npmjs.com/package/fusebox-mcp)), or the TypeScript SDK [`fusebox-sdk`](sdk) (check, pay checked-first, approve, freeze, watch, history)
 - **Try to scam it:** https://fusebox-xlayer.vercel.app/app/try. Write the payment an agent might be tricked into; the app runs Atlas's real `check()` on X Layer. It's free, needs no wallet, and nothing moves.
-- **For owners:** every wallet page has an owner console (fuses, payees, agents, approvers, money, ownership), an Atom feed of its decisions, a full CSV export and browser alerts for stopped payments.
-- **For designers:** every fuse has its own page (e.g. [/app/fuse/1](https://fusebox-xlayer.vercel.app/app/fuse/1)), installs from the market in one signature, and describes itself on-chain (`fusebox-fuse/1` metadata as a data URI).
+- **For owners:** every wallet page has an owner console (fuses, payees, agents, approvers, money, ownership), spending analytics (paid vs stopped per day, top payees, what each fuse stopped), an Atom feed of its decisions, a full CSV export and browser alerts for stopped payments. The [line simulator](https://fusebox-xlayer.vercel.app/app/simulate) runs any line of fuses on a sequence of payments with TapeOut's own `eval`/`step`, and matches a real wallet fuse for fuse.
+- **For designers:** [Fuse Studio](https://fusebox-xlayer.vercel.app/app/studio) builds a fuse from rules, compiles it to NAND gates, proves the bytes on every input in the browser, then mints, tapes out and lists it from your wallet (built there, Daily Cap and Two of Three come out byte-identical to circuits #15 and #18). Every fuse has its own page (e.g. [/app/fuse/1](https://fusebox-xlayer.vercel.app/app/fuse/1)), installs from the market in one signature, and describes itself on-chain (`fusebox-fuse/1` metadata as a data URI).
 
 ## Live on X Layer mainnet (chain 196)
 
@@ -55,6 +55,7 @@ Every address is in [`deployments/xlayer-mainnet.json`](deployments/xlayer-mainn
 |---|---|
 | [`circuits/`](circuits) | The TAP-02 netlist toolchain (builder, encoder, simulator), the four shipped fuses and four rival designs for the same sockets ([`src/rivals.ts`](circuits/src/rivals.ts)), all with exhaustive tests. `scripts/publish-rivals.mjs` tapes the rivals out and lists them (rehearsed on a fork; `--dry` prices it). |
 | [`contracts/`](contracts) | `FuseRegistry`, `FuseboxWallet` and `FuseboxFactory` (Foundry), the unit and fuzz tests, the X Layer fork tests, and the launch scripts. |
+| [`sdk/`](sdk) | [`fusebox-sdk`](sdk/README.md): a typed client for agents and services (viem). Tested against a mainnet fork. |
 | [`mcp/`](mcp) | [`fusebox-mcp`](https://www.npmjs.com/package/fusebox-mcp): `fusebox_check`, `fusebox_pay` and `fusebox_status` for any MCP agent (`npx -y fusebox-mcp`). |
 | [`web/`](web) | The site and app (Next.js, GSAP, three.js, viem). They read X Layer mainnet directly. |
 | [`deweb/`](deweb) | The DeWEB edition: one self-contained page with no backend, built for circuit #15's container (`15.2.272.tape`, served by TapeKit), plus a resumable publisher. |
