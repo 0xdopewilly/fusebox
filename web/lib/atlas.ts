@@ -34,6 +34,8 @@ export interface Atlas {
   /** Owner-console fields (absent from older snapshots). */
   agents?: Address[]; pendingOwner?: Address; approvalTtl?: number;
   limits?: { maxDecisions: number; maxBlocked: number; decisionsToday: number; blockedToday: number; day: number };
+  /** The log history is still being read (a long gap after an RPC outage): decisions and payees fill in on a later poll. */
+  historyLoading?: boolean;
 }
 
 // ------------------------------------------------------------------ decision log (from the shared log layer)
@@ -100,6 +102,7 @@ export async function isFuseboxWallet(addr: Address) {
   return client.readContract({ address: DEPLOYMENT.factory, abi: fuseboxFactoryAbi, functionName: "isWallet", args: [addr] });
 }
 
+const HISTORY_WAIT_MS = 20_000;
 async function build(addr: Address): Promise<Atlas> {
   const W = { address: addr, abi: fuseboxWalletAbi } as const;
   const R = { address: DEPLOYMENT.registry, abi: fuseRegistryAbi } as const;
@@ -154,7 +157,9 @@ async function build(addr: Address): Promise<Atlas> {
       earned: usd(earned), lifetimeEarned: usd(life), spentToday: usd(spent), token: s.params.token, socket: Number(s.socket),
     } satisfies FuseSlot;
   }));
-  const hist = await histP;
+  // The wallet's live state never waits on its history: a long log catch-up keeps running in the background (the scan
+  // is shared and resumable) and a later poll picks it up.
+  const hist = await Promise.race([histP, new Promise<null>((r) => setTimeout(() => r(null), HISTORY_WAIT_MS))]) ?? { rows: [] as DecisionRow[], payees: new Map<Address, number>(), agents: new Set<Address>(), loading: true };
   const paidToDesigners = usd(hist.rows.reduce((t, r) => t + BigInt(Math.round(Number(r.fee) * 1e6)), 0n));
   return {
     source: IS_FORK ? "fork" : "mainnet", block: Number(head.number), time: Number(head.timestamp),
@@ -166,6 +171,7 @@ async function build(addr: Address): Promise<Atlas> {
     paidToDesigners, isAtlas: isAtlas(addr),
     agents: [...hist.agents], pendingOwner, approvalTtl: Number(approvalTtl),
     // the counters roll over at the first decision of a new UTC day; before that, today's count is 0
+    ...("loading" in hist ? { historyLoading: true } : {}),
     limits: { maxDecisions: Number(maxDec), maxBlocked: Number(maxBlk), day: Number(day),
       decisionsToday: Number(day) === Math.floor(Number(head.timestamp) / 86400) ? Number(decToday) : 0,
       blockedToday: Number(day) === Math.floor(Number(head.timestamp) / 86400) ? Number(blkToday) : 0 },

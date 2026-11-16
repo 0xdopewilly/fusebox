@@ -886,3 +886,4 @@ a.flt:hover { background: rgba(255, 255, 255, 0.02); }
 .nudge .btn { height: 36px; padding: 0 12px; }
 @media (max-width: 900px) { .nudge { bottom: calc(92px + env(safe-area-inset-bottom)); } }
 @media (prefers-reduced-motion: reduce) { .nudge { animation: none; } }
+.hist-wait { margin: 4px 0 14px; }

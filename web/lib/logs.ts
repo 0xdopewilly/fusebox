@@ -12,7 +12,8 @@ import index from "./deployments/mainnet-index.json";
  *  - blocks before `scannedTo` come from mainnet-index.json (scripts/index-logs.mjs, refreshed on every build);
  *  - after that, aligned 1,000-block windows. Finished windows never change, so each is fetched once and kept in
  *    Next's data cache, shared by every server instance. An hourly warm-up keeps the uncached tail short.
- * X Layer caps eth_getLogs ranges: tapeout.net 1,000 blocks, rpc.xlayer.tech and drpc 100.
+ * X Layer caps eth_getLogs ranges: tapeout.net 1,000 blocks, rpc.xlayer.tech and drpc 100. Batches are capped too:
+ * drpc's free plan refuses more than 3 calls per batch, and rpc.xlayer.tech rate-limits past about 5.
  */
 export interface RawLog { address: Address; topics: Hex[]; data: Hex; blockNumber: number; transactionHash: Hex; logIndex: number }
 
@@ -29,8 +30,9 @@ const TOPICS = Object.values(TOPIC);
 
 const LOGS_RPC = process.env.FUSEBOX_LOGS_RPC;
 const LOGS_STEP = Number(process.env.FUSEBOX_LOGS_STEP) || 1000; // a fork of rpc.xlayer.tech needs 100
-const SOURCES: [string, number][] = IS_FORK ? [[RPC, 5000]] : LOGS_RPC ? [[LOGS_RPC, LOGS_STEP]]
-  : [["https://tapeout.net/rpc-xlayer", 1000], ["https://xlayer.drpc.org", 100], [RPC, 100]]; // rpc.xlayer.tech last: the app's reads already lean on it, and it rate-limits
+// [url, blocks per eth_getLogs, calls per batch request]
+const SOURCES: [string, number, number][] = IS_FORK ? [[RPC, 5000, 10]] : LOGS_RPC ? [[LOGS_RPC, LOGS_STEP, 10]]
+  : [["https://tapeout.net/rpc-xlayer", 1000, 10], ["https://xlayer.drpc.org", 100, 3], [RPC, 100, 4]]; // rpc.xlayer.tech last: the app's reads already lean on it, and it rate-limits
 const IDX = IS_FORK ? { blocks: [] as number[], scannedTo: DEPLOYMENT.fromBlock - 1 } : (index as { blocks: number[]; scannedTo: number });
 const WINDOW = 1000;
 const FINAL = 64; // a window is cached once its last block is this far behind the head
@@ -45,7 +47,8 @@ const hex = (n: number) => "0x" + n.toString(16);
 async function getLogsBatch(url: string, ranges: [number, number][], signal: AbortSignal): Promise<LogJson[][]> {
   const body = ranges.map(([f, t], id) => ({ jsonrpc: "2.0", id, method: "eth_getLogs", params: [{ topics: [TOPICS], fromBlock: hex(f), toBlock: hex(t) }] }));
   const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), cache: "no-store", signal: AbortSignal.any([signal, AbortSignal.timeout(CALL_MS)]) });
-  const j = (await r.json()) as { id: number; result?: LogJson[]; error?: { message: string } }[];
+  // a Cloudflare challenge or an error page is HTML: fail fast with a readable reason so the next source takes over
+  const j = (await r.json().catch(() => { throw new Error(`${url}: HTTP ${r.status}, not a JSON-RPC reply`); })) as { id: number; result?: LogJson[]; error?: { message: string } }[];
   if (!Array.isArray(j)) throw new Error(`${url}: not a batch reply`);
   const byId = new Map(j.map((x) => [x.id, x]));
   return ranges.map((_, id) => {
@@ -55,13 +58,13 @@ async function getLogsBatch(url: string, ranges: [number, number][], signal: Abo
   });
 }
 
-/** One source's logs for [a, b], cut to its range cap, ten ranges per request. */
-async function scanFrom(url: string, step: number, a: number, b: number, signal: AbortSignal): Promise<RawLog[]> {
+/** One source's logs for [a, b], cut to its range cap, `per` ranges per request. */
+async function scanFrom(url: string, step: number, per: number, a: number, b: number, signal: AbortSignal): Promise<RawLog[]> {
   const parts: [number, number][] = [];
   for (let f = a; f <= b; f += step) parts.push([f, Math.min(b, f + step - 1)]);
   const out: RawLog[] = [];
-  for (let i = 0; i < parts.length; i += 10) {
-    (await getLogsBatch(url, parts.slice(i, i + 10), signal)).flat().forEach((l) => out.push({
+  for (let i = 0; i < parts.length; i += per) {
+    (await getLogsBatch(url, parts.slice(i, i + per), signal)).flat().forEach((l) => out.push({
       address: (l.address as string).toLowerCase() as Address, topics: l.topics as Hex[], data: l.data as Hex,
       blockNumber: parseInt(l.blockNumber as string, 16), transactionHash: l.transactionHash as Hex, logIndex: parseInt(l.logIndex as string, 16),
     }));
@@ -78,9 +81,9 @@ async function scan(a: number, b: number): Promise<RawLog[]> {
   // a range that fits one 100-block call goes to drpc first: it answers small ranges about twice as fast as tapeout.net
   const order = b - a < 100 && SOURCES.length > 1 ? [SOURCES[1], SOURCES[0], ...SOURCES.slice(2)] : SOURCES;
   let prevFailed: Promise<unknown> = Promise.resolve();
-  const runs = order.map(([url, step], i) => {
+  const runs = order.map(([url, step, per], i) => {
     const gate = i === 0 ? Promise.resolve() : Promise.race([new Promise((r) => setTimeout(r, HEDGE_MS * i)), prevFailed]);
-    const run = gate.then(() => { if (ctl.signal.aborted) throw new Error("settled"); return scanFrom(url, step, a, b, ctl.signal); });
+    const run = gate.then(() => { if (ctl.signal.aborted) throw new Error("settled"); return scanFrom(url, step, per, a, b, ctl.signal); });
     prevFailed = run.then(() => new Promise(() => {}), () => undefined); // settles only if this source fails
     return run;
   });

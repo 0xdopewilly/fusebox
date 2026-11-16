@@ -158,6 +158,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
       <SpendView wallet={a.wallet} refreshKey={a.counts.decisions} />
 
       <div className="blockhead" data-b><h2 className="disp">Decisions</h2><span className="m mute">{a.counts.decisions} on-chain · {a.counts.allowed} paid · {a.counts.blocked} stopped</span></div>
+      {a.historyLoading && <p className="m mute hist-wait" role="status"><span className="live" />Reading the decision history from X Layer. It fills in on its own.</p>}
       <div data-b><DecisionTools wallet={a.wallet} rows={a.decisions} fresh={fresh} names={a.fuses.map((x) => x.name)} /></div>
       <div data-b><Scope rows={a.decisions} /></div>
       <div className="dtable" style={{ overflowX: "auto" }} data-b tabIndex={0} role="region" aria-label="Decisions table">
