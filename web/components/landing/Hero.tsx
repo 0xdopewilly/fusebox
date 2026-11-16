@@ -4,7 +4,7 @@ import { gsap, SplitText, ScrollTrigger, useGSAP, introDone, reduced } from "@/l
 import type { FuseScene } from "./FuseScene";
 
 const TAGS = [
-  { id: "fil", title: "Filament", sub: "a NAND circuit on X Layer", dx: -40, dy: -128 },
+  { id: "fil", title: "Filament", sub: "a TapeOut NAND circuit", dx: -40, dy: -128 },
   { id: "cap", title: "End cap", sub: "X Layer · chain 196", dx: -120, dy: 118 },
   { id: "blow", title: "Blows on", sub: "a stranger payee", dx: 70, dy: 150 },
 ];
@@ -124,15 +124,16 @@ export default function Hero() {
   return (
     <section className="hero" ref={root} id="top">
       <div className="wrap copy" data-in>
-        <div className="m eyebrow"><span className="lime">[01]</span> Guardrails that run on X Layer, not on trust</div>
+        <div className="m eyebrow"><span className="lime">[01]</span> Built on <a className="lime" href="https://tapeout.net" target="_blank" rel="noreferrer">TapeOut</a> · live on X Layer</div>
         <h1 className="disp">Your agent pays.<br /><span className="lime">[Circuits]</span> decide.</h1>
         <div className="sub">
-          <p>Fusebox wires an AI agent&apos;s wallet through small logic circuits taped out on X Layer. A payment reaches the payee only if every fuse holds, and each fuse that checks it pays its designer.</p>
+          <p>Fusebox wires an AI agent&apos;s wallet through small logic circuits taped out on TapeOut. Every payment runs them on X Layer in the same transaction: it reaches the payee only if every fuse holds, and each fuse that checks it pays its designer.</p>
         </div>
         <div className="ctas">
           <a className="btn lime" href="/app/new" data-cursor="Enter"><span className="roll"><span>Wire up a wallet</span><span aria-hidden="true">Wire up a wallet</span></span> <span className="k">→</span></a>
           <a className="btn line" href="#designers" data-cursor="Earn"><span className="roll"><span>Sell a fuse</span><span aria-hidden="true">Sell a fuse</span></span> <span className="k">→</span></a>
         </div>
+        <div className="lockup m"><span className="mute">Built on</span><a href="https://tapeout.net" target="_blank" rel="noreferrer"><i aria-hidden="true" />TapeOut</a><span className="x" aria-hidden="true">×</span><a href="https://www.okx.com/xlayer" target="_blank" rel="noreferrer"><i aria-hidden="true" />X Layer</a></div>
       </div>
       <div className="fusewrap">
         <canvas className="fuse" ref={canvas} data-cursor="Blow it" aria-label="A 3D glass fuse. Click it to blow it." />
@@ -143,8 +144,8 @@ export default function Hero() {
       </div>
       <div className="hint m">Click the fuse to blow it</div>
       <div className="facts m mute" data-in>
-        <div><b data-v="4">4</b>fuses on one line</div>
-        <div><b data-v="244">244</b>logic gates, all on-chain</div>
+        <div><b data-v="4">4</b>TapeOut circuits on one line</div>
+        <div><b data-v="244">244</b>logic gates, taped out on TapeOut</div>
         <div><b data-v="1">1</b>call per payment</div>
         <div><b data-v="0.0045" data-dec="4">0.0045</b>USDT0 per fully checked payment</div>
       </div>

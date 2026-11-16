@@ -5,6 +5,7 @@ import Hero from "@/components/landing/Hero";
 import Problem from "@/components/landing/Problem";
 import LiveProof from "@/components/landing/LiveProof";
 import How from "@/components/landing/How";
+import OnTapeOut from "@/components/landing/OnTapeOut";
 import Fuses from "@/components/landing/Fuses";
 import Users from "@/components/landing/Users";
 import Designers from "@/components/landing/Designers";
@@ -22,6 +23,7 @@ export default function Home() {
         <LiveProof />
         <Problem />
         <How />
+        <OnTapeOut />
         <Fuses />
         <Users />
         <Designers />

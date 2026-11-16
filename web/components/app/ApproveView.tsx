@@ -8,6 +8,7 @@ import { useTxQueue } from "@/lib/useTxQueue";
 import { useWallet } from "./WalletProvider";
 import NoWallet from "./NoWallet";
 import ApprovalInbox from "./ApprovalInbox";
+import ApproverAlerts from "./ApproverAlerts";
 
 /** Two of Three: approvers sign off one exact payment (token, payee, amount) so the agent's retry can pass. */
 export default function ApproveView() {
@@ -61,6 +62,7 @@ export default function ApproveView() {
         <h1 className="disp" data-a>Two of <span className="lime">[three]</span>.</h1>
         <p data-a>Above its threshold, a wallet with the Two of Three fuse pays only what two of its three approvers have signed off: this exact payee, this exact amount. Approvals expire {Math.round(ttl / 3600)} hours after the first one. Connect as an approver to see everything waiting on you, across every wallet where you hold a seat.</p>
       </section>
+      {account && <ApproverAlerts account={account} />}
       {account && <ApprovalInbox account={account} onPick={(r) => { setWallet(r.wallet); setTo(r.to); setAmount(r.amount); setTimeout(() => document.getElementById("approve-one")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); }} />}
       <h2 className="sr" id="approve-one">Approve a payment</h2>
       <section className="wz">

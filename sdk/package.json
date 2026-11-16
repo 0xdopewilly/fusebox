@@ -1,7 +1,7 @@
 {
   "name": "fusebox-sdk",
-  "version": "0.2.0",
-  "description": "TypeScript client for Fusebox wallets on X Layer: AI-agent payments that must pass logic-circuit fuses taped out on TapeOut. Check for free, pay (checked first), approve, freeze, watch decisions.",
+  "version": "0.3.0",
+  "description": "TypeScript client for Fusebox wallets on X Layer: AI-agent payments that must pass logic-circuit fuses taped out on TapeOut. Check for free, pay (checked first), pay for APIs over x402, approve, freeze, watch decisions.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -9,6 +9,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./x402": {
+      "types": "./dist/x402.d.ts",
+      "import": "./dist/x402.js"
     }
   },
   "files": [
@@ -33,7 +37,8 @@
     "agent-wallet",
     "payments",
     "fusebox",
-    "viem"
+    "viem",
+    "x402"
   ],
   "scripts": {
     "build": "tsc -p .",

@@ -1,7 +1,7 @@
 {
   "name": "fusebox-mcp",
-  "version": "0.2.0",
-  "description": "MCP tools for AI agents paying through a Fusebox wallet on X Layer: check a payment against TapeOut circuit fuses, pay, and read the wallet's state.",
+  "version": "0.3.0",
+  "description": "MCP tools for AI agents paying through a Fusebox wallet on X Layer: check a payment against TapeOut circuit fuses, pay, pay for APIs over x402, and read the wallet's state.",
   "type": "module",
   "bin": {
     "fusebox-mcp": "index.mjs"
@@ -27,7 +27,8 @@
     "tapeout",
     "ai-agents",
     "wallet",
-    "fusebox"
+    "fusebox",
+    "x402"
   ],
   "scripts": {
     "test": "node test/smoke.mjs"

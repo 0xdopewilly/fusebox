@@ -53,11 +53,11 @@ export default function Fuses() {
   return (
     <section className="fuses reg" ref={root} id="fuses">
       <Reg />
-      <div className="wrap sh"><div className="m lime" data-scr>[04]</div><div className="m mute" data-scr>The fuses</div></div>
+      <div className="wrap sh"><div className="m lime" data-scr>[05]</div><div className="m mute" data-scr>The fuses</div></div>
       <div className="wrap">
         <div className="head">
-          <h2 className="disp">Four circuits.<br /><span className="lime">[244]</span> gates.<br />All on&#8209;chain.</h2>
-          <p>Each fuse is a real NAND circuit with its own NFT, gate count and gas cost. The pictures below are their actual netlists, one square per gate, laid out by logic depth. Hover one to send a signal through it.</p>
+          <h2 className="disp">Four TapeOut circuits.<br /><span className="lime">[244]</span> gates.<br />All on&#8209;chain.</h2>
+          <p>Each fuse is a real NAND circuit taped out on TapeOut, with its own circuit NFT, gate count and gas cost. The pictures below are their actual netlists, one square per gate, laid out by logic depth. Hover one to send a signal through it.</p>
         </div>
         <div>
           {LAYERS.map((f) => {
@@ -66,7 +66,7 @@ export default function Fuses() {
               <div className="fz" key={f.key} data-cursor="Signal">
                 <div><div className="ix" data-ix={m.ix}>{m.ix}</div></div>
                 <div style={{ gridColumn: "2 / 4" }}><h3>{m.name}</h3><p className="say">{m.say}</p></div>
-                <div className="sch"><Netlist f={f} /><div className="m">Netlist · {f.gates} gates · depth {f.depth}{f.key === "breaker" ? " · lime box = the latch" : ""}</div></div>
+                <div className="sch"><Netlist f={f} /><div className="m"><span className="lime">TapeOut circuit #{m.circuit}</span> · netlist · {f.gates} gates · depth {f.depth}{f.key === "breaker" ? " · lime box = the latch" : ""}</div></div>
                 <div><div className="chips">{m.chips.map(([t, c]) => <span className={`chip ${c || ""}`} key={t}>{t}</span>)}</div></div>
               </div>
             );

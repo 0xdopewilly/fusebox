@@ -1,0 +1,6 @@
+# never upload local secrets or test data
+.env*
+.store
+node_modules
+.next
+tsconfig.tsbuildinfo

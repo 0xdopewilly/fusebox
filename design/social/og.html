@@ -23,6 +23,8 @@ p { margin-top: 28px; font-size: 25px; line-height: 1.42; color: var(--soft); wi
 .chips { display: flex; gap: 10px; margin-top: 26px; flex-wrap: wrap; width: 700px; }
 .chips span { border: 1px solid var(--hair2); padding: 8px 12px; color: var(--soft); }
 .art { position: absolute; right: 14px; top: 196px; width: 430px; image-rendering: pixelated; mix-blend-mode: lighten; }
+.body.wide + .art { top: 372px; right: 24px; width: 470px; }
+.body.wide { width: 1120px; } .body.wide h1 { font-size: 112px; } .body.wide p { width: 560px; } .body.wide .chips { width: 620px; }
 .foot { position: absolute; left: 40px; right: 40px; bottom: 0; height: 64px; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid var(--hair2); }
 </style>
 </head>
@@ -30,17 +32,19 @@ p { margin-top: 28px; font-size: 25px; line-height: 1.42; color: var(--soft); wi
 <div class="grid"><i></i><i></i><i></i><i></i><i></i><i></i></div>
 <div class="top">
   <div class="logo"><svg width="44" height="20" viewBox="0 0 30 14"><rect x=".5" y="1.5" width="6" height="11" fill="#f2f2ee"/><rect x="23.5" y="1.5" width="6" height="11" fill="#f2f2ee"/><rect x="6.5" y="3.5" width="17" height="7" fill="none" stroke="#f2f2ee"/><path d="M6.5 7h4.5l1.6-2.6 2 5.2 1.6-2.6h7.3" fill="none" stroke="#bbfe2f" stroke-width="1.4"/></svg>Fusebox</div>
-  <div class="m mute"><span class="dot"></span>X Layer mainnet · chain 196</div>
+  <div class="m mute"><span class="dot"></span>Built on <span class="lime">TapeOut</span> × X Layer</div>
 </div>
 <div class="body" id="body"></div>
 <img class="art" id="art" alt="">
-<div class="foot m mute"><span>AI agents pay. <span class="lime">Circuits decide.</span></span><span style="color:var(--ink)" id="url">fusebox-xlayer.vercel.app</span></div>
+<div class="foot m mute"><span>AI agents pay. <span class="lime">TapeOut circuits decide.</span></span><span style="color:var(--ink)" id="url">fusebox-xlayer.vercel.app</span></div>
 <script>
 const V = {
-  docs: { eyebrow: '<span class="lime">[Docs]</span> <span class="mute">Build with Fusebox</span>', h1: 'Build with<br><span class="lime">[Fusebox]</span>.', p: "Wallets for AI agents whose payments must pass logic circuits taped out on TapeOut.", chips: ["Quickstart", "Wallet API", "MCP tools", "Sell a fuse", "Contracts"], art: "intact", url: "fusebox-xlayer.vercel.app/docs" },
-  app: { eyebrow: '<span class="lime">[Atlas]</span> <span class="mute">A live agent wallet on X Layer</span>', h1: 'Try to<br><span class="red">[scam]</span> it.', p: "Pick a trick an invoice scammer would use. Atlas's real fuses decide on mainnet: free, read-only, nothing moves.", chips: ["Daily Cap", "Payee Guard", "Breaker", "Two of Three"], art: "blown", url: "fusebox-xlayer.vercel.app/app" },
+  home: { wide: true, eyebrow: '<span class="lime">[Fusebox]</span> <span class="mute">Circuit fuses for AI agent wallets</span>', h1: 'Your agent pays.<br><span class="lime">[Circuits]</span> decide.', p: "Every payment runs logic circuits taped out on TapeOut, on X Layer, in the same transaction.", chips: ["Built on TapeOut", "X Layer mainnet", "Circuits #15–18"], art: "intact", url: "fusebox-xlayer.vercel.app" },
+  docs: { eyebrow: '<span class="lime">[Docs]</span> <span class="mute">Build with Fusebox</span>', h1: 'Build with<br><span class="lime">[Fusebox]</span>.', p: "Wallets for AI agents whose payments must pass logic circuits taped out on TapeOut.", chips: ["Built on TapeOut", "Wallet API", "MCP · SDK · x402", "Sell a fuse"], art: "intact", url: "fusebox-xlayer.vercel.app/docs" },
+  app: { eyebrow: '<span class="lime">[Atlas]</span> <span class="mute">A live agent wallet on X Layer</span>', h1: 'Try to<br><span class="red">[scam]</span> it.', p: "Pick a trick an invoice scammer would use. Atlas's TapeOut circuits decide on mainnet: free, read-only, nothing moves.", chips: ["Daily Cap", "Payee Guard", "Breaker", "Two of Three"], art: "blown", url: "fusebox-xlayer.vercel.app/app" },
 };
 const v = V[new URLSearchParams(location.search).get("v") || "docs"];
+if (v.wide) document.getElementById("body").classList.add("wide");
 document.getElementById("body").innerHTML = `<div class="m">${v.eyebrow}</div><h1>${v.h1}</h1><p>${v.p}</p><div class="chips m">${v.chips.map((c) => `<span>${c}</span>`).join("")}</div>`;
 document.getElementById("art").src = `../../deweb/src/fuse-${v.art}.png`;
 document.getElementById("url").textContent = v.url;

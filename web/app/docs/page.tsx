@@ -23,6 +23,9 @@ const SECTIONS = [
   { id: "wallet", title: "The wallet API", group: "Build" },
   { id: "mcp", title: "MCP tools", group: "Build" },
   { id: "sdk", title: "TypeScript SDK", group: "Build" },
+  { id: "x402", title: "Pay per call (x402)", group: "Build" },
+  { id: "frameworks", title: "Agent frameworks", group: "Build" },
+  { id: "alerts", title: "Approver alerts", group: "Build" },
   { id: "designers", title: "Sell a fuse", group: "Build" },
   { id: "contracts", title: "Contracts", group: "Reference" },
   { id: "security", title: "Security", group: "Reference" },
@@ -158,6 +161,8 @@ if (allowed) await agent.writeContract({ address: WALLET, abi: fuseboxWalletAbi,
               <p><b>Alerts and exports.</b> Every wallet publishes its decisions as an Atom feed at <code>/api/wallet/&lt;address&gt;/feed</code> (subscribe in Slack with <code>/feed subscribe</code>, an email digest or any reader) and its whole history as CSV at <code>/api/wallet/&lt;address&gt;/csv</code>. With the wallet&apos;s page open, the app can also raise a browser notification whenever a payment is stopped.</p>
               <p><b>Approvers.</b> <Link href="/app/approve">Approvals</Link> is an inbox: connect an approver&apos;s address and it lists every payment an approval fuse stopped in any wallet where that address holds a seat, until a later decision pays it, with who has signed and a one-tap approve. Approvers can subscribe to <code>/api/approvals/feed?approver=&lt;address&gt;</code>. The SDK&apos;s <code>pay()</code> returns <code>needsApproval.url</code> when signatures alone would clear a payment, and the MCP tools say the same.</p>
               <p><b>Fleets.</b> <Link href="/app/mine">My wallets</Link> shows every wallet you own at once: balances, fees left and how many decisions they cover, blown fuses, today&apos;s decisions and stops, and a status that flags low fees, a blown fuse or a missing agent. One button freezes every live agent.</p>
+              <p><b>Badges.</b> <code>/api/badge/&lt;wallet&gt;</code> is an SVG for a README or a status page: the wallet&apos;s fuses and whether any is blown or the wallet is paused, read from X Layer and cached for five minutes. A wallet page&apos;s tools copy the Markdown for you.</p>
+              <p><img src="/api/badge/atlas" alt="Fusebox badge for Atlas" height={20} /></p>
             </section>
 
             <section id="mcp">
@@ -168,6 +173,7 @@ if (allowed) await agent.writeContract({ address: WALLET, abi: fuseboxWalletAbi,
                   <tr><td><code>fusebox_check</code></td><td>Dry-runs a payment against every fuse and returns each verdict with its reason. Free and read-only.</td></tr>
                   <tr><td><code>fusebox_pay</code></td><td>Pays in USDT0 through the fuses with the agent&apos;s key; reports paid or stopped, which fuse said no, the fee and the transaction.</td></tr>
                   <tr><td><code>fusebox_status</code></td><td>The wallet&apos;s balance, fee balance, fuses (and whether any is blown), today&apos;s spend and decision counts.</td></tr>
+                  <tr><td><code>fusebox_fetch</code></td><td>Fetches a URL; if it asks for payment over x402, pays the price through the fuses (only if they all allow it) and returns the response. <code>max_price</code> caps it, <code>dry_run</code> only reports.</td></tr>
                 </tbody>
               </table></div>
               <div className="tbl-w" tabIndex={0} role="region" aria-label="MCP settings table"><table>
@@ -176,6 +182,7 @@ if (allowed) await agent.writeContract({ address: WALLET, abi: fuseboxWalletAbi,
                   <tr><td><code>FUSEBOX_WALLET</code></td><td>Atlas</td><td>The wallet the agent pays from</td></tr>
                   <tr><td><code>FUSEBOX_AGENT_KEY</code></td><td>none (read-only)</td><td>The agent key you named in the wizard. It can only ask the wallet to pay.</td></tr>
                   <tr><td><code>FUSEBOX_RPC</code></td><td>rpc.xlayer.tech</td><td>An X Layer RPC</td></tr>
+                  <tr><td><code>FUSEBOX_APP</code></td><td>fusebox-xlayer.vercel.app</td><td>Where approval links point and approver alerts are sent from</td></tr>
                 </tbody>
               </table></div>
             </section>
@@ -193,7 +200,55 @@ const r = await fb.pay("0x69dB…A6C4", "12.5", "Invoice INV-7790");
 if (!r.paid) console.log(r.summary);                  // "Not sent. Stopped: Daily Cap (…)"
 
 const stop = fb.watch((d) => { if (!d.paid) notify(d); });  // decisions as they land`}</Code>
-              <p className="small">Also <code>status()</code>, <code>history()</code>, <code>approve(to, amount)</code> for approvers and <code>freeze()</code>. Source and tests in <a href="https://github.com/0xdopewilly/fusebox/tree/main/sdk" target="_blank" rel="noreferrer">sdk/</a>.</p>
+              <p className="small">Also <code>status()</code>, <code>history()</code>, <code>fetch(url)</code> for paid APIs (below), <code>requestApproval(to, amount, memo)</code>, <code>pending(approver)</code> and <code>approve(to, amount)</code> for approvers, and <code>freeze()</code>. Source and tests in <a href="https://github.com/0xdopewilly/fusebox/tree/main/sdk" target="_blank" rel="noreferrer">sdk/</a>.</p>
+            </section>
+
+            <section id="x402">
+              <h2>Pay per call (x402)</h2>
+              <p>Agents pay for APIs with <a href="https://x402.org" target="_blank" rel="noreferrer">x402</a>: the server answers <code>402</code> with an offer, the agent pays and asks again with proof. With Fusebox the price is a payment like any other, so it goes through the wallet&apos;s fuses first: a scam price list is stopped like a scam invoice, and nothing moves. <Link href="/app/x402">Two live demo sellers</Link> show both sides.</p>
+              <ol>
+                <li>The seller answers <code>402</code> with <code>PAYMENT-REQUIRED</code> (x402 v2): a <code>fusebox</code> option on <code>eip155:196</code> in USDT0, the payee, the price, and a nonce it signed.</li>
+                <li>The agent&apos;s wallet runs the free <code>check()</code>, then <code>pay()</code> through the fuses with <code>x402 &lt;nonce&gt;</code> in the memo.</li>
+                <li>It retries with <code>PAYMENT-SIGNATURE</code>: the wallet and the transaction. The seller checks that the factory made the wallet, that its Decision allowed this payee and price with that nonce, that USDT0 moved, and that the transaction hasn&apos;t bought anything before. Then it serves the response with a <code>PAYMENT-RESPONSE</code> receipt.</li>
+              </ol>
+              <Code label="Agent · fusebox-sdk">{`const { response, payment } = await fb.fetch("https://fusebox-xlayer.vercel.app/api/x402/prices", {}, { maxPrice: "0.05" });
+console.log(payment?.summary);   // "Paid 0.01 USDT0 to 0x69dB… for …/prices (decision #7)."`}</Code>
+              <Code label="Seller · any fetch-style route">{`import { createPublicClient, http } from "viem";
+import { xLayer, x402 } from "fusebox-sdk";
+const client = createPublicClient({ chain: xLayer, transport: http() });
+
+export async function GET(req: Request) {
+  const g = await x402.requirePayment(req, { payTo: "0xYou", price: "0.01", secret: process.env.X402_SECRET!, client,
+    markUsed: (tx) => db.insertIfAbsent("x402:" + tx) });   // one payment buys one response
+  if (!g.paid) return g.response;                          // 402: a fresh offer, or why it didn't count
+  return Response.json(await getData(), { headers: g.headers });
+}`}</Code>
+              <p>Sellers on their own x402 stack can use the hosted facilitator for the scheme, in x402&apos;s shape: <code>GET /api/x402/facilitator/supported</code>, and <code>POST /api/x402/facilitator/verify</code> or <code>/settle</code> with <code>{"{ paymentPayload, paymentRequirements }"}</code>. Settle marks the transaction used, so a payment settles once.</p>
+              <p className="small">Why a scheme of its own: x402&apos;s <code>exact</code> scheme has the payer sign a token transfer off-chain. A Fusebox wallet is a contract that only pays through its fuses, so it can&apos;t sign one, and shouldn&apos;t: that signature would skip the fuses. Here the on-chain Decision is the proof.</p>
+            </section>
+
+            <section id="frameworks">
+              <h2>Agent frameworks</h2>
+              <p><code>fusebox-tools</code> gives an agent the same four tools as the MCP server (<code>fusebox_check</code>, <code>fusebox_pay</code>, <code>fusebox_status</code>, <code>fusebox_fetch</code>) as native tools for the Vercel AI SDK, LangChain and ElizaOS, or as plain objects for anything else. Options fall back to <code>FUSEBOX_WALLET</code>, <code>FUSEBOX_AGENT_KEY</code> and <code>FUSEBOX_RPC</code>.</p>
+              <Code label="Vercel AI SDK">{`import { fuseboxTools } from "fusebox-tools/ai";
+const { text } = await generateText({ model, tools: fuseboxTools(), stopWhen: stepCountIs(5),
+  prompt: "Pay Kano Cotton's invoice INV-7801: 0.05 USDT0 to 0x69dB89385E8a69278a49335C432d0c70ec86A6C4" });`}</Code>
+              <Code label="LangChain">{`import { fuseboxLangchainTools } from "fusebox-tools/langchain";
+const agent = createReactAgent({ llm, tools: fuseboxLangchainTools() });`}</Code>
+              <Code label="ElizaOS">{`import { fuseboxPlugin } from "fusebox-tools/eliza";
+export const character = { name: "Ledger", plugins: [fuseboxPlugin],
+  settings: { secrets: { FUSEBOX_WALLET: "0xYourFuseboxWallet", FUSEBOX_AGENT_KEY: process.env.FUSEBOX_AGENT_KEY } } };`}</Code>
+              <p className="small">A refused payment comes back as a result the model can read (which fuse said no and why), not an exception, and approval links are meant for a person. Source and tests in <a href="https://github.com/0xdopewilly/fusebox/tree/main/tools" target="_blank" rel="noreferrer">tools/</a>.</p>
+            </section>
+
+            <section id="alerts">
+              <h2>Approver alerts</h2>
+              <p>Two of Three only works if approvers hear about requests quickly. On <Link href="/app/approve">Approvals</Link>, an approver turns on alerts for their phone or laptop with one signature (free: it proves the address is theirs). From then on a payment waiting on their seat arrives as a notification that opens that exact approval. Fusebox installs as an app (on iPhone, add it to the Home Screen first: iOS only delivers web push to installed apps).</p>
+              <ul>
+                <li><b>When an agent asks.</b> The SDK&apos;s <code>pay()</code> and the MCP&apos;s <code>fusebox_pay</code> alert the approvers themselves when signatures are all that stand in the way. The request is signed with the agent&apos;s key; Fusebox checks on X Layer that the signer is the wallet&apos;s agent and that the approval fuse really holds that payment before anything is sent.</li>
+                <li><b>Every hour.</b> A sweep announces any open request in an approver&apos;s inbox that hasn&apos;t been announced yet, so a refused decision recorded on-chain is never missed. Each request is announced once.</li>
+              </ul>
+              <p className="small">Alerts are end-to-end encrypted web push (VAPID). The server stores each device&apos;s push subscription under the approver&apos;s address and nothing else; a device the push service reports gone is dropped.</p>
             </section>
 
             <section id="designers">

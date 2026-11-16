@@ -1,5 +1,6 @@
 # Keeps the app's X Layer log cache warm, so pages stay fast however long it's been since the last deploy.
 # web/lib/logs.ts caches each finished 1,000-block window once; an hourly visit means only the last hour is ever new.
+# It also runs the approver-alert sweep: any open approval request not yet announced goes to approvers' phones.
 name: Warm the log cache
 on:
   schedule:
@@ -13,6 +14,6 @@ jobs:
     steps:
       - name: Visit the data endpoints
         run: |
-          for p in /api/atlas /api/market; do
+          for p in /api/atlas /api/market /api/push/sweep; do
             curl -s -o /dev/null -w "$p %{http_code} %{time_total}s\n" --max-time 150 "https://fusebox-xlayer.vercel.app$p" || true
           done

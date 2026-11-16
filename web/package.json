@@ -11,7 +11,9 @@
     "prebuild": "node scripts/index-logs.mjs || echo \"index refresh skipped; using the committed index\""
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "1.8.0",
     "@gsap/react": "2.1.2",
+    "@vercel/blob": "2.9.0",
     "gsap": "3.15.0",
     "lenis": "1.3.27",
     "next": "16.4.3",
@@ -19,13 +21,15 @@
     "react-dom": "19.3.1",
     "server-only": "0.0.1",
     "three": "0.187.0",
-    "viem": "2.57.12"
+    "viem": "2.57.12",
+    "web-push": "4.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
     "@types/react": "19.3.0",
     "@types/react-dom": "^19.3.0",
     "@types/three": "0.187.0",
+    "@types/web-push": "^3.6.4",
     "typescript": "5.9.3"
   }
 }

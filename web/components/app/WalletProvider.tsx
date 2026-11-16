@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { BaseError, ContractFunctionRevertedError, createWalletClient, custom, getAddress, type Address, type EIP1193Provider, type Hash } from "viem";
+import { BaseError, ContractFunctionRevertedError, createWalletClient, custom, getAddress, toHex, type Address, type EIP1193Provider, type Hash, type Hex } from "viem";
 import { XLAYER, pub } from "@/lib/client-chain";
 
 interface Info { uuid: string; name: string; icon: string; rdns: string }
@@ -9,6 +9,8 @@ type WriteArgs = Parameters<ReturnType<typeof createWalletClient>["writeContract
 interface Ctx {
   wallets: Detail[]; account: Address | null; chainId: number | null; connecting: boolean; error: string | null;
   connect: (rdns: string) => Promise<void>; disconnect: () => void; write: (a: Omit<WriteArgs, "account" | "chain">) => Promise<Hash>;
+  /** personal_sign a plain-text message with the connected account (free: no transaction) */
+  sign: (message: string) => Promise<Hex>;
 }
 const C = createContext<Ctx | null>(null);
 export const useWallet = () => { const c = useContext(C); if (!c) throw new Error("WalletProvider missing"); return c; };
@@ -96,6 +98,11 @@ export default function WalletProvider({ children }: { children: React.ReactNode
     return wc.writeContract({ ...(a as WriteArgs), account, chain: XLAYER });
   }, [account, ensureChain]);
 
-  const value = useMemo(() => ({ wallets, account, chainId, connecting, error, connect, disconnect, write }), [wallets, account, chainId, connecting, error, connect, disconnect, write]);
+  const sign = useCallback(async (message: string) => {
+    const p = active.current;
+    if (!p || !account) throw new Error("Connect a wallet first.");
+    return (await p.request({ method: "personal_sign", params: [toHex(message), account] })) as Hex;
+  }, [account]);
+  const value = useMemo(() => ({ wallets, account, chainId, connecting, error, connect, disconnect, write, sign }), [wallets, account, chainId, connecting, error, connect, disconnect, write, sign]);
   return <C.Provider value={value}>{children}</C.Provider>;
 }

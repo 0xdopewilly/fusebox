@@ -37,9 +37,14 @@ The app always shows the live figures.
 | Fleet view (`/app/mine`) | All of an owner's wallets: balances, fees left and decisions covered, blown fuses, today's activity, status flags, freeze every agent. |
 | Starter lines and Studio drafts | The wizard starts from four tested lines; Studio drafts run in the simulator in the browser (identical to their taped-out twin) and travel as links. |
 | Spending analytics | Paid vs stopped per day (one scale), top payees, what each fuse stopped, a range filter, tooltips and a table view; colours validated for colour-blind separation on the dark surface. |
-| SDK (`sdk/`) | `fusebox-sdk`: check, pay (checked first by default), approve, freeze, watch, history, status. |
+| SDK (`sdk/`) | `fusebox-sdk`: check, pay (checked first by default), fetch (x402 pay-per-call), requestApproval, approve, freeze, watch, history, status; `x402.requirePayment` for sellers. |
+| Pay per call (`/app/x402`) | x402 v2 with a `fusebox` scheme on eip155:196: a signed one-time nonce in the offer, the payment through the fuses with the nonce in the memo, the transaction as proof. Sellers verify on X Layer (factory-made wallet, allowed Decision, USDT0 moved, nonce, single use via Vercel Blob). Two live demo sellers and a hosted verify/settle facilitator. First real purchase on mainnet 2026-11-16: Atlas's agent paid 0.01 USDT0 through all four fuses for the price sheet (decision #6, tx `0x058bd5eb…1f94`), the seller answered 200 with a receipt, and a second settle of the same payment was refused. |
+| Rob the agent (`/app/rob`) | A visitor writes the scam; the payables agent decides (Claude Haiku 5.5 on NEAR AI Cloud with a pay tool when `NEARAI_API_KEY` is set; Claude Opus 5.5 on the Anthropic API with `ANTHROPIC_API_KEY`; otherwise a scripted agent that believes every word); its payment, or the message's ask if it refused, goes through Atlas's `check()`. Shareable links. Capped at 6 tries a minute per visitor and 60 model calls an hour (400 a day) per server; out of credit or unreachable, the scripted agent answers. |
+| Approver alerts | An installable app (manifest, service worker) and web push: an approver signs once per device; agents' signed requests (SDK `pay()`, MCP `fusebox_pay`) are checked on X Layer and pushed to every seat; an hourly sweep announces open requests once. Subscriptions live in a private Vercel Blob store. |
+| Agent frameworks (`tools/`) | `fusebox-tools`: check/pay/status/fetch for the Vercel AI SDK, LangChain and ElizaOS 1.x, plus a framework-free core. |
+| Badges | `/api/badge/<wallet>`: an SVG with the wallet's fuses and whether any is blown or the wallet is paused, cached five minutes; copied from a wallet page as Markdown. |
 | Rival fuses (`circuits/src/rivals.ts`) | Per-Payment Cap (37 NAND), Strict Payee Book (39), Two-Strike Breaker (16 NAND + 2 LATCH), Lead Approver (43). Exhaustively tested, taped out and listed on a mainnet fork, and paid through end to end. The mainnet tape-out (about 0.02 OKB) waits on funds. |
-| Agents (`mcp/`) | An MCP server for Claude Code, Claude Desktop, Cursor and any MCP client. Without a key it is read-only; `fusebox_check` dry-runs a payment for free, and with an agent key `fusebox_pay` sends it. |
+| Agents (`mcp/`) | An MCP server for Claude Code, Claude Desktop, Cursor and any MCP client. Without a key it is read-only; `fusebox_check` dry-runs a payment for free, with an agent key `fusebox_pay` sends it, and `fusebox_fetch` pays for x402 APIs through the fuses. |
 | DeWEB (`deweb/`) | One self-contained page with no off-chain references, plus a resumable publisher. The publish was rehearsed on a mainnet fork: the SHA-256 read back from the chain matched. |
 | Reliability | Event history comes from a block index plus cached 1,000-block windows. Reads race three X Layer RPCs (tapeout.net, drpc, rpc.xlayer.tech), because one of them intermittently hangs. An hourly GitHub Action keeps the cache warm. |
 
@@ -87,6 +92,8 @@ What was verified against the real TapeOut contracts on a fork before launch:
 - A release-after-delivery fuse isn't built: it needs a delivery attestation source and a new socket.
 - Delisting a fuse stops new installs only; there is no designer-side kill switch, by design.
 - The app shows the latest 60 decisions per wallet and links to OKLink for the rest.
+- Rob the agent runs on NEAR AI Cloud's builder credit, which Veto shares; the caps keep a busy page from spending more than a few cents a day.
+- The x402 `fusebox` scheme is Fusebox's own: standard `exact` sellers can't be paid by a contract wallet without `isValidSignature`, which FuseboxWallet doesn't implement (and shouldn't: a signature would skip the fuses).
 
 ## Against the rivals (read 2026-11-13)
 

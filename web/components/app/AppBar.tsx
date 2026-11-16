@@ -24,10 +24,10 @@ export default function AppBar() {
     if (on) gsap.to(ink, { left: on.offsetLeft + 16, width: on.offsetWidth - 32, duration: 0.6, ease: "snap", autoAlpha: 1 });
     else gsap.to(ink, { autoAlpha: 0, duration: 0.2 });
   }, [path]);
-  const active = (h: string) => (h === "/app" ? path === "/app" : path?.startsWith(h) || (h === "/app/market" && !!path?.startsWith("/app/fuse/")) || (h === "/app/try" && !!path?.startsWith("/app/simulate")) || (h === "/app/designers" && !!path?.startsWith("/app/studio")));
+  const active = (h: string) => (h === "/app" ? path === "/app" : path?.startsWith(h) || (h === "/app/market" && !!path?.startsWith("/app/fuse/")) || (h === "/app/try" && (!!path?.startsWith("/app/simulate") || !!path?.startsWith("/app/rob"))) || (h === "/app/designers" && !!path?.startsWith("/app/studio")));
   const { account } = useWallet();
   // phones show the page's name in the bar; the sections live in the dock at the bottom
-  const title = path === "/app" ? "Atlas" : path?.startsWith("/app/w/") ? "Wallet" : path?.startsWith("/app/try") ? "Try to scam it" : path?.startsWith("/app/market") ? "Fuse market" : path?.startsWith("/app/fuse/") ? "Fuse" : path?.startsWith("/app/simulate") ? "Line simulator" : path?.startsWith("/app/studio") ? "Fuse Studio"
+  const title = path === "/app" ? "Atlas" : path?.startsWith("/app/w/") ? "Wallet" : path?.startsWith("/app/try") ? "Try to scam it" : path?.startsWith("/app/market") ? "Fuse market" : path?.startsWith("/app/fuse/") ? "Fuse" : path?.startsWith("/app/simulate") ? "Line simulator" : path?.startsWith("/app/rob") ? "Rob the agent" : path?.startsWith("/app/x402") ? "Pay per call" : path?.startsWith("/app/studio") ? "Fuse Studio"
     : path?.startsWith("/app/designers") ? "Sell a fuse" : path?.startsWith("/app/approve") ? "Approvals" : path?.startsWith("/app/new") ? "Wire up a wallet" : path?.startsWith("/app/mine") ? "My wallets" : "App";
   return (
     <header className="appbar">
@@ -38,7 +38,9 @@ export default function AppBar() {
         <span className="ink" style={{ left: 0, width: 0 }} />
       </nav>
       <div className="right m">
+        <Link className="docs-l x4" href="/app/x402">x402</Link>
         <Link className="docs-l" href="/docs">Docs ↗</Link>
+        <a className="badge tape" href="https://tapeout.net" target="_blank" rel="noreferrer" title="Every fuse is a circuit taped out on TapeOut">Built on TapeOut ↗</a>
         {source && <span className={`badge ${source === "mainnet" ? "main" : "warn"}`}>{source === "mainnet" ? "X Layer mainnet" : source === "fork" ? "Mainnet fork · rehearsal" : "Rehearsal snapshot"}</span>}
         <span className="mute blk"><span className="live" />Block {block ? <Digits value={block.toLocaleString("en-US")} /> : "—"}</span>
       </div>

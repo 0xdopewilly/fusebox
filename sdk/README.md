@@ -48,15 +48,53 @@ const s = await fb.status();   // balance, prepaid fees, each fuse (and whether 
 const h = await fb.history();  // every decision, oldest first
 ```
 
+## Pay for APIs (x402)
+
+`fetch()` works like `fetch`, except that when a URL answers `402` with an x402 offer that takes Fusebox payments,
+the price goes through the wallet's fuses like any payment, and only a payment they allow is made. Then the request
+is retried with the proof.
+
+```ts
+const { response, payment } = await agent.fetch("https://fusebox-xlayer.vercel.app/api/x402/prices", {}, { maxPrice: "0.05" });
+console.log(payment?.summary);   // "Paid 0.01 USDT0 to 0x69dB… for …/prices (decision #7)."
+const prices = await response.json();
+
+await agent.fetch(url, {}, { dryRun: true });   // the price and what the fuses would say; nothing paid
+```
+
+Selling: gate any fetch-style route behind a Fusebox payment.
+
+```ts
+import { createPublicClient, http } from "viem";
+import { xLayer, x402 } from "fusebox-sdk";
+const client = createPublicClient({ chain: xLayer, transport: http() });
+
+export async function GET(req: Request) {
+  const g = await x402.requirePayment(req, { payTo: "0xYou", price: "0.01", secret: process.env.X402_SECRET!, client,
+    markUsed: (tx) => db.insertIfAbsent("x402:" + tx) });   // one payment buys one response
+  if (!g.paid) return g.response;                          // 402 with a fresh offer, or why it didn't count
+  return Response.json(await getData(), { headers: g.headers });
+}
+```
+
+The `fusebox` scheme: the offer carries a nonce the seller signed; the buyer pays through its fuses with
+`x402 <nonce>` in the memo and retries with `PAYMENT-SIGNATURE` (wallet + transaction); the seller checks on X Layer
+that the Fusebox factory made the wallet, that its Decision allowed this payee and price with that nonce, and that
+USDT0 moved. `x402.verifyFuseboxPayment()` does that check on its own, for your own stack. x402's `exact` scheme
+doesn't fit a Fusebox wallet: it's a contract that only pays through its fuses, so the on-chain Decision is the proof.
+
 ## Approvals
 
-When an approval fuse is what said no, `check` and `pay` say so and give the page where approvers sign:
+When an approval fuse is what said no, `check` and `pay` say so and give the page where approvers sign. When
+signatures are all that stand in the way, `pay()` also alerts the approvers' phones (the request is signed with the
+agent's key and checked on X Layer; approvers turn alerts on at /app/approve):
 
 ```ts
 const r = await agent.pay(payee, "40", "Q4 bulk order");
-if (r.needsApproval) notifyApprovers(r.needsApproval.url); // then retry once two have signed
+if (r.needsApproval) console.log(r.needsApproval.url, r.needsApproval.notified); // retry once two have signed
 
-const waiting = await fb.pending(approverAddress); // everything waiting on this approver, across wallets
+await agent.requestApproval(payee, "40", "Q4 bulk order"); // the same alert, on its own
+const waiting = await fb.pending(approverAddress);        // everything waiting on this approver, across wallets
 ```
 
 ## Approve and freeze
@@ -74,16 +112,20 @@ await agent.freeze();                  // agent, approver or owner: stop everyth
 |---|---|
 | `new Fusebox({ wallet?, rpc?, account?, api?, publicClient?, walletClient? })` | `account` is a private key or any viem `Account`; without it the client is read-only |
 | `check(to, amount)` | `{ allowed, fuses: [{ name, verdict, why }], summary, block }` |
-| `pay(to, amount, memo, { checkFirst? })` | `{ paid, sent, decisionId, txUrl, feePaid, fuses, summary }` |
+| `pay(to, amount, memo, { checkFirst?, notify? })` | `{ paid, sent, decisionId, txUrl, feePaid, fuses, summary, needsApproval? }` |
+| `fetch(url, init?, { maxPrice?, dryRun?, memo? })` | `{ response, payment?: { paid, price, payTo, summary, fuses, tx, settlement } }` (x402) |
+| `requestApproval(to, amount, memo?)` | alert the wallet's approvers about a payment an approval fuse holds |
 | `status()` / `fuses()` | the wallet and its line of fuses |
 | `history()` | decisions from Fusebox's indexed log (X Layer RPCs cap log ranges) |
 | `watch(onDecision, { pollingInterval? })` | returns a function that stops watching |
 | `approve(to, amount)` / `freeze()` | approver sign-off, emergency stop |
 | `pending(approver)` | payments waiting on an approver, across wallets |
+| `x402.requirePayment(req, opts)` / `x402.verifyFuseboxPayment(client, payload, requirements)` | selling over x402 |
 | `xLayer`, `ADDRESSES`, the contract ABIs | for your own viem calls |
 
 Amounts are USDT0 with up to 6 decimals. Fuses from any designer work; ones that aren't Fusebox's own are named
 from their on-chain metadata. For MCP clients (Claude Code, Cursor and others) there's
-[`fusebox-mcp`](https://www.npmjs.com/package/fusebox-mcp). Docs: https://fusebox-xlayer.vercel.app/docs
+[`fusebox-mcp`](https://www.npmjs.com/package/fusebox-mcp); for the Vercel AI SDK, LangChain and ElizaOS,
+[`fusebox-tools`](https://www.npmjs.com/package/fusebox-tools). Docs: https://fusebox-xlayer.vercel.app/docs
 
 MIT

@@ -30,7 +30,7 @@ export default function Users() {
   return (
     <section className="users reg" ref={root} id="who">
       <Reg />
-      <div className="wrap sh"><div className="m lime" data-scr>[05]</div><div className="m mute" data-scr>Who it&apos;s for</div><div className="m mute" style={{ gridColumn: "5 / 7" }} data-scr>Pay per decision. No seats, no subscriptions.</div></div>
+      <div className="wrap sh"><div className="m lime" data-scr>[06]</div><div className="m mute" data-scr>Who it&apos;s for</div><div className="m mute" style={{ gridColumn: "5 / 7" }} data-scr>Pay per decision. No seats, no subscriptions.</div></div>
       <div className="wrap body">
         <h2 className="disp">For anyone who lets an agent <span className="lime">[touch money]</span>.</h2>
       </div>

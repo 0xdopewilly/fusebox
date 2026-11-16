@@ -11,6 +11,9 @@ const cast = (...a) => execFileSync("cast", [...a, "--rpc-url", RPC], { encoding
 const reset = () => cast("send", ADDRESSES.atlas, "unfreeze()", "--from", OWNER, "--unlocked");
 const reader = new Fusebox({ rpc: RPC, api: "http://localhost:3120" });
 const agent = new Fusebox({ rpc: RPC, account: AGENT_KEY });
+// the fork starts from mainnet balances: gas for every signer, and USDT0 for Atlas and the owner (balances are slot 51)
+for (const a of [agent.account.address, OWNER, APPROVER]) cast("rpc", "anvil_setBalance", a, "0x8AC7230489E80000");
+for (const a of [ADDRESSES.atlas, OWNER]) cast("rpc", "anvil_setStorageAt", ADDRESSES.usdt0, execFileSync("cast", ["index", "address", a, "51"], { encoding: "utf8" }).trim(), "0x" + (100_000_000).toString(16).padStart(64, "0"));
 
 test("status: Atlas's line, balances and budgets", async () => {
   const s = await reader.status();

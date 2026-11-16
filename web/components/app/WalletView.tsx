@@ -96,13 +96,13 @@ export default function WalletView({ address, from }: { address?: string; from?:
       <h1 className="sr">{a.isAtlas ? "Atlas, the public Fusebox demo wallet" : `Fusebox wallet ${short(a.wallet)}`}</h1>
       <section className="w-hero">
         <div className="who" data-b>
-          <div className="m">{a.isAtlas ? <><span className="lime">[Atlas]</span> <span className="mute">ops agent · public demo wallet · owner {short(a.owner)}</span></> : <><span className="lime">[Fusebox wallet]</span> <span className="mute">owner {short(a.owner)} · agent {short(a.agent)}</span></>}</div>
+          <div className="m">{a.isAtlas ? <><span className="lime">[Atlas]</span> <span className="mute">ops agent · public demo wallet · fuses on TapeOut · owner {short(a.owner)}</span></> : <><span className="lime">[Fusebox wallet]</span> <span className="mute">owner {short(a.owner)} · agent {short(a.agent)}</span></>}</div>
           <div className="m addr">{a.wallet}<button onClick={copy} data-cursor="Copy">{copied ? "Copied" : "Copy"}</button><a href={`${OKLINK}/address/${a.wallet}`} target="_blank" rel="noreferrer" data-cursor="OKLink">↗</a>{a.isAtlas ? <a href={`https://repo.sourcify.dev/196/${a.wallet}`} target="_blank" rel="noreferrer" data-cursor="Source" style={{ color: "var(--dim)" }}>Verified source ↗</a> : null}</div>
           <div className="bal"><b><Count value={Number(a.balance)} /></b><span className="m">USDT0 in the wallet</span></div>
           <div className={`state-line${blown || a.paused ? " bad" : ""}`}>
             <i />{a.paused ? <span><b>Paused.</b> The owner froze the wallet; nothing pays until they unfreeze it.</span>
               : blown ? <span><b>{blown.name} blown.</b> Nothing can be paid until the owner resets it.</span>
-              : <span><b>Line closed.</b> Every fuse is holding; a payment reaches the payee only if all four say yes.</span>}
+              : <span><b>Line closed.</b> Every TapeOut fuse is holding; a payment reaches the payee only if all {a.fuses.length} say yes.</span>}
           </div>
         </div>
         <div className="acts" data-b>
@@ -118,15 +118,15 @@ export default function WalletView({ address, from }: { address?: string; from?:
         <div>Paid<b className="lime"><Count value={a.counts.allowed} d={0} /></b></div>
         <div>Stopped<b style={{ color: "var(--red)" }}><Count value={a.counts.blocked} d={0} /></b></div>
         <div>Fee balance<b><Count value={Number(a.feeBalance)} d={4} /><small>USDT0</small></b></div>
-        <div>Fees paid to designers<b><Count value={Number(a.paidToDesigners)} d={4} /><small>USDT0</small></b></div>
+        <div>Paid to circuit designers<b><Count value={Number(a.paidToDesigners)} d={4} /><small>USDT0</small></b></div>
       </section>
 
       <OwnerConsole data={a} />
 
-      <div className="blockhead" data-b><h2 className="disp">The line</h2><span className="m mute">{a.fuses.length} fuses in series · click one to inspect it</span></div>
+      <div className="blockhead" data-b><h2 className="disp">The line</h2><span className="m mute">{a.fuses.length} TapeOut circuits in series · click one to inspect it</span></div>
       <div className="linepanel" data-b>
         <div className="wire-wrap">
-          <LineWire fuses={a.fuses.map((x) => ({ name: x.name, meta: `${x.gates} gates · ${x.fee}/check` }))} live={live} payee="PAYEES" payeeSub={`${a.payees.length} saved`} selected={sel} onSelect={(i) => setSel(sel === i ? null : i)} />
+          <LineWire fuses={a.fuses.map((x) => ({ name: x.name, meta: `TapeOut #${x.circuitId} · ${x.gates} gates` }))} live={live} payee="PAYEES" payeeSub={`${a.payees.length} saved`} selected={sel} onSelect={(i) => setSel(sel === i ? null : i)} />
         </div>
         {f && (
           <div className="detail" ref={detailRef} key={f.slot}>
@@ -144,7 +144,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
             </div>
             <div className="m sch" style={{ gridColumn: "span 2" }}>{layout && <Netlist f={layout} />}<div className="mute" style={{ marginTop: 8 }}>Real netlist · {f.gates} gates{f.nState ? ` · ${f.nState} state bit` : ""}</div></div>
             <div className="m kv" style={{ gridColumn: "span 2" }}>
-              <span>Circuit</span><span><a href={`${OKLINK}/address/${f.processor}`} target="_blank" rel="noreferrer">#{f.circuitId} on {short(f.processor)} ↗</a></span>
+              <span>TapeOut circuit</span><span><a href={`${OKLINK}/address/${f.processor}`} target="_blank" rel="noreferrer">#{f.circuitId} on TapeOut&apos;s processor {short(f.processor)} ↗</a></span>
               <span>Fee per check</span><span>{fmt(f.fee)} USDT0</span>
               <span>Decisions</span><span>{f.decisions}</span>
               <span>Earned (claimable)</span><span>{fmt(f.earned)} USDT0</span>

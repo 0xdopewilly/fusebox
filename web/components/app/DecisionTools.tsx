@@ -36,6 +36,9 @@ export default function DecisionTools({ wallet, rows, fresh, names }: { wallet: 
   };
   const feed = `/api/wallet/${wallet}/feed`;
   const copy = () => { navigator.clipboard?.writeText(`${location.origin}${feed}`); setCopied(true); setTimeout(() => setCopied(false), 1600); };
+  const [badged, setBadged] = useState(false);
+  // a README badge: the wallet's fuses and whether any is blown, live from X Layer
+  const badge = () => { const o = location.origin; navigator.clipboard?.writeText(`[![Fusebox](${o}/api/badge/${wallet})](${o}/app/w/${wallet})`); setBadged(true); setTimeout(() => setBadged(false), 1600); };
   return (
     <div className="dtools m" role="group" aria-label="Alerts and exports">
       {perm !== "unsupported" && (
@@ -45,6 +48,7 @@ export default function DecisionTools({ wallet, rows, fresh, names }: { wallet: 
       )}
       <button className="dt-btn" onClick={copy} title="An Atom feed of every decision. Subscribe in Slack (/feed subscribe), an email digest or any feed reader.">{copied ? "Feed URL copied" : "Copy feed URL"}</button>
       <a className="dt-btn" href={`/api/wallet/${wallet}/csv`} download>Export CSV ↓</a>
+      <button className="dt-btn dt-badge" onClick={badge} title="Markdown for a README: the wallet's fuses and whether any is blown, live from X Layer."><img src={`/api/badge/${wallet}`} alt="" height={14} />{badged ? "Badge copied" : "Copy README badge"}</button>
     </div>
   );
 }

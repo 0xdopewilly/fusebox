@@ -12,9 +12,11 @@ const TABS = [["/app", "Wallet"], ["/app/try", "Try"], ["/app/market", "Market"]
 const MORE = [
   ["/app/mine", "My wallets", "Every Fusebox wallet you own"],
   ["/app/new", "Wire up a wallet", "Pick fuses, seat approvers, fund it"],
-  ["/app/simulate", "Line simulator", "Test fuses on payments, on X Layer"],
+  ["/app/rob", "Rob the agent", "Write a scam; an AI agent reads it"],
+  ["/app/x402", "Pay per call", "Agents paying for APIs, through fuses"],
+  ["/app/simulate", "Line simulator", "Run TapeOut fuses on payments"],
   ["/app/studio", "Fuse Studio", "Build, prove and tape out a fuse"],
-  ["/app/approve", "Approvals", "Sign off a payment as an approver"],
+  ["/app/approve", "Approvals", "Sign off payments; alerts on this phone"],
   ["/docs", "Docs", "How it works, contracts, MCP"],
   ["/onchain", "DeWEB edition", "The serverless page for 15.2.272.tape"],
   ["/", "Fusebox home", "The story, the fuses, the designers"],
@@ -40,7 +42,7 @@ export default function Dock() {
   const [open, setOpen] = useState(false);
   const sheet = useRef<HTMLDivElement>(null);
   const shade = useRef<HTMLDivElement>(null);
-  const active = (h: string) => (h === "/app" ? path === "/app" || path.startsWith("/app/w/") : path.startsWith(h) || (h === "/app/market" && path.startsWith("/app/fuse/")) || (h === "/app/try" && path.startsWith("/app/simulate")) || (h === "/app/designers" && path.startsWith("/app/studio")));
+  const active = (h: string) => (h === "/app" ? path === "/app" || path.startsWith("/app/w/") : path.startsWith(h) || (h === "/app/market" && path.startsWith("/app/fuse/")) || (h === "/app/try" && (path.startsWith("/app/simulate") || path.startsWith("/app/rob"))) || (h === "/app/designers" && path.startsWith("/app/studio")));
 
   const close = useCallback(() => {
     if (!sheet.current || reduced()) { setOpen(false); return; }

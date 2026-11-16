@@ -56,7 +56,7 @@ export default function TryView() {
       <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
       <section className="try-head">
         <h1 className="disp" data-a>Try to <span className="lime">[scam]</span> Atlas.</h1>
-        <p data-a>Pick a trick or write your own payment, the way an AI agent might be talked into it. We run Atlas&apos;s real <span className="m lime">check()</span> on X Layer: free, no wallet, and nothing moves. <a className="lime" href="/app/simulate">Test your own line of fuses →</a></p>
+        <p data-a>Pick a trick or write your own payment, the way an AI agent might be talked into it. Atlas&apos;s four TapeOut circuits answer through its real <span className="m lime">check()</span> on X Layer: free, no wallet, and nothing moves. <a className="lime" href="/app/rob">Let an AI agent read your scam →</a> <a className="lime" href="/app/simulate">Test your own line of fuses →</a></p>
       </section>
       <section className="try-body">
         <div className="try-form" data-a>

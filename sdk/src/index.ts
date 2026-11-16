@@ -9,8 +9,10 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { fuseboxWalletAbi, fuseRegistryAbi, tapeoutProcessorAbi } from "./abi.js";
+import { encodeHeader, decodeHeader, readPaymentRequired, pickFusebox, memoFor, HEADER, X402_VERSION, type PaymentRequirements, type PaymentRequired, type PaymentPayload, type SettleResponse } from "./x402.js";
 
 export { fuseboxWalletAbi, fuseRegistryAbi, fuseboxFactoryAbi, tapeoutProcessorAbi } from "./abi.js";
+export * as x402 from "./x402.js";
 
 /** X Layer mainnet (chain 196). */
 export const xLayer: Chain = defineChain({
@@ -73,8 +75,8 @@ export interface PayResult {
   fuses: { name: string; verdict: Verdict }[];
   summary: string;
   check?: CheckResult;
-  /** the payment needs approvers' signatures before a retry can pass */
-  needsApproval?: { url: string };
+  /** the payment needs approvers' signatures before a retry can pass; `notified` = devices alerted (null if that failed) */
+  needsApproval?: { url: string; notified?: number | null };
 }
 
 /** A payment waiting on an approver (from pending()). */
@@ -86,6 +88,28 @@ export interface PendingApproval {
 export interface Decision {
   id: number; time: number; to: Address; amount: string; paid: boolean; fee: string; tx?: Hash;
   fuses: { name: string; verdict: Verdict }[];
+}
+
+/** What fetch() did with a URL that may cost money (x402). */
+export interface FetchResult {
+  /** the final response: the resource when it was paid for (or free), the seller's 402 when it wasn't */
+  response: Response;
+  /** set when the URL asked for payment */
+  payment?: {
+    /** the price went through the fuses and the seller accepted it */
+    paid: boolean;
+    price: string; payTo: Address; resource: string;
+    /** one sentence for a person (or an agent) to read */
+    summary: string;
+    fuses?: { name: string; verdict: Verdict }[];
+    tx?: Hash; txUrl?: string; decisionId?: number;
+    /** the seller's settlement (PAYMENT-RESPONSE) */
+    settlement?: SettleResponse;
+    /** the payment needs approvers' signatures before a retry can pass */
+    needsApproval?: { url: string };
+    /** dryRun: what the fuses would say, nothing paid */
+    check?: CheckResult;
+  };
 }
 
 export interface FuseboxOptions {
@@ -214,7 +238,7 @@ export class Fusebox {
    * fuses would refuse (a refused payment is still recorded and its checks are still paid for). Pass
    * { checkFirst: false } to record the attempt anyway.
    */
-  async pay(to: string, amount: string | number, memo: string, opts: { checkFirst?: boolean } = {}): Promise<PayResult> {
+  async pay(to: string, amount: string | number, memo: string, opts: { checkFirst?: boolean; notify?: boolean } = {}): Promise<PayResult> {
     if (!this.walletClient || !this.account) throw new FuseboxError("Read-only client: pass the agent's key as `account` to pay.");
     const payee = parseTo(to), amt = parseAmount(amount);
     if (memo.length > 200) throw new FuseboxError("Keep the memo to one line (200 characters).");
@@ -223,7 +247,11 @@ export class Fusebox {
       const c = await this.check(payee, usd(amt));
       // needsApproval only when signatures alone would let the retry through
       const onlyApproval = !!c.approvalUrl && c.fuses.filter((f) => f.verdict !== "pass").length === 1;
-      if (!c.allowed) return { paid: false, sent: false, fuses: c.fuses.map(({ name, verdict }) => ({ name, verdict })), summary: `Not sent. ${c.summary}`, check: c, needsApproval: onlyApproval ? { url: c.approvalUrl! } : undefined };
+      if (!c.allowed) {
+        // only signatures stand between the agent and this payment: tell the approvers' phones (unless asked not to)
+        const notified = onlyApproval && opts.notify !== false ? await this.requestApproval(payee, usd(amt), memo).then((r) => r.sent).catch(() => null) : undefined;
+        return { paid: false, sent: false, fuses: c.fuses.map(({ name, verdict }) => ({ name, verdict })), summary: `Not sent. ${c.summary}${notified ? ` The approvers' devices were alerted (${notified}).` : ""}`, check: c, needsApproval: onlyApproval ? { url: c.approvalUrl!, notified } : undefined };
+      }
     }
     // a decision is charged up front from the prepaid fee balance: say so plainly instead of sending a doomed tx
     const [line, registry] = await Promise.all([this.fuses(), this.public.readContract({ ...this.W, functionName: "registry" })]);
@@ -248,6 +276,64 @@ export class Fusebox {
       paid: d.allowed, sent: true, decisionId: Number(d.decisionId), tx: hash, txUrl: `${EXPLORER}/tx/${hash}`, feePaid: usd(d.feePaid), fuses,
       summary: d.allowed ? `Paid ${usd(amt)} USDT0 to ${payee} (decision #${d.decisionId}).` : `Stopped by ${blew.join(", ")}: nothing moved (decision #${d.decisionId}).`,
     };
+  }
+
+  /**
+   * fetch() for paid APIs (x402). When the URL answers 402 with a Fusebox offer, the price goes through the wallet's
+   * fuses like any payment, and only a payment they allow is made; then the request is retried with the proof.
+   * `maxPrice` (USDT0) refuses anything dearer without asking the fuses; `dryRun` only reports what they'd say.
+   * Use a string or JSON body: a stream can't be sent twice.
+   */
+  async fetch(input: string | URL, init: RequestInit = {}, opts: { maxPrice?: string | number; dryRun?: boolean; memo?: string } = {}): Promise<FetchResult> {
+    const url = String(input);
+    const first = await fetch(url, init);
+    if (first.status !== 402) return { response: first };
+    const offer: PaymentRequired | null = await readPaymentRequired(first);
+    if (!offer) throw new FuseboxError(`${url} answered 402 without an x402 offer.`);
+    const req: PaymentRequirements | undefined = pickFusebox(offer);
+    if (!req) throw new FuseboxError(`${url} doesn't take Fusebox payments; it offers ${offer.accepts.map((a) => `${a.scheme} on ${a.network}`).join(", ") || "nothing"}.`);
+    const price = usd(BigInt(req.amount)), payTo = getAddress(req.payTo.toLowerCase()), resource = offer.resource?.url ?? url;
+    const base = { price, payTo, resource };
+    if (opts.maxPrice !== undefined && Number(price) > Number(opts.maxPrice)) {
+      return { response: first, payment: { ...base, paid: false, summary: `Not paid: ${url} costs ${price} USDT0, over the ${opts.maxPrice} USDT0 you allowed.` } };
+    }
+    if (opts.dryRun || !this.account) {
+      const c = await this.check(payTo, price);
+      const why = c.allowed ? `the fuses would pay ${price} USDT0 to ${payTo} for it` : c.summary;
+      return { response: first, payment: { ...base, paid: false, check: c, fuses: c.fuses.map(({ name, verdict }) => ({ name, verdict })), summary: `${opts.dryRun ? "Dry run" : "Read-only client"}: ${url} costs ${price} USDT0; ${why}` } };
+    }
+    const memo = opts.memo ? `${memoFor(req, resource).split(" ").slice(0, 2).join(" ")} ${opts.memo}`.slice(0, 200) : memoFor(req, resource);
+    const p = await this.pay(payTo, price, memo);
+    if (!p.paid || !p.tx) return { response: first, payment: { ...base, paid: false, fuses: p.fuses, summary: `Not paid for ${url}: ${p.summary}`, needsApproval: p.needsApproval, tx: p.tx, txUrl: p.txUrl, decisionId: p.decisionId } };
+    const payload: PaymentPayload = { x402Version: X402_VERSION, resource: offer.resource, accepted: req, payload: { wallet: this.wallet, transaction: p.tx, decisionId: p.decisionId } };
+    const headers = new Headers(init.headers);
+    headers.set(HEADER.signature, encodeHeader(payload));
+    if (offer.x402Version < 2) headers.set(HEADER.v1Payment, encodeHeader(payload));
+    const second = await fetch(url, { ...init, headers });
+    const raw = second.headers.get(HEADER.response) ?? second.headers.get(HEADER.v1Response);
+    let settlement: SettleResponse | undefined; try { settlement = raw ? decodeHeader<SettleResponse>(raw) : undefined; } catch { /* the seller sent no readable receipt */ }
+    const ok = second.ok;
+    return {
+      response: second,
+      payment: { ...base, paid: ok, fuses: p.fuses, tx: p.tx, txUrl: p.txUrl, decisionId: p.decisionId, settlement,
+        summary: ok ? `Paid ${price} USDT0 to ${payTo} for ${url} (decision #${p.decisionId}).` : `Paid ${price} USDT0 (decision #${p.decisionId}) but ${url} answered ${second.status}: ${(await readPaymentRequired(second))?.error ?? "no reason given"}.` },
+    };
+  }
+
+  /**
+   * As the agent: ask the wallet's approvers to sign off a payment an approval fuse is holding. Signed with the agent's
+   * key; Fusebox checks it on X Layer and alerts every approver who turned on alerts. pay() does this for you when
+   * signatures are all that stand in the way.
+   */
+  async requestApproval(to: string, amount: string | number, memo = ""): Promise<{ seats: number; sent: number; url: string }> {
+    if (!this.walletClient || !this.account) throw new FuseboxError("Pass the agent's key as `account` to ask for approval.");
+    const payee = parseTo(to), a = usd(parseAmount(amount)), m = memo.slice(0, 200), issued = Math.floor(Date.now() / 1000);
+    const message = `Fusebox approval request\nWallet: ${this.wallet}\nTo: ${payee}\nAmount: ${a} USDT0\nMemo: ${m}\nIssued: ${issued}`;
+    const signature = await this.walletClient.signMessage({ account: this.account, message });
+    const r = await fetch(`${this.api}/api/push/notify`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ wallet: this.wallet, to: payee, amount: a, memo: m, issued, signature }), signal: AbortSignal.timeout(20_000) });
+    const j = (await r.json().catch(() => ({}))) as { seats?: number; sent?: number; url?: string; error?: string };
+    if (!r.ok) throw new FuseboxError(j.error ?? `Couldn't reach the approvers (${r.status}).`);
+    return { seats: j.seats ?? 0, sent: j.sent ?? 0, url: j.url ?? "" };
   }
 
   /** As an approver: sign off this exact payment (payee and amount) for Two of Three. */

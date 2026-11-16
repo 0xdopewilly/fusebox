@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { gsap, useGSAP, introDone } from "@/lib/gsap";
 import Digits from "@/components/fx/Digits";
 import SiteMenu from "./SiteMenu";
@@ -41,6 +41,7 @@ export default function Header() {
   const ref = useRef<HTMLElement>(null);
   const block = useBlock();
   const [menu, setMenu] = useState(false);
+  const closeMenu = useCallback(() => setMenu(false), []);
 
   useGSAP(() => {
     const el = ref.current!;
@@ -73,14 +74,14 @@ export default function Header() {
       <div className="tcol m mute" data-h><span className="live" />Block {block ? <Digits value={b} /> : <span style={{ color: "#f2f2ee" }}>{b}</span>}<br />X Layer mainnet · live</div>
       <nav className="m" style={{ gridColumn: "5 / 7" }} data-h aria-label="Site">
         <NavLink href="#how" label="How" />
+        <NavLink href="#tapeout" label="TapeOut" />
         <NavLink href="#fuses" label="Fuses" />
-        <NavLink href="#who" label="Who" />
         <NavLink href="#designers" label="Designers" />
         <NavLink href="/docs" label="Docs" />
         <a className="btn lime" href="/app" data-cursor="Enter"><span className="roll"><span>Open app</span><span aria-hidden="true">Open app</span></span> <span className="k">↗</span></a>
         <button className="menu-btn m" onClick={() => setMenu(true)} aria-label="Open the menu" aria-expanded={menu}><span>Menu</span><i /><i /></button>
       </nav>
-      <SiteMenu open={menu} onClose={() => setMenu(false)} />
+      <SiteMenu open={menu} onClose={closeMenu} />
     </header>
   );
 }
