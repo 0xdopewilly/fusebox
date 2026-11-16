@@ -17,6 +17,8 @@ interface Ctx {
   hasOkx: boolean;
   /** how the current account is connected: an injected wallet's rdns, or OKX_APP */
   via: string | null;
+  /** the connected wallet's name, for display */
+  walletName: string | null;
   /** pass an injected wallet's rdns, or OKX_APP to pair with the OKX Wallet app */
   connect: (rdns: string) => Promise<void>; disconnect: () => void; write: (a: Omit<WriteArgs, "account" | "chain">) => Promise<Hash>;
   /** personal_sign a plain-text message with the connected account (free: no transaction) */
@@ -187,6 +189,7 @@ export default function WalletProvider({ children }: { children: React.ReactNode
     return (await p.request({ method: "personal_sign", params: [toHex(message), account] })) as Hex;
   }, [account]);
   const hasOkx = useMemo(() => wallets.some((w) => /okx|okex/i.test(w.info.rdns)), [wallets]);
-  const value = useMemo(() => ({ wallets, account, chainId, connecting, error, mobile, hasOkx, via, connect, disconnect, write, sign }), [wallets, account, chainId, connecting, error, mobile, hasOkx, via, connect, disconnect, write, sign]);
+  const walletName = via === OKX_APP ? "OKX Wallet app" : (wallets.find((w) => w.info.rdns === via)?.info.name ?? null);
+  const value = useMemo(() => ({ wallets, account, chainId, connecting, error, mobile, hasOkx, via, walletName, connect, disconnect, write, sign }), [wallets, account, chainId, connecting, error, mobile, hasOkx, via, walletName, connect, disconnect, write, sign]);
   return <C.Provider value={value}>{children}{pair && <PairSheet links={pair.links} mobile={mobile} onCancel={cancelPair} />}{nudge && via === OKX_APP && <ApproveNudge links={nudge} mobile={mobile} />}</C.Provider>;
 }

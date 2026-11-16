@@ -4,10 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { gsap } from "@/lib/gsap";
 import { useWallet } from "./WalletProvider";
 import ConnectChoices from "./ConnectChoices";
+import AccountCard from "./AccountCard";
+import { Glyph } from "./Pixel";
 import { short } from "@/lib/hooks";
 
 export default function Connect() {
-  const { account, disconnect, connecting, error } = useWallet();
+  const { account, connecting, error } = useWallet();
   const [open, setOpen] = useState(false);
   const pop = useRef<HTMLDivElement>(null);
   useEffect(() => { if (open && pop.current) gsap.fromTo(pop.current, { y: -8, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.35, ease: "snap" }); }, [open]);
@@ -18,14 +20,15 @@ export default function Connect() {
         {account ? <><span className="live" />{short(account)}</> : connecting ? "Connecting…" : "Connect"}
       </button>
       {open && (
-        <div className="pop" ref={pop}>
+        <div className={`pop${account ? " acct" : ""}`} ref={pop}>
           {account ? (
             <>
-              <Link href="/app/mine" onClick={() => setOpen(false)}>My wallets</Link>
-              <Link href="/app/new" onClick={() => setOpen(false)}>Wire up a new wallet</Link>
-              <Link href="/app/approve" onClick={() => setOpen(false)}>Approvals</Link>
-              <button onClick={() => { navigator.clipboard?.writeText(account); setOpen(false); }}>Copy address</button>
-              <button onClick={() => { disconnect(); setOpen(false); }}>Disconnect</button>
+              <AccountCard compact />
+              <nav className="pop-go" aria-label="Your wallets">
+                {([["/app/mine", "My wallets", "mine"], ["/app/new", "Wire up a wallet", "new"], ["/app/approve", "Approvals", "approve"]] as const).map(([h, t, g]) => (
+                  <Link key={h} href={h} onClick={() => setOpen(false)}><Glyph name={g} size={14} />{t}<span className="k" aria-hidden="true">→</span></Link>
+                ))}
+              </nav>
             </>
           ) : (
             <ConnectChoices variant="menu" cta="" onDone={() => setOpen(false)} />

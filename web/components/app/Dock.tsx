@@ -6,23 +6,23 @@ import { gsap, reduced } from "@/lib/gsap";
 import { useBlock, short } from "@/lib/hooks";
 import { useWallet } from "./WalletProvider";
 import ConnectChoices from "./ConnectChoices";
+import AccountCard from "./AccountCard";
+import { Glyph, type GlyphName } from "./Pixel";
 
 /** Phones only: a fuse strip in the thumb zone. Each section is a cartridge whose filament lights when you're on it;
  *  the fifth key opens the panel (wallet, every other page, network). Desktop keeps the top bar. */
 const TABS = [["/app", "Wallet"], ["/app/try", "Try"], ["/app/market", "Market"], ["/app/designers", "Sell"]] as const;
-const MORE = [
-  ["/app/mine", "My wallets", "Every Fusebox wallet you own"],
-  ["/app/new", "Wire up a wallet", "Pick fuses, seat approvers, fund it"],
-  ["/app/rob", "Rob the agent", "Write a scam; an AI agent reads it"],
-  ["/app/x402", "Pay per call", "Agents paying for APIs, through fuses"],
-  ["/app/simulate", "Line simulator", "Run TapeOut fuses on payments"],
-  ["/app/studio", "Fuse Studio", "Build, prove and tape out a fuse"],
-  ["/app/approve", "Approvals", "Sign off payments; alerts on this phone"],
-  ["/app/status", "Status", "Live health of every part"],
-  ["/docs", "Docs", "How it works, contracts, MCP"],
-  ["/onchain", "DeWEB edition", "The serverless page for 15.2.272.tape"],
-  ["/", "Fusebox home", "The story, the fuses, the designers"],
-] as const;
+const GO: readonly [string, string, GlyphName][] = [
+  ["/app/mine", "My wallets", "mine"],
+  ["/app/new", "Wire up a wallet", "new"],
+  ["/app/approve", "Approvals", "approve"],
+  ["/app/studio", "Fuse Studio", "studio"],
+  ["/app/simulate", "Line simulator", "sim"],
+  ["/app/rob", "Rob the agent", "rob"],
+  ["/app/x402", "Pay per call", "x402"],
+  ["/app/status", "Status", "status"],
+];
+const MORE = [["/docs", "Docs"], ["/onchain", "DeWEB edition"], ["/", "Fusebox home"]] as const;
 
 export const openPanel = () => window.dispatchEvent(new Event("fusebox:panel"));
 
@@ -39,7 +39,7 @@ function Cartridge({ on }: { on: boolean }) {
 
 export default function Dock() {
   const path = usePathname() || "/app";
-  const { account, disconnect, connecting, error } = useWallet();
+  const { account, connecting, error } = useWallet();
   const block = useBlock();
   const [open, setOpen] = useState(false);
   const sheet = useRef<HTMLDivElement>(null);
@@ -52,6 +52,15 @@ export default function Dock() {
     gsap.to(shade.current, { autoAlpha: 0, duration: 0.3, onComplete: () => setOpen(false) });
   }, []);
   useEffect(() => { const f = () => setOpen(true); window.addEventListener("fusebox:panel", f); return () => window.removeEventListener("fusebox:panel", f); }, []);
+  // the counts on the tiles: wallets this account owns and approvals waiting on it, read each time the panel opens
+  const [counts, setCounts] = useState<{ wallets?: number; waiting?: number }>({});
+  useEffect(() => {
+    if (!open || !account) { setCounts({}); return; }
+    let live = true;
+    fetch(`/api/fleet?owner=${account}`, { cache: "no-store" }).then((r) => r.json()).then((j) => { if (live && Array.isArray(j.wallets)) setCounts((c) => ({ ...c, wallets: j.wallets.length })); }).catch(() => {});
+    fetch(`/api/approvals?approver=${account}`, { cache: "no-store" }).then((r) => r.json()).then((j) => { if (live && Array.isArray(j.open)) setCounts((c) => ({ ...c, waiting: j.open.length })); }).catch(() => {});
+    return () => { live = false; };
+  }, [open, account]);
   useEffect(() => { setOpen(false); }, [path]);
   useEffect(() => {
     if (!open) return;
@@ -59,7 +68,7 @@ export default function Dock() {
     if (!reduced() && sheet.current) {
       gsap.fromTo(shade.current, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.3 });
       gsap.fromTo(sheet.current, { yPercent: 100 }, { yPercent: 0, duration: 0.55, ease: "expo.out" });
-      gsap.from(sheet.current.querySelectorAll(".pl-row, .pl-acct"), { y: 18, autoAlpha: 0, duration: 0.45, stagger: 0.04, delay: 0.12, ease: "power3.out" });
+      gsap.from(sheet.current.querySelectorAll(".kc-card, .kc-acts, .pl-acct, .pl-lbl, .pl-tile, .pl-more"), { y: 18, autoAlpha: 0, duration: 0.45, stagger: 0.035, delay: 0.12, ease: "power3.out" });
     }
     const esc = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", esc);
@@ -91,33 +100,27 @@ export default function Dock() {
         <div className="pl-shade" ref={shade} onClick={close}>
           <div className="pl-sheet" ref={sheet} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Fusebox panel">
             <div className="pl-grab" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}><i /></div>
-            <div className="pl-head m"><span className="lime">Fusebox panel</span><span className="mute"><span className="live" />Block {block ? block.toLocaleString("en-US") : "…"} · chain 196</span></div>
-            <div className="pl-acct">
-              {account ? (
-                <>
-                  <div className="who"><span className="m mute">Connected</span><b>{short(account)}</b></div>
-                  <div className="acts m">
-                    <button onClick={() => navigator.clipboard?.writeText(account)}>Copy</button>
-                    <button onClick={() => { disconnect(); }}>Disconnect</button>
-                  </div>
-                </>
-              ) : (
-                <>
+            {account ? <AccountCard /> : (
+              <>
+                <div className="pl-head m"><span className="lime">Fusebox panel</span><span className="mute"><span className="live" />Block {block ? block.toLocaleString("en-US") : "…"} · chain 196</span></div>
+                <div className="pl-acct">
                   <div className="who"><span className="m mute">{connecting ? "Connecting…" : "Connect a wallet"}</span><b>To own wallets, approve and sell fuses</b></div>
                   <div className="wl"><ConnectChoices variant="sheet" cta="" /></div>
-                </>
-              )}
-              {error && <p className="m" style={{ color: "var(--red)", marginTop: 10 }}>{error}</p>}
-            </div>
-            <div className="pl-rows">
-              {MORE.map(([h, t, s], i) => (
-                <Link key={h} href={h} className={`pl-row${path === h ? " on" : ""}`} onClick={close}>
-                  <span className="n m">{String(i + 1).padStart(2, "0")}</span>
-                  <span className="t"><b>{t}</b><small>{s}</small></span>
-                  <span className="k">→</span>
+                </div>
+              </>
+            )}
+            {error && <p className="m pl-err" role="alert">{error}</p>}
+            <div className="pl-lbl m"><span>Go to</span><span>{String(GO.length).padStart(2, "0")}</span></div>
+            <nav className="pl-grid" aria-label="Fusebox pages">
+              {GO.map(([h, t, g]) => (
+                <Link key={h} href={h} className={`pl-tile${path.startsWith(h) ? " on" : ""}`} aria-current={path.startsWith(h) ? "page" : undefined} onClick={close}>
+                  <Glyph name={g} size={18} /><b>{t}</b>
+                  {h === "/app/mine" && counts.wallets != null && <span className="cnt m">{counts.wallets}</span>}
+                  {h === "/app/approve" && !!counts.waiting && <span className="cnt m lime">{counts.waiting} waiting</span>}
                 </Link>
               ))}
-            </div>
+            </nav>
+            <div className="pl-more m">{MORE.map(([h, t]) => <Link key={h} href={h} onClick={close}>{t}</Link>)}</div>
           </div>
         </div>
       )}

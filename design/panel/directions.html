@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fusebox · account panel directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&family=Geist:wght@300..800&family=Geist+Mono:wght@400..700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #000; --sheet: #070707; --ink: #f2f2ee; --soft: #c9c9c4; --mute: #9d9d98; --dim: #5d5d59;
+    --hair: rgba(255,255,255,.08); --hair2: rgba(255,255,255,.14); --hair3: rgba(255,255,255,.26);
+    --lime: #bbfe2f; --lime-ink: #0b1400; --red: #ff5232;
+    --display: "Archivo", system-ui, sans-serif; --sans: "Geist", system-ui, sans-serif; --mono: "Geist Mono", ui-monospace, monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #2a2a28; font-family: var(--sans); color: var(--ink); -webkit-font-smoothing: antialiased; }
+  .board { display: flex; gap: 56px; padding: 64px 56px 72px; align-items: flex-start; }
+  .col { display: flex; flex-direction: column; gap: 18px; }
+  .cap { font: 600 13px/1.4 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: #e9e9e4; }
+  .cap b { color: var(--lime); font-weight: 600; margin-right: 10px; }
+  .note { width: 390px; font: 400 14px/1.55 var(--sans); color: #b9b9b4; }
+  body.solo .board { padding: 0; gap: 0; } body.solo .cap, body.solo .note { display: none; } body.solo { background: #000; }
+
+  /* a phone: the app behind, dimmed, and the sheet */
+  .phone { width: 390px; height: 844px; position: relative; overflow: hidden; background: #000; }
+  .behind { position: absolute; inset: 0; filter: blur(3px); opacity: .5; }
+  .behind .bar { height: 64px; display: flex; align-items: center; gap: 14px; padding: 0 16px; border-bottom: 1px solid var(--hair); }
+  .behind .bar b { font: 800 26px/1 var(--display); font-stretch: 112%; text-transform: uppercase; }
+  .behind .bar i { margin-left: auto; width: 120px; height: 34px; border: 1px solid var(--hair3); }
+  .behind .h { margin: 40px 16px 0; font: 800 56px/.92 var(--display); font-stretch: 112%; text-transform: uppercase; }
+  .shade { position: absolute; inset: 0; background: rgba(0,0,0,.6); }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--sheet); border-top: 1px solid var(--lime); padding: 0 16px 26px; }
+  .grab { display: flex; justify-content: center; padding: 10px 0 12px; } .grab i { width: 40px; height: 4px; background: var(--hair3); }
+  .m { font: 500 10.5px/1.4 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+  .mute { color: var(--mute); } .lime { color: var(--lime); }
+  .live { display: inline-block; width: 6px; height: 6px; background: var(--lime); margin-right: 8px; vertical-align: 1px; box-shadow: 0 0 0 3px rgba(187,254,47,.16); }
+  svg.px { display: block; shape-rendering: crispEdges; }
+  .addr { font: 600 18px/1 var(--mono); letter-spacing: .01em; }
+  .num { font: 800 30px/1 var(--display); font-stretch: 100%; letter-spacing: -.01em; font-variant-numeric: tabular-nums; }
+  .num small { font: 600 11px/1 var(--mono); letter-spacing: .08em; margin-left: 6px; }
+
+  /* ---------- A · key card ---------- */
+  .A .card { background: var(--lime); color: var(--lime-ink); padding: 16px 16px 14px; clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%); position: relative; }
+  .A .card .top { display: flex; align-items: center; gap: 12px; }
+  .A .card .who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .A .card .who .m { color: rgba(11,20,0,.62); }
+  .A .card .addr { font-size: 20px; }
+  .A .ibtn { width: 38px; height: 38px; display: grid; place-items: center; background: var(--lime-ink); }
+  .A .dots { height: 1px; margin: 14px 0 12px; background-image: radial-gradient(circle, rgba(11,20,0,.55) 1px, transparent 1.2px); background-size: 6px 1px; height: 2px; background-size: 6px 2px; }
+  .A .bal { display: grid; grid-template-columns: 1fr 1fr; }
+  .A .bal div { display: flex; flex-direction: column; gap: 7px; }
+  .A .bal div + div { padding-left: 14px; border-left: 1px solid rgba(11,20,0,.25); }
+  .A .bal .m { color: rgba(11,20,0,.62); }
+  .A .net { display: flex; justify-content: space-between; margin-top: 14px; color: rgba(11,20,0,.7); }
+  .A .net .live { background: var(--lime-ink); box-shadow: none; }
+  .A .acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .A .acts a { height: 44px; display: flex; align-items: center; justify-content: center; gap: 8px; border: 1px solid var(--hair3); color: var(--soft); }
+  .A .acts a.out { color: var(--red); border-color: rgba(255,82,50,.45); }
+  .A .lbl { display: flex; justify-content: space-between; margin: 20px 0 10px; }
+  .A .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .A .tile { height: 70px; border: 1px solid var(--hair2); background: #0b0b0b; padding: 11px 12px; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+  .A .tile b { font: 600 14.5px/1.15 var(--sans); }
+  .A .tile .cnt { position: absolute; right: 11px; top: 10px; }
+  .A .tile.on { border-color: var(--lime); }
+  .A .more { display: flex; gap: 18px; margin-top: 14px; color: var(--mute); }
+  .A .more span { border-bottom: 1px solid var(--hair3); padding-bottom: 2px; }
+
+  /* ---------- B · readout ---------- */
+  .B .head { display: flex; align-items: center; gap: 12px; padding: 4px 0 16px; }
+  .B .head .who { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .B .pwr { width: 42px; height: 42px; border: 1px solid rgba(255,82,50,.5); display: grid; place-items: center; }
+  .B .ro { border-top: 1px solid var(--hair2); }
+  .B .ro div { display: flex; justify-content: space-between; align-items: baseline; padding: 11px 0; border-bottom: 1px solid var(--hair); }
+  .B .ro div span:last-child { font: 500 13px/1 var(--mono); color: var(--ink); letter-spacing: .02em; }
+  .B .ro .leader { flex: 1; margin: 0 10px; border-bottom: 1px dotted var(--hair3); transform: translateY(-3px); }
+  .B .seg { display: grid; grid-template-columns: 1fr 1fr 1fr; margin-top: 14px; border: 1px solid var(--hair3); }
+  .B .seg a { height: 44px; display: flex; align-items: center; justify-content: center; color: var(--soft); }
+  .B .seg a + a { border-left: 1px solid var(--hair3); }
+  .B .grp { margin-top: 18px; }
+  .B .grp > .m { color: var(--lime); padding-bottom: 6px; }
+  .B .row { display: flex; align-items: center; gap: 14px; height: 46px; border-bottom: 1px solid var(--hair); }
+  .B .row b { flex: 1; font: 500 16px/1 var(--sans); }
+  .B .row .k { color: var(--dim); font: 400 15px/1 var(--mono); }
+  .B .chips { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 4px; }
+  .B .chips > span { height: 36px; display: inline-flex; align-items: center; gap: 8px; padding: 0 12px; border: 1px solid var(--hair2); font: 500 14px/1 var(--sans); }
+
+  /* ---------- C · fuse board ---------- */
+  .C .ctop { display: flex; align-items: baseline; justify-content: space-between; padding: 2px 0 10px; }
+  .C .ctop .addr { font-size: 20px; }
+  .C .fuse { position: relative; height: 64px; display: grid; grid-template-columns: 30px 1fr 30px; margin-top: 4px; }
+  .C .fuse .end { background: #121212; border: 1px solid var(--hair3); position: relative; }
+  .C .fuse .end::after { content: ""; position: absolute; left: 7px; right: 7px; top: 12px; bottom: 12px; background-image: repeating-linear-gradient(0deg, var(--hair3) 0 1px, transparent 1px 6px); }
+  .C .fuse .glass { border-top: 1px solid var(--hair3); border-bottom: 1px solid var(--hair3); margin: 10px 0; position: relative; background: linear-gradient(180deg, rgba(187,254,47,.04), rgba(187,254,47,.09) 50%, rgba(187,254,47,.04)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+  .C .fuse svg.fil { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .C .fuse .addr { position: relative; background: var(--sheet); padding: 3px 8px; font-size: 17px; }
+  .C .fuse .m { position: relative; background: var(--sheet); padding: 1px 6px; }
+  .C .stat { display: grid; grid-template-columns: 1fr 1fr 1fr; border: 1px solid var(--hair2); margin-top: 12px; }
+  .C .stat div { padding: 10px 10px 11px; display: flex; flex-direction: column; gap: 7px; }
+  .C .stat div + div { border-left: 1px solid var(--hair2); }
+  .C .stat .v { font: 700 19px/1 var(--display); font-stretch: 100%; }
+  .C .lbl { display: flex; justify-content: space-between; margin: 18px 0 10px; }
+  .C .carts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 10px; }
+  .C .cart { height: 52px; display: grid; grid-template-columns: 9px 1fr 9px; }
+  .C .cart .e { background: #141414; border: 1px solid var(--hair3); }
+  .C .cart .g { border-top: 1px solid var(--hair2); border-bottom: 1px solid var(--hair2); margin: 6px 0; display: flex; align-items: center; gap: 10px; padding: 0 10px; background: #0a0a0a; }
+  .C .cart .g b { font: 600 13.5px/1.1 var(--sans); }
+  .C .cart.on .e { border-color: var(--lime); background: var(--lime); }
+  .C .cart.on .g { border-color: var(--lime); box-shadow: inset 0 0 18px rgba(187,254,47,.12); }
+  .C .cart.warn .g b { color: var(--soft); }
+  .C .bot { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 14px; }
+  .C .bot a { height: 42px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--hair3); color: var(--soft); }
+  .C .bot a.out { color: var(--red); border-color: rgba(255,82,50,.45); }
+</style>
+</head>
+<body>
+<div class="board">
+  <div class="col" id="fa">
+    <div class="cap"><b>A</b>Key card</div>
+    <div class="phone A"><div class="behind"><div class="bar"><b>Atlas</b><i></i></div><div class="h">Atlas<br/>wallet</div></div><div class="shade"></div>
+      <div class="sheet">
+        <div class="grab"><i></i></div>
+        <div class="card">
+          <div class="top">
+            <span data-id="ident" data-c="#0b1400" data-s="44"></span>
+            <div class="who"><span class="m">Connected · OKX Wallet</span><span class="addr">0xDA04…635F</span></div>
+            <span class="ibtn" title="Copy"><span data-g="copy" data-c="#bbfe2f" data-s="16"></span></span>
+          </div>
+          <div class="dots"></div>
+          <div class="bal">
+            <div><span class="m">OKB · pays gas</span><span class="num">0.0019</span></div>
+            <div><span class="m">USD₮0</span><span class="num">0.00</span></div>
+          </div>
+          <div class="net m"><span><span class="live"></span>X Layer · chain 196</span><span>Block 76,080,248</span></div>
+        </div>
+        <div class="acts m"><a>OKLink ↗</a><a class="out">Disconnect</a></div>
+        <div class="lbl m"><span class="mute">Go to</span><span class="mute">08</span></div>
+        <div class="grid">
+          <div class="tile on"><span data-g="mine" data-c="#bbfe2f" data-s="18"></span><b>My wallets</b><span class="cnt m mute">0</span></div>
+          <div class="tile"><span data-g="new" data-c="#bbfe2f" data-s="18"></span><b>Wire up a wallet</b></div>
+          <div class="tile"><span data-g="approve" data-c="#bbfe2f" data-s="18"></span><b>Approvals</b><span class="cnt m mute">0 waiting</span></div>
+          <div class="tile"><span data-g="studio" data-c="#bbfe2f" data-s="18"></span><b>Fuse Studio</b></div>
+          <div class="tile"><span data-g="sim" data-c="#bbfe2f" data-s="18"></span><b>Line simulator</b></div>
+          <div class="tile"><span data-g="rob" data-c="#bbfe2f" data-s="18"></span><b>Rob the agent</b></div>
+          <div class="tile"><span data-g="x402" data-c="#bbfe2f" data-s="18"></span><b>Pay per call</b></div>
+          <div class="tile"><span data-g="status" data-c="#bbfe2f" data-s="18"></span><b>Status</b><span class="cnt m lime"><span class="live"></span>OK</span></div>
+        </div>
+        <div class="more m"><span>Docs</span><span>DeWEB edition</span><span>Fusebox home</span></div>
+      </div>
+    </div>
+    <p class="note">The account is the hero: a lime key card with your address, gas and USD₮0 balances and the network, like the lime sections on the landing. Destinations are a 2×4 grid of tiles with dot-matrix pictograms; the rest are quiet links. Fits one screen, no scrolling.</p>
+  </div>
+
+  <div class="col" id="fb">
+    <div class="cap"><b>B</b>Readout</div>
+    <div class="phone B"><div class="behind"><div class="bar"><b>Atlas</b><i></i></div><div class="h">Atlas<br/>wallet</div></div><div class="shade"></div>
+      <div class="sheet">
+        <div class="grab"><i></i></div>
+        <div class="head">
+          <span data-id="ident" data-c="#bbfe2f" data-s="40"></span>
+          <div class="who"><span class="addr">0xDA04…635F</span><span class="m mute">OKX Wallet · X Layer</span></div>
+          <span class="pwr" title="Disconnect"><span data-g="power" data-c="#ff5232" data-s="16"></span></span>
+        </div>
+        <div class="ro m">
+          <div><span class="mute">Network</span><i class="leader"></i><span><span class="live"></span>X Layer · 196</span></div>
+          <div><span class="mute">Block</span><i class="leader"></i><span>76,080,248</span></div>
+          <div><span class="mute">OKB · gas</span><i class="leader"></i><span>0.0019</span></div>
+          <div><span class="mute">USD₮0</span><i class="leader"></i><span>0.00</span></div>
+          <div><span class="mute">Fusebox wallets</span><i class="leader"></i><span>0</span></div>
+          <div><span class="mute">Approvals waiting</span><i class="leader"></i><span>0</span></div>
+        </div>
+        <div class="seg m"><a>Copy</a><a>OKLink ↗</a><a>Switch</a></div>
+        <div class="grp"><div class="m">Your wallets</div>
+          <div class="row"><span data-g="mine" data-c="#bbfe2f"></span><b>My wallets</b><span class="k">→</span></div>
+          <div class="row"><span data-g="new" data-c="#bbfe2f"></span><b>Wire up a wallet</b><span class="k">→</span></div>
+          <div class="row"><span data-g="approve" data-c="#bbfe2f"></span><b>Approvals</b><span class="k">→</span></div>
+        </div>
+        <div class="grp"><div class="m">Build and test</div>
+          <div class="chips"><span><span data-g="studio" data-c="#bbfe2f" data-s="12"></span>Fuse Studio</span><span><span data-g="sim" data-c="#bbfe2f" data-s="12"></span>Simulator</span><span><span data-g="rob" data-c="#bbfe2f" data-s="12"></span>Rob the agent</span><span><span data-g="x402" data-c="#bbfe2f" data-s="12"></span>Pay per call</span><span><span data-g="status" data-c="#bbfe2f" data-s="12"></span>Status</span><span>Docs</span></div>
+        </div>
+      </div>
+    </div>
+    <p class="note">A spec-sheet readout: every number about your account on dotted leaders, like a datasheet. One segmented action bar, a power key to disconnect. Destinations are grouped by job: your wallets as rows, the build-and-test tools as chips. Densest of the three.</p>
+  </div>
+
+  <div class="col" id="fc">
+    <div class="cap"><b>C</b>Fuse board</div>
+    <div class="phone C"><div class="behind"><div class="bar"><b>Atlas</b><i></i></div><div class="h">Atlas<br/>wallet</div></div><div class="shade"></div>
+      <div class="sheet">
+        <div class="grab"><i></i></div>
+        <div class="ctop"><span class="addr">0xDA04…635F</span><span class="m lime"><span class="live"></span>Live · X Layer 196</span></div>
+        <div class="fuse">
+          <div class="end"></div>
+          <div class="glass">
+            <svg class="fil" viewBox="0 0 300 72" preserveAspectRatio="none"><path d="M0 36 H96 l9 -16 l12 32 l12 -32 l12 32 l12 -32 l12 32 l12 -32 l12 32 l9 -16 H300" fill="none" stroke="#bbfe2f" stroke-width="1.8" vector-effect="non-scaling-stroke"/></svg>
+          </div>
+          <div class="end"></div>
+        </div>
+        <div class="stat">
+          <div><span class="m mute">OKB · gas</span><span class="v">0.0019</span></div>
+          <div><span class="m mute">USD₮0</span><span class="v">0.00</span></div>
+          <div><span class="m mute">Wallets</span><span class="v">0</span></div>
+        </div>
+        <div class="lbl m"><span class="mute">Pull a fuse to go</span><span class="mute">08</span></div>
+        <div class="carts">
+          <div class="cart on"><i class="e"></i><span class="g"><span data-g="mine" data-c="#bbfe2f"></span><b>My wallets</b></span><i class="e"></i></div>
+          <div class="cart"><i class="e"></i><span class="g"><span data-g="new" data-c="#bbfe2f"></span><b>Wire up</b></span><i class="e"></i></div>
+          <div class="cart"><i class="e"></i><span class="g"><span data-g="approve" data-c="#bbfe2f"></span><b>Approvals</b></span><i class="e"></i></div>
+          <div class="cart"><i class="e"></i><span class="g"><span data-g="studio" data-c="#bbfe2f"></span><b>Fuse Studio</b></span><i class="e"></i></div>
+          <div class="cart"><i class="e"></i><span class="g"><span data-g="sim" data-c="#bbfe2f"></span><b>Simulator</b></span><i class="e"></i></div>
+          <div class="cart"><i class="e"></i><span class="g"><span data-g="rob" data-c="#bbfe2f"></span><b>Rob the agent</b></span><i class="e"></i></div>
+          <div class="cart"><i class="e"></i><span class="g"><span data-g="x402" data-c="#bbfe2f"></span><b>Pay per call</b></span><i class="e"></i></div>
+          <div class="cart"><i class="e"></i><span class="g"><span data-g="status" data-c="#bbfe2f"></span><b>Status</b></span><i class="e"></i></div>
+        </div>
+        <div class="bot m"><a>Copy</a><a>OKLink ↗</a><a class="out">Disconnect</a></div>
+      </div>
+    </div>
+    <p class="note">The product's own metaphor: your connection is a live fuse cartridge with the filament lit, and every destination is a cartridge on the board (the page you're on glows). Matches the dock's cartridge icons, so the panel reads as part of the same object.</p>
+  </div>
+</div>
+<script>
+  // 7x7 dot-matrix pictograms, drawn like the netlists
+  const G = {
+    mine:    [".#####.", ".......", "#######", "#.....#", "#...###", "#.....#", "#######"],
+    new:     ["...#...", "...#...", "...#...", "#######", "...#...", "...#...", "...#..."],
+    approve: [".......", "......#", ".....#.", "#...#..", ".#.#...", "..#....", "......."],
+    studio:  ["####...", "#...#..", "#....#.", "#....##", "#....#.", "#...#..", "####..."],
+    sim:     [".......", "###....", "#.#....", "#.#.###", "#.#.#.#", "#.###.#", "......#"],
+    rob:     ["...#...", ".#####.", ".#...#.", "###.###", ".#...#.", ".#####.", "...#..."],
+    x402:    ["..###..", ".#...#.", "#..#..#", "#.###.#", "#..#..#", ".#...#.", "..###.."],
+    status:  [".......", "..#....", "..#....", ".#.#..#", "#..#.#.", "...##..", "......."],
+    copy:    ["####...", "#..#...", "#.#####", "###...#", "..#...#", "..#...#", "..#####"],
+    power:   ["...#...", ".#.#.#.", "#..#..#", "#.....#", "#.....#", ".#...#.", "..###.."],
+  };
+  const px = (rows, color, size) => {
+    const n = rows.length, c = size / n;
+    let r = ""; rows.forEach((row, y) => [...row].forEach((ch, x) => { if (ch === "#") r += `<rect x="${x * c}" y="${y * c}" width="${c - 0.6}" height="${c - 0.6}"/>`; }));
+    return `<svg class="px" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" fill="${color}">${r}</svg>`;
+  };
+  document.querySelectorAll("[data-g]").forEach((el) => { el.innerHTML = px(G[el.dataset.g], el.dataset.c, +(el.dataset.s || 14)); });
+  // a fuse plate per address: a mirrored 8x8 dither seeded by the address
+  const addr = "0xda04c7f2e18b9a3366d0f4b21c95e7a810aa635f";
+  const bits = [...addr.slice(2)].map((h) => parseInt(h, 16));
+  const plate = Array.from({ length: 8 }, (_, y) => { const half = Array.from({ length: 4 }, (_, x) => (bits[(y * 4 + x) % 40] + y + x) % 3 === 0 ? "#" : "."); return [...half, ...half.slice().reverse()].join(""); });
+  document.querySelectorAll("[data-id=ident]").forEach((el) => { el.innerHTML = px(plate, el.dataset.c, +(el.dataset.s || 40)); });
+  const solo = new URLSearchParams(location.search).get("f");
+  if (solo) { document.body.classList.add("solo"); ["fa", "fb", "fc"].forEach((id) => { if (id !== "f" + solo) document.getElementById(id).remove(); }); }
+</script>
+</body>
+</html>
