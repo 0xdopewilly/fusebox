@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { gsap, reduced } from "@/lib/gsap";
 import { useBlock, short } from "@/lib/hooks";
 import { useWallet } from "./WalletProvider";
+import ConnectChoices from "./ConnectChoices";
 
 /** Phones only: a fuse strip in the thumb zone. Each section is a cartridge whose filament lights when you're on it;
  *  the fifth key opens the panel (wallet, every other page, network). Desktop keeps the top bar. */
@@ -38,7 +39,7 @@ function Cartridge({ on }: { on: boolean }) {
 
 export default function Dock() {
   const path = usePathname() || "/app";
-  const { wallets, account, connect, disconnect, connecting, error } = useWallet();
+  const { account, disconnect, connecting, error } = useWallet();
   const block = useBlock();
   const [open, setOpen] = useState(false);
   const sheet = useRef<HTMLDivElement>(null);
@@ -100,17 +101,11 @@ export default function Dock() {
                     <button onClick={() => { disconnect(); }}>Disconnect</button>
                   </div>
                 </>
-              ) : wallets.length ? (
+              ) : (
                 <>
                   <div className="who"><span className="m mute">{connecting ? "Connecting…" : "Connect a wallet"}</span><b>To own wallets, approve and sell fuses</b></div>
-                  <div className="wl">{wallets.map((w) => (
-                    <button key={w.info.rdns} className="btn lime" onClick={() => connect(w.info.rdns)}>
-                      {w.info.icon ? <img src={w.info.icon} alt="" width={18} height={18} /> : null}{w.info.name}
-                    </button>
-                  ))}</div>
+                  <div className="wl"><ConnectChoices variant="sheet" cta="" /></div>
                 </>
-              ) : (
-                <div className="who"><span className="m mute">No wallet in this browser</span><b>Open Fusebox in OKX Wallet&apos;s browser, or <a className="lime" href="https://web3.okx.com/download" target="_blank" rel="noreferrer">get OKX Wallet ↗</a></b></div>
               )}
               {error && <p className="m" style={{ color: "var(--red)", marginTop: 10 }}>{error}</p>}
             </div>

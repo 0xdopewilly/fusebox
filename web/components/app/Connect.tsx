@@ -3,10 +3,11 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { gsap } from "@/lib/gsap";
 import { useWallet } from "./WalletProvider";
+import ConnectChoices from "./ConnectChoices";
 import { short } from "@/lib/hooks";
 
 export default function Connect() {
-  const { wallets, account, connect, disconnect, connecting, error } = useWallet();
+  const { account, disconnect, connecting, error } = useWallet();
   const [open, setOpen] = useState(false);
   const pop = useRef<HTMLDivElement>(null);
   useEffect(() => { if (open && pop.current) gsap.fromTo(pop.current, { y: -8, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.35, ease: "snap" }); }, [open]);
@@ -26,14 +27,8 @@ export default function Connect() {
               <button onClick={() => { navigator.clipboard?.writeText(account); setOpen(false); }}>Copy address</button>
               <button onClick={() => { disconnect(); setOpen(false); }}>Disconnect</button>
             </>
-          ) : wallets.length ? (
-            wallets.map((w) => (
-              <button key={w.info.rdns} onClick={async () => { await connect(w.info.rdns); setOpen(false); }}>
-                {w.info.icon ? <img src={w.info.icon} alt="" width={18} height={18} /> : <span className="wdot" />}{w.info.name}
-              </button>
-            ))
           ) : (
-            <div className="none">No wallet found in this browser. <a href="https://web3.okx.com/download" target="_blank" rel="noreferrer">Get OKX Wallet ↗</a></div>
+            <ConnectChoices variant="menu" cta="" onDone={() => setOpen(false)} />
           )}
           {error && <div className="cerr">{error}</div>}
         </div>

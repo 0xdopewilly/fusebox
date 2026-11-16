@@ -2,12 +2,22 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { BaseError, ContractFunctionRevertedError, createWalletClient, custom, getAddress, toHex, type Address, type EIP1193Provider, type Hash, type Hex } from "viem";
 import { XLAYER, pub } from "@/lib/client-chain";
+import { errCode, friendlyError, isMobileUA, legacyName } from "@/lib/walletLinks";
+import { okxAppAbort, okxAppConnect, okxAppDisconnect, okxAppRestore, onOkxPending, type PairLinks } from "@/lib/okxApp";
+import PairSheet, { ApproveNudge } from "./PairSheet";
 
 interface Info { uuid: string; name: string; icon: string; rdns: string }
 interface Detail { info: Info; provider: EIP1193Provider }
 type WriteArgs = Parameters<ReturnType<typeof createWalletClient>["writeContract"]>[0];
 interface Ctx {
   wallets: Detail[]; account: Address | null; chainId: number | null; connecting: boolean; error: string | null;
+  /** a phone or tablet browser: no extensions, so wallets are reached through their apps */
+  mobile: boolean;
+  /** an OKX wallet is injected here (the extension, or OKX Wallet's own browser) */
+  hasOkx: boolean;
+  /** how the current account is connected: an injected wallet's rdns, or OKX_APP */
+  via: string | null;
+  /** pass an injected wallet's rdns, or OKX_APP to pair with the OKX Wallet app */
   connect: (rdns: string) => Promise<void>; disconnect: () => void; write: (a: Omit<WriteArgs, "account" | "chain">) => Promise<Hash>;
   /** personal_sign a plain-text message with the connected account (free: no transaction) */
   sign: (message: string) => Promise<Hex>;
@@ -15,70 +25,143 @@ interface Ctx {
 const C = createContext<Ctx | null>(null);
 export const useWallet = () => { const c = useContext(C); if (!c) throw new Error("WalletProvider missing"); return c; };
 const KEY = "fusebox:wallet";
+export const OKX_APP = "okx-app";
+const ADD_XLAYER = { chainId: "0xc4", chainName: "X Layer Mainnet", nativeCurrency: { name: "OKB", symbol: "OKB", decimals: 18 }, rpcUrls: ["https://rpc.xlayer.tech"], blockExplorerUrls: ["https://www.oklink.com/xlayer"] };
+/** Wallets answer eth_chainId as hex, and a few as a number or a decimal string. */
+const toChain = (c: unknown) => (typeof c === "number" ? c : String(c).startsWith("0x") ? parseInt(String(c), 16) : parseInt(String(c), 10));
+const save = (v: string | null) => { try { if (v) localStorage.setItem(KEY, v); else localStorage.removeItem(KEY); } catch {} };
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** Browser wallets via EIP-6963 (OKX Wallet first), switched onto X Layer, with silent reconnect. */
+/** Browser wallets (EIP-6963 first, then any injected provider), the OKX Wallet app over OKX Connect, switched onto
+ *  X Layer, with silent reconnect. */
 export default function WalletProvider({ children }: { children: React.ReactNode }) {
   const [wallets, setWallets] = useState<Detail[]>([]);
   const [account, setAccount] = useState<Address | null>(null);
   const [chainId, setChainId] = useState<number | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mobile, setMobile] = useState(false);
+  const [via, setVia] = useState<string | null>(null);
+  const [pair, setPair] = useState<{ links: PairLinks | null } | null>(null);
+  const [nudge, setNudge] = useState<PairLinks | null>(null);
   const active = useRef<EIP1193Provider | null>(null);
+  const detach = useRef<() => void>(() => {});
+  const pairGen = useRef(0);
+  const stopPair = useRef<() => void>(() => {});
+  const restored = useRef(false);
+
+  useEffect(() => { setMobile(isMobileUA()); onOkxPending(setNudge); return () => onOkxPending(null); }, []);
 
   useEffect(() => {
     const seen = new Map<string, Detail>();
-    const add = (d: Detail) => { if (!d?.info?.rdns || seen.has(d.info.rdns)) return; seen.set(d.info.rdns, d); setWallets([...seen.values()].sort((a, b) => Number(b.info.rdns.includes("okx")) - Number(a.info.rdns.includes("okx")))); };
-    const onAnnounce = (e: Event) => add((e as CustomEvent<Detail>).detail);
+    const publish = () => setWallets([...seen.values()].sort((a, b) => Number(/okx|okex/i.test(b.info.rdns)) - Number(/okx|okex/i.test(a.info.rdns))));
+    const onAnnounce = (e: Event) => {
+      const d = (e as CustomEvent<Detail>).detail;
+      if (!d?.info?.rdns || !d.provider || seen.has(d.info.rdns)) return;
+      // a wallet that announces itself replaces any guess made from window.ethereum
+      for (const k of [...seen.keys()]) if (k.startsWith("legacy:")) seen.delete(k);
+      seen.set(d.info.rdns, d); publish();
+    };
+    // Wallets that never announce (older extensions, some in-app browsers) still inject window.ethereum, sometimes late.
+    const legacy = () => {
+      if ([...seen.keys()].some((k) => !k.startsWith("legacy:"))) return;
+      const w = window as unknown as { okxwallet?: EIP1193Provider; ethereum?: EIP1193Provider };
+      const p = w.okxwallet ?? w.ethereum;
+      if (!p || [...seen.values()].some((d) => d.provider === p)) return;
+      const { name, rdns } = w.okxwallet ? { name: "OKX Wallet", rdns: "legacy:okx" } : legacyName(p as unknown as Record<string, unknown>);
+      seen.set(rdns, { info: { uuid: rdns, name, icon: "", rdns }, provider: p }); publish();
+    };
     window.addEventListener("eip6963:announceProvider", onAnnounce);
+    window.addEventListener("ethereum#initialized", legacy);
     window.dispatchEvent(new Event("eip6963:requestProvider"));
-    const w = window as unknown as { okxwallet?: EIP1193Provider; ethereum?: EIP1193Provider };
-    const t = setTimeout(() => {
-      if (!seen.size && w.okxwallet) add({ info: { uuid: "okx", name: "OKX Wallet", icon: "", rdns: "com.okex.wallet" }, provider: w.okxwallet });
-      if (!seen.size && w.ethereum) add({ info: { uuid: "injected", name: "Browser wallet", icon: "", rdns: "injected" }, provider: w.ethereum });
-    }, 400);
-    return () => { window.removeEventListener("eip6963:announceProvider", onAnnounce); clearTimeout(t); };
+    const timers = [400, 1500, 4000].map((ms) => setTimeout(legacy, ms));
+    return () => { window.removeEventListener("eip6963:announceProvider", onAnnounce); window.removeEventListener("ethereum#initialized", legacy); timers.forEach(clearTimeout); };
   }, []);
 
   const attach = useCallback(async (p: EIP1193Provider, prompt: boolean) => {
     const accts = (await p.request({ method: prompt ? "eth_requestAccounts" : "eth_accounts" })) as string[];
     if (!accts?.length) return false;
+    detach.current();
     active.current = p;
     setAccount(getAddress(accts[0]));
-    setChainId(parseInt((await p.request({ method: "eth_chainId" })) as string, 16));
+    setChainId(toChain(await p.request({ method: "eth_chainId" })));
     const onAcc = (a: unknown) => { const l = a as string[]; setAccount(l?.length ? getAddress(l[0]) : null); };
-    const onChain = (c: unknown) => setChainId(parseInt(c as string, 16));
+    const onChain = (c: unknown) => setChainId(toChain(c));
     p.on?.("accountsChanged", onAcc); p.on?.("chainChanged", onChain);
+    detach.current = () => { p.removeListener?.("accountsChanged", onAcc); p.removeListener?.("chainChanged", onChain); };
     return true;
   }, []);
 
   // silent reconnect to the last wallet used
   useEffect(() => {
+    if (account) return;
     let saved: string | null = null; try { saved = localStorage.getItem(KEY); } catch {}
+    if (!saved) return;
+    if (saved === OKX_APP) {
+      if (restored.current) return; restored.current = true;
+      okxAppRestore().then(async (p) => { if (p && (await attach(p, false))) setVia(OKX_APP); }).catch(() => {});
+      return;
+    }
     const d = wallets.find((x) => x.info.rdns === saved);
-    if (d && !account) attach(d.provider, false).catch(() => {});
+    if (d) attach(d.provider, false).then((ok) => { if (ok) setVia(saved); }).catch(() => {});
   }, [wallets, account, attach]);
 
   const ensureChain = useCallback(async () => {
     const p = active.current!;
-    if (parseInt((await p.request({ method: "eth_chainId" })) as string, 16) === 196) return;
+    const now = async () => toChain(await p.request({ method: "eth_chainId" }));
+    if ((await now()) === 196) { setChainId(196); return; }
     try {
       await p.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0xc4" }] });
     } catch (e) {
-      if ((e as { code?: number }).code !== 4902 && !String((e as Error).message).includes("Unrecognized")) throw e;
-      await p.request({ method: "wallet_addEthereumChain", params: [{ chainId: "0xc4", chainName: "X Layer Mainnet", nativeCurrency: { name: "OKB", symbol: "OKB", decimals: 18 }, rpcUrls: ["https://rpc.xlayer.tech"], blockExplorerUrls: ["https://www.oklink.com/xlayer"] }] });
+      const c = errCode(e);
+      if (c === 4001 || c === -32002) throw e;
+      // X Layer isn't in this wallet yet (4902, or MetaMask mobile's -32603 wrapping it), or the wallet can't switch
+      // by itself: adding the chain also switches to it in every major wallet.
+      try { await p.request({ method: "wallet_addEthereumChain", params: [ADD_XLAYER] }); }
+      catch (e2) { throw errCode(e2) === 4001 ? e2 : e; }
     }
-    setChainId(196);
+    let id = await now();
+    if (id !== 196) { // some wallets add the chain without switching to it, or report the new chain a moment late
+      await p.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0xc4" }] }).catch(() => {});
+      for (let i = 0; i < 4 && (id = await now()) !== 196; i++) await sleep(300);
+    }
+    setChainId(id);
+    if (id !== 196) throw new Error("Your wallet is still on another network. Switch it to X Layer (chain 196) and try again.");
   }, []);
 
   const connect = useCallback(async (rdns: string) => {
+    setError(null);
+    if (rdns === OKX_APP) {
+      const gen = ++pairGen.current;
+      setConnecting(true); setPair({ links: null });
+      try {
+        // OKX's connect only settles when the app answers, so a cancel has to end the wait from this side
+        const cancelled = new Promise<null>((r) => { stopPair.current = () => r(null); });
+        const p = await Promise.race([okxAppConnect((links) => { if (pairGen.current === gen) setPair({ links }); }), cancelled]);
+        if (!p || pairGen.current !== gen) return; // cancelled while waiting
+        if (await attach(p, false)) { setVia(OKX_APP); save(OKX_APP); }
+      } catch (e) {
+        if (pairGen.current === gen) setError(friendlyError(e));
+      } finally {
+        if (pairGen.current === gen) { setConnecting(false); setPair(null); }
+      }
+      return;
+    }
     const d = wallets.find((x) => x.info.rdns === rdns); if (!d) return;
-    setConnecting(true); setError(null);
+    setConnecting(true);
     try {
-      if (await attach(d.provider, true)) { try { localStorage.setItem(KEY, rdns); } catch {} await ensureChain(); }
-    } catch (e) { setError((e as Error).message?.split("\n")[0] ?? "Couldn't connect."); } finally { setConnecting(false); }
+      if (await attach(d.provider, true)) { setVia(rdns); save(rdns); await ensureChain(); }
+    } catch (e) { setError(friendlyError(e)); } finally { setConnecting(false); }
   }, [wallets, attach, ensureChain]);
 
-  const disconnect = useCallback(() => { setAccount(null); active.current = null; try { localStorage.removeItem(KEY); } catch {} }, []);
+  const cancelPair = useCallback(() => { pairGen.current++; stopPair.current(); setPair(null); setConnecting(false); okxAppAbort(); }, []);
+
+  const disconnect = useCallback(() => {
+    detach.current(); detach.current = () => {};
+    if (via === OKX_APP) okxAppDisconnect();
+    setAccount(null); setVia(null); setError(null); active.current = null; save(null);
+  }, [via]);
+
 
   const write = useCallback(async (a: Omit<WriteArgs, "account" | "chain">) => {
     if (!active.current || !account) throw new Error("Connect a wallet first.");
@@ -103,6 +186,7 @@ export default function WalletProvider({ children }: { children: React.ReactNode
     if (!p || !account) throw new Error("Connect a wallet first.");
     return (await p.request({ method: "personal_sign", params: [toHex(message), account] })) as Hex;
   }, [account]);
-  const value = useMemo(() => ({ wallets, account, chainId, connecting, error, connect, disconnect, write, sign }), [wallets, account, chainId, connecting, error, connect, disconnect, write, sign]);
-  return <C.Provider value={value}>{children}</C.Provider>;
+  const hasOkx = useMemo(() => wallets.some((w) => /okx|okex/i.test(w.info.rdns)), [wallets]);
+  const value = useMemo(() => ({ wallets, account, chainId, connecting, error, mobile, hasOkx, via, connect, disconnect, write, sign }), [wallets, account, chainId, connecting, error, mobile, hasOkx, via, connect, disconnect, write, sign]);
+  return <C.Provider value={value}>{children}{pair && <PairSheet links={pair.links} mobile={mobile} onCancel={cancelPair} />}{nudge && via === OKX_APP && <ApproveNudge links={nudge} mobile={mobile} />}</C.Provider>;
 }

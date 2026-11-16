@@ -9,6 +9,7 @@ import { useTxQueue, type TxStep } from "@/lib/useTxQueue";
 import { short, OKLINK } from "@/lib/hooks";
 import { useMarket } from "@/lib/useMarket";
 import { useWallet } from "./WalletProvider";
+import ConnectChoices from "./ConnectChoices";
 
 const erc20 = [
   { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "a", type: "address" }], outputs: [{ type: "uint256" }] },
@@ -47,7 +48,7 @@ function Field({ label, v, set, suffix }: { label: string; v: string; set: (s: s
 }
 
 export default function NewWalletView() {
-  const { account, wallets, connect, write } = useWallet();
+  const { account, write } = useWallet();
   const q = useTxQueue<Ctx>();
   // designers can reprice their fuses, so the wizard reads today's fee and accepts exactly that
   const { data: market } = useMarket();
@@ -159,7 +160,7 @@ export default function NewWalletView() {
               {account ? <p className="lead">Owner: <span className="m lime">{account}</span>. Only this address can change the wallet&apos;s fuses, payees and limits.</p> : (
                 <>
                   <p className="lead">The wallet you connect becomes the owner. OKX Wallet works best on X Layer.</p>
-                  <div className="prow">{wallets.length ? wallets.map((w) => <button key={w.info.rdns} className="btn" onClick={() => connect(w.info.rdns)} data-cursor="Connect">{w.info.icon ? <img src={w.info.icon} alt="" width={18} height={18} /> : null}{w.info.name}</button>) : <p className="lead">No wallet found in this browser. <a className="lime" href="https://web3.okx.com/download" target="_blank" rel="noreferrer">Get OKX Wallet ↗</a></p>}</div>
+                  <ConnectChoices cta="" />
                 </>
               )}
             </div>

@@ -16,7 +16,7 @@ import { useTxQueue } from "@/lib/useTxQueue";
 import { short, OKLINK } from "@/lib/hooks";
 import { arcs } from "./ChainNetlist";
 import { useWallet } from "./WalletProvider";
-import NoWallet from "./NoWallet";
+import ConnectChoices from "./ConnectChoices";
 
 const transistorsAbi = [
   { type: "function", name: "mint", stateMutability: "payable", inputs: [{ name: "id", type: "uint256" }, { name: "amount", type: "uint256" }], outputs: [] },
@@ -34,7 +34,7 @@ const payable = (a: { address: Address; abi: readonly unknown[]; functionName: s
 
 /** Build a fuse from rules, prove it on every input, and tape it out and list it from your own wallet. */
 export default function StudioView() {
-  const { account, wallets, connect, write } = useWallet();
+  const { account, write } = useWallet();
   const [socket, setSocket] = useState(1);
   const [groups, setGroups] = useState<Cond[][]>(START[1]);
   const [strikes, setStrikes] = useState(2);
@@ -290,7 +290,7 @@ export default function StudioView() {
             <p className="m mute" style={{ fontSize: 10.5, lineHeight: 1.6 }}>90% of every fee goes to whoever holds the circuit NFT; Fusebox keeps 10%. The description is written on X Layer with the listing.</p>
           </div>
           <div className="st-go">
-            {!account ? (wallets.length ? <div className="prow">{wallets.map((w) => <button key={w.info.rdns} className="btn lime" onClick={() => connect(w.info.rdns)}>Connect {w.info.name}</button>)}</div> : <NoWallet />) : (
+            {!account ? <ConnectChoices /> : (
               <>
                 <button className="btn lime" disabled={!!blocker || q.running || !!made} onClick={launch}><span>{q.running ? "Working…" : "Tape out and list"}</span> <span className="k">→</span></button>
                 {blocker && !made && <p className="m mute">{blocker}</p>}

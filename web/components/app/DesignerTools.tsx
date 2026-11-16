@@ -9,7 +9,7 @@ import type { Market } from "@/lib/market";
 import Link from "next/link";
 import { encodeMeta, metaSource } from "@/lib/fuseMeta";
 import { useWallet } from "./WalletProvider";
-import NoWallet from "./NoWallet";
+import ConnectChoices from "./ConnectChoices";
 
 const SOCKETS: Record<number, [number, string]> = { 24: [1, "Daily Cap"], 33: [2, "Payee Guard"], 4: [3, "Breaker"], 19: [4, "Two of Three"] };
 interface Info { owner: Address; nIn: number; nOut: number; nState: number; gates: number; hash: Hex }
@@ -61,7 +61,7 @@ function ManageFuse({ f, busy, run }: { f: Market["fuses"][number]; busy: boolea
 
 /** For designers: claim what your fuses earned, manage their price and listing, and list a circuit you've taped out. */
 export default function DesignerTools({ market }: { market: Market | null }) {
-  const { account, wallets, connect, write } = useWallet();
+  const { account, write } = useWallet();
   const q = useTxQueue<object>();
   const [proc, setProc] = useState(DEP.processor); const [cid, setCid] = useState(""); const [fee, setFee] = useState("0.001"); const [fname, setFname] = useState(""); const [fsum, setFsum] = useState("");
   const [info, setInfo] = useState<Info | null>(null); const [infoErr, setInfoErr] = useState<string | null>(null);
@@ -91,7 +91,7 @@ export default function DesignerTools({ market }: { market: Market | null }) {
           <div className="ix">↓</div>
           <div>
             <h3>Claim your earnings</h3>
-            {!account ? <><p className="lead">Connect the wallet that owns your circuit NFTs.</p>{wallets.length ? <div className="prow">{wallets.map((w) => <button key={w.info.rdns} className="btn lime" onClick={() => connect(w.info.rdns)}>Connect {w.info.name}</button>)}</div> : <NoWallet />}</>
+            {!account ? <><p className="lead">Connect the wallet that owns your circuit NFTs.</p><ConnectChoices /></>
               : !mine.length ? <p className="lead">{short(account)} doesn&apos;t own any listed fuse yet. List one below.</p>
               : (
                 <>

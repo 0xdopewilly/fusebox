@@ -6,6 +6,7 @@ import { useTxQueue } from "@/lib/useTxQueue";
 import { short, OKLINK } from "@/lib/hooks";
 import type { FleetWallet } from "@/app/api/fleet/route";
 import { useWallet } from "./WalletProvider";
+import ConnectChoices from "./ConnectChoices";
 import Loading from "./Loading";
 
 const ago = (t: number) => { const s = Math.max(0, Date.now() / 1000 - t); return s < 90 ? "just now" : s < 5400 ? `${Math.round(s / 60)} min ago` : s < 129600 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} d ago`; };
@@ -16,7 +17,7 @@ const usd = (v: string | number) => { const n = Number(v); return n >= 1000 ? n.
 
 /** Every Fusebox wallet the connected address owns, as a fleet: money, fees left, what's blown, today's activity. */
 export default function MineView() {
-  const { account, wallets, connect, write } = useWallet();
+  const { account, write } = useWallet();
   const q = useTxQueue<object>();
   const [rows, setRows] = useState<FleetWallet[] | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -58,8 +59,7 @@ export default function MineView() {
           <div className="m lime">Not connected</div>
           <h3>Connect the wallet that owns them</h3>
           <p>Fusebox reads every wallet the factory made for your address. Nothing is signed just to look.</p>
-          {wallets.length ? <div className="prow">{wallets.map((w) => <button key={w.info.rdns} className="btn lime" onClick={() => connect(w.info.rdns)}>Connect {w.info.name} <span className="k">→</span></button>)}</div>
-            : <p className="m mute">No wallet in this browser. <a className="lime" href="https://web3.okx.com/download" target="_blank" rel="noreferrer">Get OKX Wallet ↗</a> or open Fusebox in its built-in browser.</p>}
+          <ConnectChoices />
         </div>
       ) : !rows ? <Loading label="Finding your wallets in the factory" error={err} /> : (
         <>

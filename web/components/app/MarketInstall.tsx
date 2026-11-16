@@ -7,10 +7,11 @@ import { useMyWallets } from "@/lib/useMyWallets";
 import { short } from "@/lib/hooks";
 import { InstallFuse } from "./OwnerConsole";
 import { useWallet } from "./WalletProvider";
+import ConnectChoices from "./ConnectChoices";
 
 /** "Install on a wallet" for one market fuse: pick one of your wallets, set the fuse's limits, sign once. */
 export default function MarketInstall({ fuseId, name }: { fuseId: number; name: string }) {
-  const { account, wallets, connect } = useWallet();
+  const { account } = useWallet();
   const q = useTxQueue<object>();
   const [open, setOpen] = useState(false);
   const [nonce, setNonce] = useState(0);
@@ -26,9 +27,7 @@ export default function MarketInstall({ fuseId, name }: { fuseId: number; name: 
       <button className="btn" onClick={() => setOpen(!open)} aria-expanded={open}>{open ? "Close" : "Install on a wallet"}</button>
       {open && (
         <div className="mk-panel m">
-          {!account ? (wallets.length
-            ? <>{wallets.map((x) => <button key={x.info.rdns} className="btn lime" onClick={() => connect(x.info.rdns)}>Connect {x.info.name}</button>)}<p className="mute">Connect the wallet that owns your Fusebox wallet.</p></>
-            : <p className="mute">No wallet in this browser. <a className="lime" href="https://web3.okx.com/download" target="_blank" rel="noreferrer">Get OKX Wallet ↗</a></p>)
+          {!account ? <><p className="mute">Connect the wallet that owns your Fusebox wallet.</p><ConnectChoices /></>
             : mine === null ? <p className="mute">Reading your wallets from X Layer…</p>
             : mine.length === 0 ? <p className="mute">{short(account)} owns no Fusebox wallet yet. <Link className="lime" href="/app/new">Wire one up →</Link></p>
             : (
