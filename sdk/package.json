@@ -5,20 +5,48 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "exports": { ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" } },
-  "files": ["dist", "README.md"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "sideEffects": false,
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "license": "MIT",
-  "repository": { "type": "git", "url": "https://github.com/0xdopewilly/fusebox", "directory": "sdk" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/0xdopewilly/fusebox.git",
+    "directory": "sdk"
+  },
   "homepage": "https://fusebox-xlayer.vercel.app/docs",
-  "keywords": ["x-layer", "tapeout", "ai-agents", "agent-wallet", "payments", "fusebox", "viem"],
+  "keywords": [
+    "x-layer",
+    "tapeout",
+    "ai-agents",
+    "agent-wallet",
+    "payments",
+    "fusebox",
+    "viem"
+  ],
   "scripts": {
     "build": "tsc -p .",
     "typecheck": "tsc -p . --noEmit",
     "test": "node --test test/*.test.mjs",
     "prepublishOnly": "npm run build"
   },
-  "peerDependencies": { "viem": "^2.30.0" },
-  "devDependencies": { "typescript": "5.9.3", "viem": "2.57.12", "@types/node": "24.19.2" }
+  "peerDependencies": {
+    "viem": "^2.30.0"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "viem": "2.57.12",
+    "@types/node": "24.19.2"
+  }
 }
