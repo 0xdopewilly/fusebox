@@ -26,7 +26,7 @@ export default function AssistantView() {
     const w = new URLSearchParams(window.location.search).get("wallet");
     setWallet(w && isAddress(w, { strict: false }) ? getAddress(w.toLowerCase()) : mine[0] ?? null);
   }, []);
-  const { data: a, error } = useAtlas(8000, wallet ? `/api/wallet/${wallet}` : "/api/atlas");
+  const { data: a, error, reload } = useAtlas(8000, wallet ? `/api/wallet/${wallet}` : "/api/atlas");
   const [key, setKey] = useState<AgentKey | null>(null);
   const [labels, setLabels] = useState<Record<string, string>>({});
   useEffect(() => { if (wallet) { setKey(loadAgentKey(wallet)); setLabels(loadLabels(wallet)); } }, [wallet]);
@@ -82,8 +82,10 @@ export default function AssistantView() {
   const pay = async (i: number, p: Proposal) => {
     if (!key || !wallet) return;
     patch(i, { state: "paying", error: undefined });
-    try { patch(i, { result: await agentPay(key.key, wallet, p.to, p.amount, p.memo), state: "done" }); }
-    catch (e) { patch(i, { state: "ready", error: (e as Error).message }); }
+    try {
+      patch(i, { result: await agentPay(key.key, wallet, p.to, p.amount, p.memo), state: "done" });
+      reload(); pub.getBalance({ address: key.address }).then(setGas).catch(() => {});
+    } catch (e) { patch(i, { state: "ready", error: (e as Error).message }); }
   };
 
   if (!wallet || !key) return (

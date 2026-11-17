@@ -33,7 +33,7 @@ export default function FirstPaymentView() {
     if (mine[0]) { setWallet(mine[0]); return; }
     try { const l = JSON.parse(localStorage.getItem("fusebox:mine") || "[]"); if (l[0]?.address) setWallet(getAddress(l[0].address)); } catch {}
   }, []);
-  const { data: a, error } = useAtlas(6000, wallet ? `/api/wallet/${wallet}` : "/api/atlas");
+  const { data: a, error, reload } = useAtlas(6000, wallet ? `/api/wallet/${wallet}` : "/api/atlas");
   const [key, setKey] = useState<AgentKey | null>(null);
   useEffect(() => { if (wallet) setKey(loadAgentKey(wallet)); }, [wallet]);
   const agentAddr = key?.address ?? (a && !a.isAtlas ? a.agents?.[0] ?? a.agent : undefined);
@@ -77,7 +77,10 @@ export default function FirstPaymentView() {
   const pay = async () => {
     if (!key || !payee) return;
     setPaying(true); setPayErr(null); setPaid(null);
-    try { setPaid(await agentPay(key.key, wallet, getAddress(payee), amount, "My first Fusebox payment")); }
+    try {
+      setPaid(await agentPay(key.key, wallet, getAddress(payee), amount, "My first Fusebox payment"));
+      reload(); if (agentAddr) pub.getBalance({ address: agentAddr }).then(setAgentOkb).catch(() => {});
+    }
     catch (e) { setPayErr((e as Error).message); } finally { setPaying(false); }
   };
   const tryStranger = async () => { const to = rand(); setStranger({ to, check: await checkFor(wallet, to, "1") }); };

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Atlas } from "./atlas";
 
 export function useBlock(ms = 2500) {
@@ -19,6 +19,7 @@ export function useAtlas(ms = 4000, url = "/api/atlas") {
   const [error, setError] = useState<string | null>(null);
   const [fresh, setFresh] = useState<Set<number>>(new Set());
   const seen = useRef<Set<number> | null>(null);
+  const pullNow = useRef<() => void>(() => {});
   useEffect(() => {
     let alive = true;
     const pull = async () => {
@@ -34,10 +35,13 @@ export function useAtlas(ms = 4000, url = "/api/atlas") {
         setData(j);
       } catch { if (alive) setError("unreachable"); }
     };
+    pullNow.current = pull;
     pull(); const id = setInterval(pull, ms);
     return () => { alive = false; clearInterval(id); };
   }, [ms, url]);
-  return { data, error, fresh };
+  /** Pull now instead of waiting for the next tick (after a payment lands, say). */
+  const reload = useCallback(() => pullNow.current(), []);
+  return { data, error, fresh, reload };
 }
 
 export const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
