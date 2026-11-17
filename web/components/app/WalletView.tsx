@@ -111,7 +111,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
         </div>
         <div className="acts" data-b>
           {a.isAtlas ? <Link className="btn lime" href="/app/try" data-cursor="Try it"><span className="roll"><span>Try to scam Atlas</span><span aria-hidden="true">Try to scam Atlas</span></span> <span className="k">→</span></Link>
-            : <Link className="btn lime" href="/app/new" data-cursor="New"><span className="roll"><span>Wire up another</span><span aria-hidden="true">Wire up another</span></span> <span className="k">→</span></Link>}
+            : <Link className="btn lime" href={`/app/assistant?wallet=${a.wallet}`} data-cursor="Chat"><span className="roll"><span>Pay by chatting</span><span aria-hidden="true">Pay by chatting</span></span> <span className="k">→</span></Link>}
           <a className="btn" href={`${OKLINK}/address/${a.wallet}`} target="_blank" rel="noreferrer" data-cursor="OKLink"><span className="roll"><span>Open on OKLink</span><span aria-hidden="true">Open on OKLink</span></span> <span className="k">↗</span></a>
         </div>
       </section>

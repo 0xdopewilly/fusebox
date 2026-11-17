@@ -51,7 +51,7 @@ export default function WalletMobile({ a, fresh }: { a: Atlas; fresh: Set<number
   const copy = () => { navigator.clipboard?.writeText(a.wallet); setCopied(true); setTimeout(() => setCopied(false), 1400); };
   const actions: Action[] = a.isAtlas
     ? [{ icon: "rob", label: "AI reads a scam", href: "/app/rob" }, { icon: "sim", label: "Test a line", href: "/app/simulate" }, { icon: "copy", label: copied ? "Copied" : "Copy", onClick: copy }, { icon: "ext", label: "OKLink", href: `${OKLINK}/address/${a.wallet}`, ext: true }]
-    : [{ icon: "copy", label: copied ? "Copied" : "Copy", onClick: copy }, { icon: "ext", label: "OKLink", href: `${OKLINK}/address/${a.wallet}`, ext: true }, { icon: "sim", label: "Test a line", href: "/app/simulate" }, { icon: "new", label: "Wire up", href: "/app/new" }];
+    : [{ icon: "rob", label: "Assistant", href: `/app/assistant?wallet=${a.wallet}` }, { icon: "coin", label: "First payment", href: `/app/first?wallet=${a.wallet}` }, { icon: "copy", label: copied ? "Copied" : "Copy", onClick: copy }, { icon: "ext", label: "OKLink", href: `${OKLINK}/address/${a.wallet}`, ext: true }];
   const tabs = [["act", "Activity"], ["fuses", "Fuses"], ["spend", "Spend"], ...(owner ? [["owner", "Owner"] as const] : [])] as const;
 
   return (

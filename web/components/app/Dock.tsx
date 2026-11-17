@@ -13,6 +13,7 @@ import { Glyph, type GlyphName } from "./Pixel";
  *  the fifth key opens the panel (wallet, every other page, network). Desktop keeps the top bar. */
 const TABS = [["/app", "Wallet"], ["/app/try", "Try"], ["/app/market", "Market"], ["/app/designers", "Sell"]] as const;
 const GO: readonly [string, string, GlyphName][] = [
+  ["/app/assistant", "Assistant", "rob"],
   ["/app/mine", "My wallets", "mine"],
   ["/app/new", "Wire up a wallet", "new"],
   ["/app/approve", "Approvals", "approve"],
@@ -20,9 +21,8 @@ const GO: readonly [string, string, GlyphName][] = [
   ["/app/simulate", "Line simulator", "sim"],
   ["/app/rob", "Rob the agent", "rob"],
   ["/app/x402", "Pay per call", "x402"],
-  ["/app/status", "Status", "status"],
 ];
-const MORE = [["/docs", "Docs"], ["/onchain", "DeWEB edition"], ["/", "Fusebox home"]] as const;
+const MORE = [["/app/status", "Status"], ["/docs", "Docs"], ["/onchain", "DeWEB edition"], ["/", "Fusebox home"]] as const;
 
 export const openPanel = () => window.dispatchEvent(new Event("fusebox:panel"));
 

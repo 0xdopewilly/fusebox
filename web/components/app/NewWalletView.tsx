@@ -16,14 +16,38 @@ import { MRow, MSheet, MSticky, MChips } from "./m/ui";
 import { Glyph, Plate, type GlyphName } from "./Pixel";
 import Term from "./m/Term";
 import { OKX_DOWNLOAD } from "@/lib/walletLinks";
+import { parseEther } from "viem";
+import AgentConnect from "./AgentConnect";
+import { download, keyFile, loadPendingKey, newAgentKey, saveAgentKey, savePendingKey, type AgentKey } from "@/lib/agentKey";
+
+const GAS_PER_PAY = 0.00002; // OKB a pay() costs on X Layer, roughly (Atlas's real payments)
+
+/** The agent key made in this browser: shown once, copy or download it, and keep it here for the assistant. */
+function KeyCard({ k, keep, setKeep }: { k: AgentKey; keep: boolean; setKeep: (v: boolean) => void }) {
+  const [shown, setShown] = useState(false); const [copied, setCopied] = useState(false);
+  return (
+    <div className="keycard">
+      <div className="m lime">Your agent&apos;s key · made in this browser</div>
+      <div className="kc-row"><span className="m mute">Address</span><span className="m">{k.address}</span></div>
+      <div className="kc-row"><span className="m mute">Private key</span><span className="m kc-secret">{shown ? k.key : "•".repeat(28)}</span></div>
+      <div className="kc-acts m">
+        <button className="btn" onClick={() => setShown(!shown)}>{shown ? "Hide" : "Reveal"}</button>
+        <button className="btn" onClick={() => { navigator.clipboard?.writeText(k.key); setCopied(true); setTimeout(() => setCopied(false), 1600); }}>{copied ? "Copied ✓" : "Copy key"}</button>
+        <button className="btn" onClick={() => download("fusebox-agent-key.txt", keyFile(null, k))}>Download</button>
+      </div>
+      <label className="kc-keep"><input type="checkbox" checked={keep} onChange={(e) => setKeep(e.target.checked)} /> Keep it in this browser so the Fusebox assistant can pay for you</label>
+      <p className="kc-warn">It can only ask your wallet to pay, through every fuse. Still, keep it secret: whoever holds it can spend what your fuses allow. Fusebox never sees it.</p>
+    </div>
+  );
+}
 
 /** What a newcomer needs before wiring up, with what Fusebox can already see. */
 function NeedList({ account, bal, compact }: { account: Address | null; bal: { okb: bigint; usdt: bigint } | null; compact?: boolean }) {
   const items: [GlyphName, React.ReactNode, string, React.ReactNode][] = [
     ["key", "A wallet on X Layer", "It becomes the owner. OKX Wallet works best.", account ? <span className="mtag ok">Connected</span> : <span className="mtag no">Not yet</span>],
-    ["rob", <Term key="a" k="agent">An agent key</Term>, "The address your AI agent signs with, from your agent framework or a fresh wallet. It can only ask to pay.", <span className="mtag dim">You paste it</span>],
+    ["rob", <Term key="a" k="agent">An agent key</Term>, "The address your AI agent signs with. No agent yet? Fusebox makes one for you in a later step, right in this browser.", <span className="mtag dim">Made or pasted</span>],
     ["coin", <><Term key="u" k="usdt0">USD₮0</Term> on X Layer</>, "Pays the fuses' fees and the agent's payments. Withdraw to the X Layer network from an exchange, or bridge.", !bal ? <span className="mtag dim">—</span> : bal.usdt > 0n ? <span className="mtag ok">{(Number(bal.usdt) / 1e6).toFixed(2)}</span> : <span className="mtag no">None yet</span>],
-    ["status", <>A little <Term key="o" k="okb">OKB</Term> for gas</>, "Each step is one transaction you sign; gas costs a fraction of a cent.", !bal ? <span className="mtag dim">—</span> : bal.okb > 0n ? <span className="mtag ok">{(Number(bal.okb) / 1e18).toFixed(4)}</span> : <span className="mtag no">None yet</span>],
+    ["status", <>A little <Term key="o" k="okb">OKB</Term> for gas</>, "For your own steps and your agent's payments; gas costs a fraction of a cent each.", !bal ? <span className="mtag dim">—</span> : bal.okb > 0n ? <span className="mtag ok">{(Number(bal.okb) / 1e18).toFixed(4)}</span> : <span className="mtag no">None yet</span>],
   ];
   return (
     <div className={`need${compact ? " compact" : ""}`}>
@@ -75,7 +99,7 @@ function Field({ label, v, set, suffix }: { label: string; v: string; set: (s: s
 }
 
 export default function NewWalletView() {
-  const { account, write } = useWallet();
+  const { account, write, send } = useWallet();
   const q = useTxQueue<Ctx>();
   // designers can reprice their fuses, so the wizard reads today's fee and accepts exactly that
   const { data: market } = useMarket();
@@ -86,6 +110,12 @@ export default function NewWalletView() {
   const [approvers, setApprovers] = useState(["", "", ""]);
   const [payees, setPayees] = useState<string[]>([""]);
   const [deposit, setDeposit] = useState("0.1"); const [float, setFloat] = useState("0");
+  // an agent with no OKB can't send its payments: the wizard can hand it some gas
+  const [gas, setGas] = useState("0.0005");
+  const [genKey, setGenKey] = useState<AgentKey | null>(null); const [keepKey, setKeepKey] = useState(true);
+  useEffect(() => { const k = loadPendingKey(); if (k) { setGenKey(k); setAgent((a) => a || k.address); } }, []);
+  const makeKey = () => { const k = newAgentKey(); setGenKey(k); savePendingKey(k); setAgent(k.address); };
+  const keyLive = genKey && agent.trim().toLowerCase() === genKey.address.toLowerCase() ? genKey : null;
   const side = useRef<HTMLDivElement>(null);
   const [sideSeen, setSideSeen] = useState(false);
   useEffect(() => {
@@ -116,6 +146,7 @@ export default function NewWalletView() {
   const depositUnits = (() => { try { return parseUnits(deposit || "0", 6); } catch { return -1n; } })();
   const floatUnits = (() => { try { return parseUnits(float || "0", 6); } catch { return -1n; } })();
   const goodPayees = payees.filter((p) => p.trim());
+  const gasWei = (() => { try { return parseEther(gas || "0"); } catch { return -1n; } })();
   const problems = useMemo(() => {
     const p: string[] = [];
     if (!account) p.push("Connect a wallet: it becomes the owner.");
@@ -127,8 +158,10 @@ export default function NewWalletView() {
     if (depositUnits < 0n || floatUnits < 0n) p.push("Amounts must be numbers, up to 6 decimals.");
     if (bal && depositUnits + floatUnits > bal.usdt) p.push(`You have ${Number(bal.usdt) / 1e6} USD₮0; the deposit and float need ${Number(depositUnits + floatUnits) / 1e6}.`);
     if (bal && bal.okb === 0n) p.push("You need a little OKB on X Layer for gas.");
+    else if (bal && gasWei > 0n && bal.okb <= gasWei) p.push(`The agent's gas (${gas} OKB) is more than the OKB you have; lower it or top up.`);
+    if (gasWei < 0n) p.push("Agent gas must be a number of OKB.");
     return p;
-  }, [account, agent, on, approvers, goodPayees, depositUnits, floatUnits, bal]);
+  }, [account, agent, on, approvers, goodPayees, depositUnits, floatUnits, bal, gas, gasWei]);
 
   const plan = (): TxStep<Ctx>[] => {
     const W = () => ({ abi: fuseboxWalletAbi, address: undefined as unknown as Address });
@@ -159,6 +192,7 @@ export default function NewWalletView() {
       } });
       steps.push({ id: "deposit", label: "Prepay fees", detail: `${deposit} USD₮0 ≈ ${perDecision ? Number(depositUnits / perDecision) : 0} decisions`, run: (c) => write({ address: DEP.registry as Address, abi: fuseRegistryAbi, functionName: "deposit", args: [c.wallet!, depositUnits] }) });
     }
+    if (gasWei > 0n) steps.push({ id: "gas", label: "Send your agent gas", detail: `${gas} OKB · about ${Math.floor(Number(gas) / GAS_PER_PAY)} payments`, run: () => send(getAddress(agent.trim().toLowerCase()), gasWei) });
     if (floatUnits > 0n) steps.push({ id: "float", label: "Fund the wallet for payments", detail: `${float} USD₮0`, run: (c) => write({ address: DEP.usdt0 as Address, abi: erc20, functionName: "transfer", args: [c.wallet!, floatUnits] }) });
     return steps;
   };
@@ -167,6 +201,8 @@ export default function NewWalletView() {
   const retry = async () => { const ok = await q.retry(); if (ok) setMade({ ...(q.ctx() ?? {}) }); };
   const failed = q.steps.some((s) => s.state === "error");
   // when the last step lands, bring the "It's live" card into view (on phones it sits under the step list)
+  // the key made here belongs to the new wallet now: keep it for the assistant (or not), and drop the pending copy
+  useEffect(() => { if (!made?.wallet || !keyLive) return; if (keepKey) saveAgentKey(made.wallet, keyLive); savePendingKey(null); }, [made?.wallet]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { if (made?.wallet) setTimeout(() => document.querySelector(".done-card")?.scrollIntoView({ behavior: "smooth", block: "center" }), 150); }, [made?.wallet]);
 
   const toggle = (k: Key) => setOn({ ...on, [k]: !on[k] });
@@ -189,8 +225,11 @@ export default function NewWalletView() {
       {made?.wallet ? (
         <div className="done-card">
           <div className="mtitle">It&apos;s live.</div>
-          <p className="mcap" style={{ marginTop: 10 }}>Your wallet <span className="m lime">{short(made.wallet)}</span> is on X Layer with its fuses spliced in. Give your agent its address.</p>
-          <Link className="btn lime" style={{ marginTop: 16, justifyContent: "center", height: 52 }} href={`/app/w/${made.wallet}`}>Open my wallet <span className="k">→</span></Link>
+          <p className="mcap" style={{ marginTop: 10 }}>Your wallet <span className="m lime">{short(made.wallet)}</span> is on X Layer with its fuses spliced in. Now hand it to your agent, or make your first payment right here.</p>
+          <Link className="btn lime" style={{ marginTop: 16, justifyContent: "center", height: 52 }} href={`/app/first?wallet=${made.wallet}`}>Make your first payment <span className="k">→</span></Link>
+          <div className="mlabel m" style={{ marginTop: 18 }}><span>Connect your agent</span></div>
+          <AgentConnect wallet={made.wallet} agentKey={keyLive?.key} />
+          <Link className="btn" style={{ marginTop: 12, justifyContent: "center", height: 48 }} href={`/app/w/${made.wallet}`}>Open my wallet</Link>
         </div>
       ) : <>
         {step === 0 && <>
@@ -208,8 +247,13 @@ export default function NewWalletView() {
         </>}
         {step === 2 && <>
           <div><div className="mtitle">Name the agent</div><p className="mcap" style={{ marginTop: 8 }}>The address your AI agent signs with. It can only ask this wallet to pay, through every fuse.</p></div>
-          <label className="mfield"><span className="m">Agent address</span><input aria-label="Agent address" value={agent} onChange={(e) => setAgent(e.target.value)} placeholder="0x…" spellCheck={false} /></label>
+          {!keyLive && <button className="btn lime" style={{ justifyContent: "center", height: 52 }} onClick={makeKey}>Make an agent key for me</button>}
+          {keyLive ? <KeyCard k={keyLive} keep={keepKey} setKeep={setKeepKey} /> : <>
+            <div className="mlabel m"><span>Or paste your agent&apos;s address</span></div>
+            <label className="mfield"><span className="sr">Agent address</span><input aria-label="Agent address" value={agent} onChange={(e) => setAgent(e.target.value)} placeholder="0x…" spellCheck={false} /></label>
+          </>}
           {agent.trim() && agentErr && <p className="mnote" style={{ color: "var(--red)" }}>{agentErr}</p>}
+          {keyLive && <button className="linkbtn m" onClick={() => { setGenKey(null); savePendingKey(null); setAgent(""); }}>Use my own agent address instead</button>}
         </>}
         {step === 3 && <>
           <div><div className="mtitle">Pick the fuses</div><p className="mcap" style={{ marginTop: 8 }}>Every payment must pass all of them.</p></div>
@@ -248,6 +292,7 @@ export default function NewWalletView() {
             <label className="mfield"><span className="m">Fee balance · USD₮0</span><input aria-label="Fee balance (USD₮0)" value={deposit} onChange={(e) => setDeposit(e.target.value)} inputMode="decimal" /></label>
             <label className="mfield"><span className="m">Wallet float · USD₮0</span><input aria-label="Wallet float (USD₮0)" value={float} onChange={(e) => setFloat(e.target.value)} inputMode="decimal" /></label>
           </div>
+          <label className="mfield"><span className="m">Agent gas · OKB · ≈ {Math.max(0, Math.floor(Number(gas || 0) / GAS_PER_PAY))} payments</span><input aria-label="Agent gas (OKB)" value={gas} onChange={(e) => setGas(e.target.value)} inputMode="decimal" /></label>
           <div className="mcard" style={{ padding: 14 }}><div className="mkv">
             <span>Fuses</span><span>{Object.values(on).filter(Boolean).length} · {(Number(perDecision) / 1e6).toFixed(4)} USD₮0 a payment</span>
             <span>Fees cover</span><span>{perDecision && depositUnits > 0n ? `${Number(depositUnits / perDecision)} decisions` : "—"}</span>
@@ -313,7 +358,11 @@ export default function NewWalletView() {
             <div>
               <h3>Name the agent</h3>
               <p className="lead">The address your AI agent signs with. It can do exactly one thing: ask this wallet to pay, through every fuse. It can&apos;t change a fuse, a limit or a payee.</p>
-              <div className="field m"><label>Agent address</label><input aria-label="Agent address" value={agent} onChange={(e) => setAgent(e.target.value)} placeholder="0x…" spellCheck={false} /></div>
+              {keyLive ? <KeyCard k={keyLive} keep={keepKey} setKeep={setKeepKey} /> : <>
+                <button className="btn lime" onClick={makeKey} style={{ marginBottom: 14 }}>Make an agent key for me <span className="k">→</span></button>
+                <div className="field m"><label>Or paste your agent&apos;s address</label><input aria-label="Agent address" value={agent} onChange={(e) => setAgent(e.target.value)} placeholder="0x…" spellCheck={false} /></div>
+              </>}
+              {keyLive && <button className="linkbtn m" style={{ marginTop: 10 }} onClick={() => { setGenKey(null); savePendingKey(null); setAgent(""); }}>Use my own agent address instead</button>}
             </div>
           </div>
           <div className="wz-sec">
@@ -383,7 +432,9 @@ export default function NewWalletView() {
               <div className="prow">
                 <Field label="Fee balance" suffix="USD₮0" v={deposit} set={setDeposit} />
                 <Field label="Wallet float" suffix="USD₮0" v={float} set={setFloat} />
+                <Field label="Agent gas" suffix="OKB" v={gas} set={setGas} />
               </div>
+              <p className="m mute" style={{ marginTop: 8 }}>Agent gas ≈ {Math.max(0, Math.floor(Number(gas || 0) / GAS_PER_PAY))} payments. Your agent needs a little OKB to send its payments; set 0 if you fund it yourself.</p>
             </div>
           </div>
         </div>
@@ -414,8 +465,10 @@ export default function NewWalletView() {
               {made?.wallet ? (
                 <div className="done-card">
                   <h4>It&apos;s live.</h4>
-                  <p style={{ color: "var(--soft)", fontSize: 14, lineHeight: 1.5 }}>Your wallet <span className="m lime">{short(made.wallet)}</span> is on X Layer with its fuses spliced in. Give your agent its address.</p>
-                  <div className="prow" style={{ marginTop: 14 }}><Link className="btn lime" href={`/app/w/${made.wallet}`} data-cursor="Open">Open my wallet <span className="k">→</span></Link></div>
+                  <p style={{ color: "var(--soft)", fontSize: 14, lineHeight: 1.5 }}>Your wallet <span className="m lime">{short(made.wallet)}</span> is on X Layer with its fuses spliced in. Hand it to your agent, or make your first payment here.</p>
+                  <div className="prow" style={{ marginTop: 14 }}><Link className="btn lime" href={`/app/first?wallet=${made.wallet}`} data-cursor="Pay">Make your first payment <span className="k">→</span></Link><Link className="btn" href={`/app/w/${made.wallet}`} data-cursor="Open">Open my wallet</Link></div>
+                  <h4 style={{ marginTop: 18 }}>Connect your agent</h4>
+                  <AgentConnect wallet={made.wallet} agentKey={keyLive?.key} />
                 </div>
               ) : failed ? (
                 <button className="btn lime" onClick={retry} disabled={q.running} data-cursor="Retry">{q.running ? "Working…" : "Retry from the failed step"}</button>

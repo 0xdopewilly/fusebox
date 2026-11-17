@@ -43,6 +43,7 @@ export default function AppBar() {
         <span className="ink" style={{ left: 0, width: 0 }} />
       </nav>
       <div className="right m">
+        <Link className="docs-l" href="/app/assistant">Assistant</Link>
         <Link className="docs-l x4" href="/app/x402">x402</Link>
         <Link className="docs-l" href="/docs">Docs ↗</Link>
         <a className="badge tape" href="https://tapeout.net" target="_blank" rel="noreferrer" title="Every fuse is a circuit taped out on TapeOut">Built on TapeOut ↗</a>

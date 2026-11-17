@@ -23,6 +23,8 @@ AI agents now hold wallets and send real money, and one convincing message can m
 
 - **Phones** get an app layout: a dock (Wallet, Try, Market, Sell, your account), one job per screen, details in bottom sheets, and the wizard as one step per screen.
 - **Connecting:** any browser wallet (EIP-6963 or injected), the **OKX Wallet app** over OKX Connect (a QR code on desktop, a hand-off on phones), or reopen Fusebox inside OKX Wallet, MetaMask, Trust Wallet or Bitget Wallet. Fusebox adds and switches to X Layer itself.
+- **Genuine use, in minutes:** Wire up can make your agent's key in the browser, send it gas, and finish with a ready setup for Claude Code, Claude Desktop, Cursor or the SDK. A first-payment guide then has your agent pay a saved payee for real and shows a stranger being stopped (read-only).
+- **The Fusebox assistant:** pay by chatting ("pay Kano Cotton 2"). It only proposes; your wallet's fuses check each payment on X Layer, you tap Pay, and the agent key in your browser signs. It only pays saved payees or addresses you type, and never sees a key on the server.
 - **Before you wire up** a wallet you need: a wallet on X Layer (the owner), an agent key (the address your agent signs with), USD₮0 on X Layer for fees and payments, and a little OKB for gas. The wizard's first step checks these.
 
 ## Live on X Layer mainnet (chain 196)

@@ -23,6 +23,8 @@ interface Ctx {
   connect: (rdns: string) => Promise<void>; disconnect: () => void; write: (a: Omit<WriteArgs, "account" | "chain">) => Promise<Hash>;
   /** personal_sign a plain-text message with the connected account (free: no transaction) */
   sign: (message: string) => Promise<Hex>;
+  /** send OKB (wei) from the connected account, e.g. gas for an agent key */
+  send: (to: Address, value: bigint) => Promise<Hash>;
 }
 const C = createContext<Ctx | null>(null);
 export const useWallet = () => { const c = useContext(C); if (!c) throw new Error("WalletProvider missing"); return c; };
@@ -188,8 +190,14 @@ export default function WalletProvider({ children }: { children: React.ReactNode
     if (!p || !account) throw new Error("Connect a wallet first.");
     return (await p.request({ method: "personal_sign", params: [toHex(message), account] })) as Hex;
   }, [account]);
+  const send = useCallback(async (to: Address, value: bigint) => {
+    if (!active.current || !account) throw new Error("Connect a wallet first.");
+    await ensureChain();
+    const wc = createWalletClient({ chain: XLAYER, transport: custom(active.current) });
+    return wc.sendTransaction({ account, to, value, chain: XLAYER });
+  }, [account, ensureChain]);
   const hasOkx = useMemo(() => wallets.some((w) => /okx|okex/i.test(w.info.rdns)), [wallets]);
   const walletName = via === OKX_APP ? "OKX Wallet app" : (wallets.find((w) => w.info.rdns === via)?.info.name ?? null);
-  const value = useMemo(() => ({ wallets, account, chainId, connecting, error, mobile, hasOkx, via, walletName, connect, disconnect, write, sign }), [wallets, account, chainId, connecting, error, mobile, hasOkx, via, walletName, connect, disconnect, write, sign]);
+  const value = useMemo(() => ({ wallets, account, chainId, connecting, error, mobile, hasOkx, via, walletName, connect, disconnect, write, sign, send }), [wallets, account, chainId, connecting, error, mobile, hasOkx, via, walletName, connect, disconnect, write, sign, send]);
   return <C.Provider value={value}>{children}{pair && <PairSheet links={pair.links} mobile={mobile} onCancel={cancelPair} />}{nudge && via === OKX_APP && <ApproveNudge links={nudge} mobile={mobile} />}</C.Provider>;
 }

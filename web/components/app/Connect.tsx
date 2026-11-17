@@ -25,7 +25,7 @@ export default function Connect() {
             <>
               <AccountCard compact />
               <nav className="pop-go" aria-label="Your wallets">
-                {([["/app/mine", "My wallets", "mine"], ["/app/new", "Wire up a wallet", "new"], ["/app/approve", "Approvals", "approve"]] as const).map(([h, t, g]) => (
+                {([["/app/assistant", "Assistant", "rob"], ["/app/mine", "My wallets", "mine"], ["/app/new", "Wire up a wallet", "new"], ["/app/approve", "Approvals", "approve"]] as const).map(([h, t, g]) => (
                   <Link key={h} href={h} onClick={() => setOpen(false)}><Glyph name={g} size={14} />{t}<span className="k" aria-hidden="true">→</span></Link>
                 ))}
               </nav>

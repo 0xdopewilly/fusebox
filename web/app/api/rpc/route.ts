@@ -2,11 +2,13 @@ import { RPCS } from "@/lib/chain";
 
 export const dynamic = "force-dynamic";
 
-/** Read-only methods the browser needs. Signed transactions go through the user's own wallet, never through here. */
+/** The methods the browser needs: reads, plus broadcasting a transaction an in-browser agent key already signed (the
+ *  Fusebox assistant and the first-payment guide). Nothing here can sign; owners still sign in their own wallet. */
 const ALLOWED = new Set([
   "eth_chainId", "net_version", "eth_blockNumber", "eth_call", "eth_estimateGas", "eth_getBalance", "eth_getCode",
   "eth_getStorageAt", "eth_getLogs", "eth_getTransactionCount", "eth_getTransactionByHash", "eth_getTransactionReceipt",
   "eth_getBlockByNumber", "eth_getBlockByHash", "eth_gasPrice", "eth_maxPriorityFeePerGas", "eth_feeHistory",
+  "eth_sendRawTransaction",
 ]);
 const MAX_BATCH = 25;
 

@@ -21,6 +21,9 @@ const SECTIONS = [
   { id: "quickstart", title: "Quickstart", group: "Start" },
   { id: "connect", title: "Connecting a wallet", group: "Start" },
   { id: "needs", title: "Before you wire up", group: "Start" },
+  { id: "agent", title: "Connect your agent", group: "Start" },
+  { id: "first", title: "Your first payment", group: "Start" },
+  { id: "assistant", title: "The Fusebox assistant", group: "Start" },
   { id: "payment", title: "How a payment works", group: "Concepts" },
   { id: "fuses", title: "The four fuses", group: "Concepts" },
   { id: "fees", title: "Fees and budgets", group: "Concepts" },
@@ -64,7 +67,8 @@ export default function DocsPage() {
               <ol className="dsteps">
                 <li><b>Try to scam Atlas.</b> Open <Link href="/app/try">Try to scam it</Link>, pick a trick and run it. Atlas&apos;s fuses answer in a few seconds. Free, no wallet needed, nothing moves.</li>
                 <li><b>See why.</b> Each fuse explains its yes or no. <Link href="/app/rob">Rob the agent</Link> lets an AI agent read your scam first, and the <Link href="/app/simulate">line simulator</Link> tests any set of fuses on a list of payments.</li>
-                <li><b>Wire up your own.</b> <Link href="/app/new">Wire up a wallet</Link> starts with a checklist of what you need, then takes you through it one step at a time.</li>
+                <li><b>Wire up your own.</b> <Link href="/app/new">Wire up a wallet</Link> starts with a checklist of what you need, makes your agent&apos;s key for you if you don&apos;t have one, and takes you through it one step at a time.</li>
+                <li><b>Use it.</b> Hand the wallet to your agent (Claude, Cursor or your own code) with the setup Fusebox gives you, or pay by chatting with the <a href="#assistant">Fusebox assistant</a>.</li>
               </ol>
               <h3>On a phone</h3>
               <p>The app is laid out like a phone app: the dock at the bottom moves between Wallet, Try, Market and Sell, and its last key opens your account and every other page. The <b>i</b> button in the top bar explains the screen you&apos;re on, and any word with a dotted underline explains itself when you tap it. Every term is also in the <a href="#glossary">glossary</a>.</p>
@@ -132,11 +136,35 @@ export default function DocsPage() {
               <p>Wiring up your own wallet takes about ten signatures. Have these ready; the first step of the wizard checks what it can for you, and nothing is signed until the last step.</p>
               <ol className="dsteps">
                 <li><b>A wallet on X Layer.</b> It becomes the owner: the only address that can change fuses, limits and payees. OKX Wallet works best.</li>
-                <li><b>An agent key.</b> The address your AI agent signs with, from your agent framework or a fresh wallet. It can only ask the wallet to pay, through every fuse.</li>
+                <li><b>An agent key.</b> The address your AI agent signs with. No agent yet? Wire up makes one in your browser: you see it once, copy or download it, and can keep it there for the assistant. It can only ask the wallet to pay, through every fuse.</li>
                 <li><b>USD₮0 on X Layer.</b> It prepays the fuses&apos; fees (0.0045 per payment with all four) and funds the agent&apos;s payments. Withdraw it to the X Layer network from an exchange, or bridge it from another chain.</li>
-                <li><b>A little OKB for gas.</b> Every step is one transaction; gas on X Layer costs a fraction of a cent.</li>
+                <li><b>A little OKB for gas.</b> Every step is one transaction; gas on X Layer costs a fraction of a cent. Your agent also needs gas to send its payments: Wire up sends it 0.0005 OKB by default, about 25 payments.</li>
               </ol>
               <p>Not ready yet? <Link href="/app/simulate">Test a line first</Link>: the simulator needs no wallet.</p>
+            </section>
+
+            <section id="agent">
+              <h2>Connect your agent</h2>
+              <p>When Wire up finishes, it hands you a ready setup with your wallet (and the agent key, if Fusebox made it) already filled in. Copy it, paste it, and your agent pays through your fuses.</p>
+              <Code label="Claude Code">{`claude mcp add fusebox -e FUSEBOX_WALLET=0xYourWallet -e FUSEBOX_AGENT_KEY=0xYourAgentKey -- npx -y fusebox-mcp`}</Code>
+              <p>For <b>Claude Desktop</b> the same server goes in <code>claude_desktop_config.json</code> (Settings → Developer → Edit Config); for <b>Cursor</b>, in <code>~/.cursor/mcp.json</code>. In your own code, <code>new Fusebox({"{ wallet, account }"})</code> from the <a href="#sdk">SDK</a>. Then ask: <i>&ldquo;Pay my saved payee 0.01 USD₮0.&rdquo;</i> The agent checks the fuses first and tells you what they said.</p>
+            </section>
+
+            <section id="first">
+              <h2>Your first payment</h2>
+              <p>The <Link href="/app/first">first-payment guide</Link> opens right after Wire up. It checks three things (money in the wallet, gas for your agent, a saved payee) and fixes what&apos;s missing with one signature each. Then your agent pays the saved payee for real, signed in your browser with its key, and you see every fuse&apos;s answer and the transaction.</p>
+              <p>Last, it checks the same payment to a stranger, read-only, so you see your fuses stop it without tripping your Breaker. On a real payment to a stranger the Breaker would trip and stay tripped until you reset it.</p>
+            </section>
+
+            <section id="assistant">
+              <h2>The Fusebox assistant</h2>
+              <p>Pay by chatting: open the <Link href="/app/assistant">assistant</Link> and say <i>&ldquo;pay Kano Cotton 2&rdquo;</i>. It lines the payment up, your wallet&apos;s fuses check it on X Layer, and you tap <b>Pay as your agent</b>. If a fuse would say no, there&apos;s nothing to sign; it shows you which fuse and why.</p>
+              <ul className="dlist">
+                <li>It only pays your saved payees, or an address you type in full. It never guesses an address, and a message claiming urgency or new bank details changes nothing.</li>
+                <li>Name your payees once (&ldquo;Kano Cotton&rdquo;); the names live in your browser.</li>
+                <li>It signs with your wallet&apos;s agent key, kept in your browser: Fusebox&apos;s servers never see it. Made the key elsewhere? Paste it once.</li>
+                <li>The model is Claude Haiku 5.5 on NEAR AI Cloud; when it&apos;s unavailable a simple reader understands &ldquo;pay &lt;name&gt; &lt;amount&gt;&rdquo;.</li>
+              </ul>
             </section>
 
             <section id="payment">
