@@ -119,6 +119,9 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 /* ---------- hero ---------- */
 .hero { height: max(1000px, 100svh); position: relative; overflow: hidden; border-bottom: 1px solid var(--hair); }
 .hero .copy { position: relative; z-index: 6; padding-top: 140px; }
+/* the copy and the facts sit over the fuse canvas: let clicks through to it ("click the fuse to blow it") */
+.hero .copy, .hero .facts { pointer-events: none; }
+.hero .copy a, .hero .copy h1, .hero .copy .sub p, .hero .copy .eyebrow { pointer-events: auto; }
 .hero .eyebrow { margin-bottom: 30px; }
 .hero h1 { font-size: clamp(64px, 7.8vw, 128px); white-space: nowrap; }
 .hero h1 .br { display: inline-block; }
