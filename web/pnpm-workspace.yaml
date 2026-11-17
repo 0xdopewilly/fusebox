@@ -2,3 +2,7 @@ allowBuilds:
   core-js: false
   sharp: false
   unrs-resolver: false
+overrides:
+  zod: 4.6.7
+  "@stablelib/ed25519": 2.1.0
+  "@stablelib/ed25519>@stablelib/sha512": 2.0.1

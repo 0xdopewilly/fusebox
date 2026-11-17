@@ -14,16 +14,26 @@ export function MSheet({ open, onClose, title, children }: { open: boolean; onCl
   const shade = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
+  // Parents re-render often (the app bar on every block) and pass a fresh onClose each time. Keeping it in a ref keeps
+  // `close` stable, so the open effect below runs once per opening instead of replaying the slide-in on every render.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const closing = useRef(false);
   const close = useCallback(() => {
-    if (!sheet.current || reduced()) { onClose(); return; }
+    if (closing.current) return;
+    if (!sheet.current || reduced()) { onCloseRef.current(); return; }
+    closing.current = true;
+    gsap.killTweensOf([sheet.current, shade.current]);
     gsap.to(sheet.current, { yPercent: 100, duration: 0.3, ease: "power3.in" });
-    gsap.to(shade.current, { autoAlpha: 0, duration: 0.28, onComplete: onClose });
-  }, [onClose]);
+    gsap.to(shade.current, { autoAlpha: 0, duration: 0.28, onComplete: () => { closing.current = false; onCloseRef.current(); } });
+  }, []);
   useEffect(() => {
     if (!open) return;
+    closing.current = false;
     document.documentElement.classList.add("panel-open");
-    sheet.current?.focus();
+    sheet.current?.focus({ preventScroll: true });
     if (!reduced() && sheet.current) {
+      gsap.killTweensOf([sheet.current, shade.current]);
       gsap.fromTo(shade.current, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.25 });
       gsap.fromTo(sheet.current, { yPercent: 100 }, { yPercent: 0, duration: 0.5, ease: "expo.out" });
     }
