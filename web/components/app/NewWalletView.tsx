@@ -14,6 +14,29 @@ import { Responsive } from "./m/useMobile";
 import { PageChrome } from "./m/chrome";
 import { MRow, MSheet, MSticky, MChips } from "./m/ui";
 import { Glyph, Plate, type GlyphName } from "./Pixel";
+import Term from "./m/Term";
+import { OKX_DOWNLOAD } from "@/lib/walletLinks";
+
+/** What a newcomer needs before wiring up, with what Fusebox can already see. */
+function NeedList({ account, bal, compact }: { account: Address | null; bal: { okb: bigint; usdt: bigint } | null; compact?: boolean }) {
+  const items: [GlyphName, React.ReactNode, string, React.ReactNode][] = [
+    ["key", "A wallet on X Layer", "It becomes the owner. OKX Wallet works best.", account ? <span className="mtag ok">Connected</span> : <span className="mtag no">Not yet</span>],
+    ["rob", <Term key="a" k="agent">An agent key</Term>, "The address your AI agent signs with, from your agent framework or a fresh wallet. It can only ask to pay.", <span className="mtag dim">You paste it</span>],
+    ["coin", <><Term key="u" k="usdt0">USD₮0</Term> on X Layer</>, "Pays the fuses' fees and the agent's payments. Withdraw to the X Layer network from an exchange, or bridge.", !bal ? <span className="mtag dim">—</span> : bal.usdt > 0n ? <span className="mtag ok">{(Number(bal.usdt) / 1e6).toFixed(2)}</span> : <span className="mtag no">None yet</span>],
+    ["status", <>A little <Term key="o" k="okb">OKB</Term> for gas</>, "Each step is one transaction you sign; gas costs a fraction of a cent.", !bal ? <span className="mtag dim">—</span> : bal.okb > 0n ? <span className="mtag ok">{(Number(bal.okb) / 1e18).toFixed(4)}</span> : <span className="mtag no">None yet</span>],
+  ];
+  return (
+    <div className={`need${compact ? " compact" : ""}`}>
+      {items.map(([g, title, say, st], i) => (
+        <div key={i} className="need-i">
+          <span className="need-ico"><Glyph name={g} size={16} /></span>
+          <span className="need-t"><b>{title}</b><small>{say}</small></span>
+          <span className="need-st m">{st}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 const erc20 = [
   { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "a", type: "address" }], outputs: [{ type: "uint256" }] },
@@ -151,17 +174,17 @@ export default function NewWalletView() {
   // ---- phones: one step per screen, Back / Next under the thumb
   const [step, setStep] = useState(0);
   const [describe, setDescribe] = useState(false);
-  const STEPS = ["Owner", "Agent", "Fuses", "People", "Fund"];
+  const STEPS = ["Start", "Owner", "Agent", "Fuses", "People", "Fund"];
   const GL: Record<Key, GlyphName> = { "daily-cap": "mine", "payee-guard": "approve", breaker: "stop", "approval-2of3": "x402" };
   const agentErr = !agent.trim() ? "Enter the address your agent signs with." : !isAddress(agent.trim(), { strict: false }) ? "That isn't an address." : account && agent.trim().toLowerCase() === account.toLowerCase() ? "Use a separate key for the agent, not your own." : null;
-  const blockNext = step === 1 && !!agentErr;
+  const blockNext = step === 2 && !!agentErr;
   const activeStarter = STARTERS.find((x) => FUSES.every((f) => on[f.key] === x.on[f.key]) && (!x.on["daily-cap"] || cap === x.cap) && (!x.on["payee-guard"] || (cool === x.cool && trial === x.trial)) && (!x.on["approval-2of3"] || thr === x.thr));
   const go = (n: number) => { setStep(n); window.scrollTo({ top: 0 }); };
   const mobileView = (
     <div className="mpage wzm">
       <PageChrome title="Wire up" sub={made?.wallet ? "Done" : `Step ${step + 1} of ${STEPS.length} · ${STEPS[step]}`}
         info={<><p>Your agent gets a key that can only pay through the fuses you pick. You stay the owner: you set the limits, save payees, and reset a blown fuse.</p><p>Each fuse is a TapeOut circuit on X Layer. A payment needs a yes from every fuse, and each check pays the fuse&apos;s designer. Everything runs on X Layer mainnet; gas is a tiny fraction of a cent.</p></>} />
-      <div className="wzm-prog" aria-hidden="true">{STEPS.map((s, i) => <i key={s} className={i <= step || made?.wallet ? "on" : ""} />)}</div>
+      <div className="wzm-prog" aria-hidden="true" style={{ gridTemplateColumns: `repeat(${STEPS.length}, 1fr)` }}>{STEPS.map((s, i) => <i key={s} className={i <= step || made?.wallet ? "on" : ""} />)}</div>
 
       {made?.wallet ? (
         <div className="done-card">
@@ -171,15 +194,24 @@ export default function NewWalletView() {
         </div>
       ) : <>
         {step === 0 && <>
+          <div><div className="mtitle">Before you start</div><p className="mcap" style={{ marginTop: 8 }}>You&apos;ll need four things. Fusebox checks what it can.</p></div>
+          <NeedList account={account} bal={bal} />
+          <p className="mnote">Missing something? You can still walk through every step: nothing is signed until the last one.</p>
+          <div className="mrows">
+            {!account && <MRow href={OKX_DOWNLOAD} ext icon={<Glyph name="key" size={16} />} title="Get OKX Wallet" sub="The wallet that works best on X Layer" />}
+            <MRow href="/docs#start" icon={<Glyph name="docs" size={16} />} title="How Fusebox works" sub="The two-minute version" />
+          </div>
+        </>}
+        {step === 1 && <>
           <div><div className="mtitle">Connect the owner</div><p className="mcap" style={{ marginTop: 8 }}>The wallet you connect owns the new one. Only it can change fuses, limits and payees.</p></div>
           {account ? <MRow icon={<Plate address={account} size={22} />} title={short(account)} sub="Owner · connected" chev={false} /> : <ConnectChoices cta="" />}
         </>}
-        {step === 1 && <>
+        {step === 2 && <>
           <div><div className="mtitle">Name the agent</div><p className="mcap" style={{ marginTop: 8 }}>The address your AI agent signs with. It can only ask this wallet to pay, through every fuse.</p></div>
           <label className="mfield"><span className="m">Agent address</span><input aria-label="Agent address" value={agent} onChange={(e) => setAgent(e.target.value)} placeholder="0x…" spellCheck={false} /></label>
           {agent.trim() && agentErr && <p className="mnote" style={{ color: "var(--red)" }}>{agentErr}</p>}
         </>}
-        {step === 2 && <>
+        {step === 3 && <>
           <div><div className="mtitle">Pick the fuses</div><p className="mcap" style={{ marginTop: 8 }}>Every payment must pass all of them.</p></div>
           <MChips label="Start from a line" items={STARTERS.map((x) => [x.id, x.name] as const)} value={activeStarter?.id ?? null} onChange={(id) => { const x = STARTERS.find((s) => s.id === id)!; setOn(x.on); setCap(x.cap); setCool(x.cool); setTrial(x.trial); setThr(x.thr); }} />
           {activeStarter && <p className="mnote">{activeStarter.why}</p>}
@@ -199,7 +231,7 @@ export default function NewWalletView() {
           ))}
           <Link className="m lime" href={simLink}>Test this line on sample payments →</Link>
         </>}
-        {step === 3 && <>
+        {step === 4 && <>
           <div><div className="mtitle">Payees and approvers</div><p className="mcap" style={{ marginTop: 8 }}>{on["payee-guard"] || on.breaker ? "Saved payees go straight through Payee Guard and the Breaker." : "Payees you save now; you can add more later."}</p></div>
           <div className="mlabel m"><span>Saved payees</span><span>{goodPayees.length}</span></div>
           {payees.map((p, i) => <div className="mfield-row" key={i}><label className="mfield"><span className="sr">Saved payee {i + 1} address</span><input aria-label={`Saved payee ${i + 1} address`} value={p} onChange={(e) => setPayees(payees.map((x, k) => (k === i ? e.target.value : x)))} placeholder="0x…" spellCheck={false} /></label><button className="mfield-x" onClick={() => setPayees(payees.filter((_, k) => k !== i))} aria-label={`Remove saved payee ${i + 1}`}>✕</button></div>)}
@@ -209,7 +241,7 @@ export default function NewWalletView() {
             {approvers.map((a, i) => <label className="mfield" key={i}><span className="sr">Approver {i + 1} address</span><input aria-label={`Approver ${i + 1} address`} value={a} onChange={(e) => setApprovers(approvers.map((x, k) => (k === i ? e.target.value : x)))} placeholder={`Approver ${i + 1} · 0x…`} spellCheck={false} /></label>)}
           </>}
         </>}
-        {step === 4 && <>
+        {step === 5 && <>
           <div><div className="mtitle">Fund it</div><p className="mcap" style={{ marginTop: 8 }}>Fees come from a prepaid balance; payments come from the wallet.</p></div>
           {bal && <div className="mstats" style={{ gridTemplateColumns: "1fr 1fr" }}><div><span className="m">You have</span><b>{(Number(bal.usdt) / 1e6).toFixed(2)}<small>USD₮0</small></b></div><div><span className="m">Gas</span><b>{(Number(bal.okb) / 1e18).toFixed(4)}<small>OKB</small></b></div></div>}
           <div className="mopt-2">
@@ -229,7 +261,7 @@ export default function NewWalletView() {
               {s.error && <span className="e">{s.error}</span>}</li>))}</ul>}
           {!q.running && problems.length > 0 && <p className="mnote" style={{ color: "var(--red)" }}>{problems[0]}</p>}
         </>}
-        {step === 4 && !q.steps.length && <p className="m mute">Each step is one transaction you sign.</p>}
+        {step === 5 && !q.steps.length && <p className="m mute">Each step is one transaction you sign.</p>}
         <MSticky>
           {step > 0 && <button className="btn fit" onClick={() => go(step - 1)} disabled={q.running}>Back</button>}
           {step < STEPS.length - 1
@@ -256,6 +288,10 @@ export default function NewWalletView() {
       <section className="try-head">
         <h1 className="disp" data-a>Wire up a <span className="lime">[wallet]</span>.</h1>
         <p data-a>Your agent gets a key that can only pay through the fuses you pick. You stay the owner: you set the limits, save payees, and reset a blown fuse. Everything runs on X Layer mainnet.</p>
+      </section>
+      <section className="need-box" data-a aria-label="Before you start">
+        <div className="need-h m"><span className="lime">Before you start</span><span className="mute">nothing is signed until the last step</span></div>
+        <NeedList account={account} bal={bal} compact />
       </section>
       <h2 className="sr">Set up your wallet</h2>
       <section className="wz">

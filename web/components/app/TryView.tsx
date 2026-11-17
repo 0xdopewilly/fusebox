@@ -78,7 +78,7 @@ export default function TryView() {
           <div className={`mverdict ${res.allowed ? "ok" : "no"}`}>
             <span className="m">Verdict · block {res.block.toLocaleString("en-US")}</span>
             <b>{res.allowed ? "Every fuse holds. Atlas would pay." : `Stopped at ${firstBad?.name}`}</b>
-            <div className="mrows">{res.fuses.map((f) => <MRow key={f.name} title={f.name} sub={f.why} value={<span className={`mtag ${f.status === "pass" ? "ok" : "no"}`}>{f.status === "pass" ? "Holds" : "Blew"}</span>} chev={false} className="tall" />)}</div>
+            <div className="mrows">{res.fuses.map((f) => <MRow key={f.name} title={f.name} sub={f.why} value={<span className={`mtag ${f.status === "pass" ? "ok" : "no"}`}>{f.status === "pass" ? "Passed" : "Stopped"}</span>} chev={false} className="tall" />)}</div>
             <span className="m mute">{res.allowed ? "4 of 4 said yes" : `Nothing moved · ${res.fuses.filter((f) => f.status !== "pass").length} of 4 said no`}</span>
           </div>
         )}
@@ -123,7 +123,7 @@ export default function TryView() {
             <div className="wire-wrap"><LineWire fuses={fuses} run={run} payee="PAYEE" payeeSub={res ? short(res.to) : ""} onDone={() => setDone(true)} /></div>
             <div className="why">
               {(res?.fuses ?? fuses.map((f) => ({ name: f.name, status: "idle", why: "Waiting for a payment." }))).map((f, i) => (
-                <div key={i}><span className="m mute">{f.name}</span><b className={done ? f.status : "idle"}>{done ? (f.status === "pass" ? "Holds" : "Blew") : "—"}</b><p>{done ? f.why : "Waiting for a payment."}</p></div>
+                <div key={i}><span className="m mute">{f.name}</span><b className={done ? f.status : "idle"}>{done ? (f.status === "pass" ? "Passed" : "Stopped") : "—"}</b><p>{done ? f.why : "Waiting for a payment."}</p></div>
               ))}
             </div>
             <div className={`verdict2 m ${!res || !done ? "idle" : res.allowed ? "ok" : "no"}`}>

@@ -64,7 +64,7 @@ export default function MineView() {
               const [label] = STATUS[r.status];
               return <MRow key={r.wallet} href={r.isAtlas ? "/app" : `/app/w/${r.wallet}`} icon={<Plate address={r.wallet} size={22} />}
                 title={r.isAtlas ? "Atlas" : short(r.wallet)} sub={`${label} · ${r.fuses} fuse${r.fuses === 1 ? "" : "s"}${r.blown.length ? ` · ${r.blown.join(", ")} blown` : ""}`}
-                value={usd(r.balance)} valueSub={r.covers === null ? "USD₮0" : `fees ≈ ${r.covers}`} />;
+                value={usd(r.balance)} valueSub={r.covers === null ? "USD₮0" : `fees for ${r.covers}`} />;
             })}
           </div>
           <MRow href="/app/new" className="dashed" icon={<Glyph name="new" size={18} />} title={rows.length ? "Wire up another" : "Wire up your first wallet"} sub="Give an agent its own wallet with fuses" />
@@ -115,7 +115,7 @@ export default function MineView() {
                 <Link key={r.wallet} href={r.isAtlas ? "/app" : `/app/w/${r.wallet}`} className="flt" data-wallet={r.wallet} data-cursor="Open">
                   <div className="flt-id"><span className={`flt-dot ${tone}`} aria-hidden="true" /><div><b>{r.isAtlas ? "Atlas" : short(r.wallet)}</b><span className="m mute">{r.fuses} fuse{r.fuses === 1 ? "" : "s"} · {r.agents} agent{r.agents === 1 ? "" : "s"}{r.approvers ? ` · ${r.approvers} approvers` : ""}</span></div></div>
                   <div className="flt-c"><span className="m mute">Balance</span><b>{usd(r.balance)}</b></div>
-                  <div className="flt-c"><span className="m mute">Fees left</span><b className={r.covers !== null && r.covers < 10 ? "amber" : ""}>{usd(r.feeBalance)}</b><small className="m mute">{r.covers === null ? "—" : `≈ ${r.covers} decisions`}</small></div>
+                  <div className="flt-c"><span className="m mute">Fees left</span><b className={r.covers !== null && r.covers < 10 ? "amber" : ""}>{usd(r.feeBalance)}</b><small className="m mute">{r.covers === null ? "—" : `≈ ${r.covers} payments`}</small></div>
                   <div className="flt-c"><span className="m mute">Today</span><b>{r.today.decisions}</b><small className="m mute">{r.today.stopped ? <span className="red">{r.today.stopped} stopped</span> : "none stopped"}</small></div>
                   <div className="flt-c flt-last"><span className="m mute">Last decision</span>{r.last ? <><b className={r.last.paid ? "" : "red"}>{r.last.paid ? "Paid" : "Stopped"} {usd(r.last.amount)}</b><small className="m mute">{ago(r.last.time)}</small></> : <b className="mute">None yet</b>}</div>
                   <div className="flt-s m"><span className={`flt-tag ${tone}`}>{label}</span>{r.blown.length ? <small className="red">{r.blown.join(", ")}</small> : null}</div>

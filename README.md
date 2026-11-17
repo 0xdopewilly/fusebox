@@ -15,6 +15,16 @@ Fusebox wires an AI agent's wallet through small logic circuits taped out on [Ta
 - **For owners:** [My wallets](https://fusebox-xlayer.vercel.app/app/mine) is a fleet view (fees left, blown fuses, today's stops, freeze every agent); the wizard starts from tested lines (invoice agent, procurement bot, refund desk, small allowance); every wallet page has an owner console (fuses, payees, agents, approvers, money, ownership), spending analytics (paid vs stopped per day, top payees, what each fuse stopped), an Atom feed of its decisions, a full CSV export and browser alerts for stopped payments. The [line simulator](https://fusebox-xlayer.vercel.app/app/simulate) runs any line of fuses on a sequence of payments with TapeOut's own `eval`/`step`, and matches a real wallet fuse for fuse.
 - **For designers:** [Fuse Studio](https://fusebox-xlayer.vercel.app/app/studio) builds a fuse from rules, compiles it to NAND gates, proves the bytes on every input in the browser, then mints, tapes out and lists it from your wallet (built there, Daily Cap and Two of Three come out byte-identical to circuits #15 and #18). Every fuse has its own page (e.g. [/app/fuse/1](https://fusebox-xlayer.vercel.app/app/fuse/1)), installs from the market in one signature, and describes itself on-chain (`fusebox-fuse/1` metadata as a data URI).
 
+## New to Fusebox?
+
+AI agents now hold wallets and send real money, and one convincing message can make an agent pay a scammer. Fusebox gives the agent a wallet where every payment must pass a few small circuits called **fuses** (a daily limit, known payees only, two signers for big payments). If any fuse says no, nothing moves.
+
+**Atlas** is the live demo wallet: an AI agent pays a supplier from it on X Layer mainnet, through four fuses. Start by trying to trick it in *Try to scam it*: free, no wallet, nothing moves. First-time visitors get a three-card intro that ends there, and every screen has an **i** button and tap-to-explain terms (the full glossary is in the docs).
+
+- **Phones** get an app layout: a dock (Wallet, Try, Market, Sell, your account), one job per screen, details in bottom sheets, and the wizard as one step per screen.
+- **Connecting:** any browser wallet (EIP-6963 or injected), the **OKX Wallet app** over OKX Connect (a QR code on desktop, a hand-off on phones), or reopen Fusebox inside OKX Wallet, MetaMask, Trust Wallet or Bitget Wallet. Fusebox adds and switches to X Layer itself.
+- **Before you wire up** a wallet you need: a wallet on X Layer (the owner), an agent key (the address your agent signs with), USD₮0 on X Layer for fees and payments, and a little OKB for gas. The wizard's first step checks these.
+
 ## Live on X Layer mainnet (chain 196)
 
 | What | Address / id |

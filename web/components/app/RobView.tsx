@@ -101,7 +101,7 @@ export default function RobView({ mode }: { mode: { mode: "llm" | "scripted"; la
             <div className="wire-wrap"><LineWire fuses={fuses} run={run} payee="PAYEE" payeeSub={c ? short(c.to) : ""} onDone={() => setDone(true)} /></div>
             <div className="why">
               {(c?.fuses ?? fuses.map((f) => ({ name: f.name, status: "idle", why: "Waiting for a payment." }))).map((f, i) => (
-                <div key={i}><span className="m mute">{f.name}</span><b className={done && c ? f.status : "idle"}>{done && c ? (f.status === "pass" ? "Holds" : "Blew") : "—"}</b><p>{done && c ? f.why : "Waiting for a payment."}</p></div>
+                <div key={i}><span className="m mute">{f.name}</span><b className={done && c ? f.status : "idle"}>{done && c ? (f.status === "pass" ? "Passed" : "Stopped") : "—"}</b><p>{done && c ? f.why : "Waiting for a payment."}</p></div>
               ))}
             </div>
           </div>

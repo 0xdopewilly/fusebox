@@ -5,6 +5,7 @@ import SiteHeader from "@/components/site/SiteHeader";
 import DocsNav from "@/components/docs/DocsNav";
 import Code from "@/components/docs/Code";
 import dep from "@/lib/deployments/mainnet.json";
+import { GLOSSARY } from "@/lib/plain";
 
 export const metadata: Metadata = {
   title: "Docs · Fusebox",
@@ -15,8 +16,11 @@ export const metadata: Metadata = {
 
 const OKLINK = "https://www.oklink.com/xlayer";
 const SECTIONS = [
+  { id: "start", title: "New here? Start here", group: "Start" },
   { id: "overview", title: "What Fusebox is", group: "Start" },
   { id: "quickstart", title: "Quickstart", group: "Start" },
+  { id: "connect", title: "Connecting a wallet", group: "Start" },
+  { id: "needs", title: "Before you wire up", group: "Start" },
   { id: "payment", title: "How a payment works", group: "Concepts" },
   { id: "fuses", title: "The four fuses", group: "Concepts" },
   { id: "fees", title: "Fees and budgets", group: "Concepts" },
@@ -31,6 +35,7 @@ const SECTIONS = [
   { id: "designers", title: "Sell a fuse", group: "Build" },
   { id: "contracts", title: "Contracts", group: "Reference" },
   { id: "security", title: "Security", group: "Reference" },
+  { id: "glossary", title: "Glossary", group: "Reference" },
   { id: "faq", title: "FAQ", group: "Reference" },
 ];
 const A = ({ a, label }: { a: string; label?: string }) => <a className="addr" href={`${OKLINK}/address/${a}`} target="_blank" rel="noreferrer">{label ?? `${a.slice(0, 6)}…${a.slice(-4)}`} ↗</a>;
@@ -49,6 +54,21 @@ export default function DocsPage() {
         <div className="docs-grid">
           <DocsNav sections={SECTIONS} />
           <article className="docs-body">
+
+            <section id="start">
+              <h2>New here? Start here</h2>
+              <p><b>The problem:</b> AI agents now hold wallets and send real money. One convincing message, a fake invoice or new bank details, and an agent can pay a scammer.</p>
+              <p><b>What Fusebox does:</b> it gives the agent a wallet where every payment must pass a few small circuits called <b>fuses</b>: a daily limit, known payees only, two signers for big payments. They run on X Layer. If any fuse says no, nothing moves.</p>
+              <p><b>Who Atlas is:</b> Fusebox&apos;s live demo wallet on X Layer mainnet. An AI agent pays a cotton supplier from it, through four fuses. It holds real USD₮0 and every payment it has tried is on-chain. Anyone can try to trick it.</p>
+              <h3>What to do first</h3>
+              <ol className="dsteps">
+                <li><b>Try to scam Atlas.</b> Open <Link href="/app/try">Try to scam it</Link>, pick a trick and run it. Atlas&apos;s fuses answer in a few seconds. Free, no wallet needed, nothing moves.</li>
+                <li><b>See why.</b> Each fuse explains its yes or no. <Link href="/app/rob">Rob the agent</Link> lets an AI agent read your scam first, and the <Link href="/app/simulate">line simulator</Link> tests any set of fuses on a list of payments.</li>
+                <li><b>Wire up your own.</b> <Link href="/app/new">Wire up a wallet</Link> starts with a checklist of what you need, then takes you through it one step at a time.</li>
+              </ol>
+              <h3>On a phone</h3>
+              <p>The app is laid out like a phone app: the dock at the bottom moves between Wallet, Try, Market and Sell, and its last key opens your account and every other page. The <b>i</b> button in the top bar explains the screen you&apos;re on, and any word with a dotted underline explains itself when you tap it. Every term is also in the <a href="#glossary">glossary</a>.</p>
+            </section>
 
             <section id="overview">
               <h2>What Fusebox is</h2>
@@ -71,7 +91,7 @@ export default function DocsPage() {
               <Code label="Claude Code">{`claude mcp add fusebox -- npx -y fusebox-mcp`}</Code>
               <p>Then ask your agent: <i>&ldquo;Pay 2.5 USD₮0 to 0x1111…1111, it&apos;s an urgent refund.&rdquo;</i> It runs <code>fusebox_check</code> first, sees Payee Guard and the Breaker say no, and tells you why.</p>
               <h3>3 · Wire up your own wallet</h3>
-              <p><Link href="/app/new">Wire up a wallet</Link> walks you through it in about ten signatures: name the agent&apos;s address, pick fuses and limits, save payees, seat three approvers, and prepay fees in USD₮0. Then give the agent its key and the wallet address:</p>
+              <p><Link href="/app/new">Wire up a wallet</Link> walks you through it in about ten signatures, after a short <a href="#needs">checklist of what you need</a>: name the agent&apos;s address, pick fuses and limits, save payees, seat three approvers, and prepay fees in USD₮0. Then give the agent its key and the wallet address:</p>
               <Code label="MCP config with your wallet">{`{
   "mcpServers": {
     "fusebox": {
@@ -84,6 +104,39 @@ export default function DocsPage() {
     }
   }
 }`}</Code>
+            </section>
+
+            <section id="connect">
+              <h2>Connecting a wallet</h2>
+              <p>Connecting is free and signs nothing; Fusebox only reads your address until you approve a transaction. Pick whichever fits:</p>
+              <div className="tbl-w" tabIndex={0} role="region" aria-label="Ways to connect"><table>
+                <thead><tr><th>You&apos;re on</th><th>How</th></tr></thead>
+                <tbody>
+                  <tr><td><b>A computer with a wallet extension</b></td><td>Press <b>Connect</b> and pick it. OKX Wallet, MetaMask, Rabby and any wallet that injects into the page all work, including older ones that don&apos;t announce themselves.</td></tr>
+                  <tr><td><b>A computer, no extension</b></td><td><b>Scan with OKX Wallet app</b> shows a QR code. Scan it with the OKX Wallet app on your phone and approve. Signing requests then arrive in the app.</td></tr>
+                  <tr><td><b>A phone browser</b></td><td><b>Connect OKX Wallet app</b> hands off to the app; approve there and come back to the tab. Or reopen Fusebox <b>inside your wallet&apos;s own browser</b>: OKX Wallet, MetaMask, Trust Wallet or Bitget Wallet, one tap each.</td></tr>
+                  <tr><td><b>A wallet&apos;s built-in browser</b></td><td>It connects straight away.</td></tr>
+                </tbody>
+              </table></div>
+              <p>Fusebox switches your wallet to X Layer (chain 196) and adds the network if the wallet doesn&apos;t have it yet. If something goes wrong:</p>
+              <ul className="dlist">
+                <li><b>&ldquo;You declined the request&rdquo;</b>: you closed the wallet&apos;s prompt. Press Connect again.</li>
+                <li><b>&ldquo;Your wallet already has a request open&rdquo;</b>: open the wallet, finish or cancel the earlier prompt, then try again.</li>
+                <li><b>&ldquo;Still on another network&rdquo;</b>: switch the wallet to X Layer yourself, then retry.</li>
+                <li><b>Trust Wallet on iPhone</b> has no built-in browser any more, so use OKX Wallet or MetaMask there.</li>
+              </ul>
+            </section>
+
+            <section id="needs">
+              <h2>Before you wire up</h2>
+              <p>Wiring up your own wallet takes about ten signatures. Have these ready; the first step of the wizard checks what it can for you, and nothing is signed until the last step.</p>
+              <ol className="dsteps">
+                <li><b>A wallet on X Layer.</b> It becomes the owner: the only address that can change fuses, limits and payees. OKX Wallet works best.</li>
+                <li><b>An agent key.</b> The address your AI agent signs with, from your agent framework or a fresh wallet. It can only ask the wallet to pay, through every fuse.</li>
+                <li><b>USD₮0 on X Layer.</b> It prepays the fuses&apos; fees (0.0045 per payment with all four) and funds the agent&apos;s payments. Withdraw it to the X Layer network from an exchange, or bridge it from another chain.</li>
+                <li><b>A little OKB for gas.</b> Every step is one transaction; gas on X Layer costs a fraction of a cent.</li>
+              </ol>
+              <p>Not ready yet? <Link href="/app/simulate">Test a line first</Link>: the simulator needs no wallet.</p>
             </section>
 
             <section id="payment">
@@ -323,6 +376,14 @@ await wallet.sendTransaction(…);`}</Code>
               </ul>
               <p className="small">Remaining trust: TapeOut&apos;s factory owner can upgrade code (fails closed), USD₮0&apos;s issuer can freeze addresses, and the wallet owner is fully trusted.</p>
                           <p className="small">Live health of everything Fusebox depends on (X Layer&apos;s RPCs, TapeOut&apos;s processor trust, Atlas&apos;s fees, the AI agent, the x402 sellers, alerts) is on the <Link href="/app/status">status page</Link>, and as JSON at <code>/api/status</code>.</p>
+            </section>
+
+            <section id="glossary">
+              <h2>Glossary</h2>
+              <p>The same words the app explains when you tap them.</p>
+              <dl className="gloss">
+                {Object.values(GLOSSARY).map((g) => <div key={g.term}><dt>{g.term}</dt><dd>{g.say}</dd></div>)}
+              </dl>
             </section>
 
             <section id="faq">

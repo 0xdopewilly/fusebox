@@ -1117,3 +1117,48 @@ html.panel-open .msticky { visibility: hidden; }
   .st-sockets button :is(b, h3, strong) { font-size: 15px !important; white-space: nowrap; }
 }
 .appbar h1.pg-t { margin: 0; font-weight: 800; }
+/* plain words: tap-to-explain terms and the Atlas callout */
+.term { position: relative; display: inline; }
+.term-w { font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; background: none; border: 0; padding: 0; border-bottom: 1px dotted currentColor; cursor: help; }
+.term-w:focus-visible { outline: 1px solid var(--lime); outline-offset: 2px; }
+.term-pop { position: absolute; left: 0; top: calc(100% + 8px); z-index: 75; width: 280px; padding: 12px 14px; background: #0b0b0b; border: 1px solid var(--lime); color: var(--soft); font: 400 13.5px/1.5 var(--sans); text-transform: none; letter-spacing: 0; text-align: left; white-space: normal; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6); }
+.term-pop b { display: block; color: var(--ink); font: 600 11px/1.3 var(--mono); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+.term-pop a { color: var(--lime); }
+.mcallout { border: 1px solid var(--hair2); background: #0b0b0b; padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.mcallout p { font: 400 15px/1.5 var(--sans); color: var(--soft); }
+.mcallout .btn { justify-content: center; height: 52px; }
+/* first-visit intro */
+.intro-shade { position: fixed; inset: 0; z-index: 130; background: rgba(0, 0, 0, 0.82); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: grid; place-items: center; padding: 16px; }
+.intro { width: min(440px, 100%); background: #070707; border: 1px solid var(--hair3); border-top: 2px solid var(--lime); padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 18px; outline: none; touch-action: pan-y; user-select: none; }
+.intro-top { display: flex; justify-content: space-between; align-items: center; }
+.intro-skip { color: var(--mute); font: inherit; letter-spacing: inherit; text-transform: inherit; padding: 6px 0 6px 12px; }
+.intro-card { display: flex; flex-direction: column; gap: 12px; min-height: 290px; }
+.intro-art { width: 96px; height: 96px; display: grid; place-items: center; background: #0b0b0b; border: 1px solid var(--hair2); margin-bottom: 6px; }
+.intro-card h2 { font: 800 30px/1 var(--display); font-stretch: 108%; text-transform: uppercase; letter-spacing: -0.01em; }
+.intro-card p { font: 400 16px/1.55 var(--sans); color: var(--soft); }
+.intro-dots { display: flex; gap: 6px; }
+.intro-dots button { width: 22px; height: 4px; background: var(--hair2); padding: 0; }
+.intro-dots button.on { background: var(--lime); width: 38px; }
+.intro-act { display: flex; flex-direction: column; gap: 8px; }
+.intro-act .btn { justify-content: center; height: 52px; }
+@media (max-width: 900px) {
+  .intro-shade { place-items: end center; padding: 0; }
+  .intro { width: 100%; max-height: 100svh; border-width: 0; border-top: 2px solid var(--lime); padding: 18px 16px calc(22px + env(safe-area-inset-bottom)); }
+}
+/* wire up: what you need */
+.need { display: flex; flex-direction: column; border-top: 1px solid var(--hair); }
+.need-i { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 12px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--hair); }
+.need-ico { width: 38px; height: 38px; display: grid; place-items: center; background: #111; border: 1px solid var(--hair2); }
+.need-t b { display: block; font: 600 15px/1.3 var(--sans); }
+.need-t small { display: block; margin-top: 4px; font: 400 13px/1.45 var(--sans); color: var(--mute); }
+.need-st { padding-top: 2px; }
+.need-box { border: 1px solid var(--hair2); background: #070707; padding: 16px 20px 6px; margin: 0 0 28px; position: relative; z-index: 4; }
+.need-h { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 8px; }
+.need.compact { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 18px; border-top: 0; }
+.need.compact .need-i { grid-template-columns: 38px minmax(0, 1fr); border-bottom: 0; }
+.need.compact .need-st { grid-column: 2; }
+@media (max-width: 1240px) { .need.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 900px) {
+  .intro { height: 100svh; justify-content: space-between; }
+  .intro-card { flex: 1; justify-content: center; min-height: 0; }
+}

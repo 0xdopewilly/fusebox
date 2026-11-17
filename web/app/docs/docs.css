@@ -81,3 +81,9 @@ details p { padding-bottom: 16px; }
   .tbl-w .addrs { min-width: 0; }
   .docs-foot .btn { width: 100%; justify-content: space-between; }
 }
+.dlist { margin: 12px 0 16px; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; color: var(--soft); line-height: 1.6; }
+.gloss { display: grid; grid-template-columns: minmax(0, 1fr); border-top: 1px solid var(--hair2); margin-top: 14px; }
+.gloss > div { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 16px; padding: 12px 0; border-bottom: 1px solid var(--hair); }
+.gloss dt { font: 600 12px/1.5 var(--mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--lime); }
+.gloss dd { margin: 0; color: var(--soft); line-height: 1.6; }
+@media (max-width: 700px) { .gloss > div { grid-template-columns: 1fr; gap: 4px; } }

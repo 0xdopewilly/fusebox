@@ -13,12 +13,15 @@ import DecisionTools from "../DecisionTools";
 import { Glyph, Plate } from "../Pixel";
 import { PageChrome } from "./chrome";
 import { MActions, MHero, MLabel, MRow, MSeg, MSheet, MStats, type Action } from "./ui";
+import Term from "./Term";
+import { feeRunway, readableMemo } from "@/lib/plain";
 
+const GLOSS: Record<string, string> = { "daily-cap": "A limit on spending per day", "payee-guard": "Known payees only", breaker: "Trips on a stranger", "approval-2of3": "Big payments need 2 signers" };
 const when = (t: number) => {
   const s = Date.now() / 1000 - t;
   return s < 3600 ? `${Math.max(1, Math.round(s / 60))} min ago` : s < 86400 ? `${Math.round(s / 3600)} h ago` : new Date(t * 1000).toISOString().slice(5, 10).replace("-", "/");
 };
-const verdict = (s: string) => (s === "pass" ? <span className="mtag ok">Holds</span> : <span className="mtag no">{s === "blew" ? "Blew" : s === "untrusted" ? "Untrusted" : "Failed"}</span>);
+const verdict = (s: string) => (s === "pass" ? <span className="mtag ok">Passed</span> : <span className="mtag no">{s === "blew" ? "Stopped" : s === "untrusted" ? "Untrusted" : "Failed"}</span>);
 
 function fuseText(f: FuseSlot) {
   if (f.original === false) return `${f.summary ?? "A rival design for this socket."} Settings: ${describe(f.socket, f.a, f.b, f.unit, f.paramLabels)}.`;
@@ -47,7 +50,7 @@ export default function WalletMobile({ a, fresh }: { a: Atlas; fresh: Set<number
   const isPayee = (addr: string) => a.payees.some((p) => p.address.toLowerCase() === addr.toLowerCase());
   const copy = () => { navigator.clipboard?.writeText(a.wallet); setCopied(true); setTimeout(() => setCopied(false), 1400); };
   const actions: Action[] = a.isAtlas
-    ? [{ icon: "rob", label: "Try a scam", href: "/app/try" }, { icon: "sim", label: "Test a line", href: "/app/simulate" }, { icon: "copy", label: copied ? "Copied" : "Copy", onClick: copy }, { icon: "ext", label: "OKLink", href: `${OKLINK}/address/${a.wallet}`, ext: true }]
+    ? [{ icon: "rob", label: "AI reads a scam", href: "/app/rob" }, { icon: "sim", label: "Test a line", href: "/app/simulate" }, { icon: "copy", label: copied ? "Copied" : "Copy", onClick: copy }, { icon: "ext", label: "OKLink", href: `${OKLINK}/address/${a.wallet}`, ext: true }]
     : [{ icon: "copy", label: copied ? "Copied" : "Copy", onClick: copy }, { icon: "ext", label: "OKLink", href: `${OKLINK}/address/${a.wallet}`, ext: true }, { icon: "sim", label: "Test a line", href: "/app/simulate" }, { icon: "new", label: "Wire up", href: "/app/new" }];
   const tabs = [["act", "Activity"], ["fuses", "Fuses"], ["spend", "Spend"], ...(owner ? [["owner", "Owner"] as const] : [])] as const;
 
@@ -64,17 +67,23 @@ export default function WalletMobile({ a, fresh }: { a: Atlas; fresh: Set<number
       />
       <MHero
         label="In the wallet"
-        right={a.paused ? "Paused" : blown ? `${blown.name} blown` : <><i className="kc-live" />Line closed</>}
+        right={a.paused ? "Paused" : blown ? `${blown.name} blown` : <><i className="kc-live" />All {a.fuses.length} fuses holding</>}
         tone={a.paused || blown ? "bad" : undefined}
-        value={Number(a.balance).toFixed(4)} unit="USD₮0"
-        foot={<><span>{cap ? `Spent today ${Number(cap.spentToday).toFixed(2)} / ${cap.a}` : `${a.counts.decisions} decisions`}</span><span>{left !== null ? `Fees cover ≈ ${left}` : ""}</span></>}
+        value={Number(a.balance).toFixed(4)} unit={<Term k="usdt0" />}
+        foot={<><span>{cap ? `Spent today ${Number(cap.spentToday).toFixed(2)} of ${cap.a}` : `${a.counts.decisions} payments`}</span><span>{left !== null ? <Term k="fees">{feeRunway(Number(a.feeBalance), perDecision)}</Term> : ""}</span></>}
       />
+      {a.isAtlas && (
+        <div className="mcallout">
+          <p>This is <Term k="atlas">Atlas</Term>, a live AI agent&apos;s wallet on X Layer. Try to trick it into paying a scammer: it&apos;s free, and nothing moves.</p>
+          <Link className="btn lime" href="/app/try">Try to scam Atlas <span className="k">→</span></Link>
+        </div>
+      )}
       {(a.paused || blown) && <p className="mnote">{a.paused ? "The owner froze this wallet; nothing pays until they unfreeze it." : `${blown!.name} is blown. Nothing can be paid until the owner resets it.`}</p>}
       <MActions items={actions} />
       <MSeg label="Wallet views" items={tabs} value={tab} onChange={setTab} />
 
       {tab === "act" && <>
-        <MStats items={[["Decisions", a.counts.decisions], ["Paid", <span key="p" className="lime">{a.counts.allowed}</span>], ["Stopped", <span key="s" style={{ color: "var(--red)" }}>{a.counts.blocked}</span>]]} />
+        <MStats items={[["Payments", a.counts.decisions], ["Paid", <span key="p" className="lime">{a.counts.allowed}</span>], ["Stopped", <span key="s" style={{ color: "var(--red)" }}>{a.counts.blocked}</span>]]} />
         {a.historyLoading && <p className="m mute" role="status"><span className="live" />Reading the history from X Layer…</p>}
         <div className="mrows">
           {a.decisions.slice(0, shown).map((r) => {
@@ -82,24 +91,24 @@ export default function WalletMobile({ a, fresh }: { a: Atlas; fresh: Set<number
             return (
               <MRow key={r.id} className={fresh.has(r.id) ? "new" : ""} onClick={() => setDec(r)}
                 icon={<Glyph name={r.allowed ? "approve" : "stop"} size={16} color={r.allowed ? "var(--lime)" : "var(--red)"} />}
-                title={r.memo || "No memo"}
-                sub={`#${r.id} · ${r.allowed ? (isPayee(r.to) ? "saved payee" : "paid") : blew.length ? `${blew[0]} blew` : "stopped"} · ${when(r.time)}`}
+                title={readableMemo(r.memo) || "No note"}
+                sub={`#${r.id} · ${r.allowed ? (isPayee(r.to) ? "to a saved payee" : "paid") : blew.length ? `stopped by ${blew[0]}` : "stopped"} · ${when(r.time)}`}
                 value={Number(r.amount).toFixed(2)}
                 valueSub={<span className={`mtag ${r.allowed ? "ok" : "no"}`}>{r.allowed ? "Paid" : "Stopped"}</span>} chev={false} />
             );
           })}
         </div>
         {shown < a.decisions.length && <button className="btn" style={{ justifyContent: "center" }} onClick={() => setShown((n) => n + 20)}>Show older · {a.decisions.length - shown} more</button>}
-        {!a.decisions.length && !a.historyLoading && <p className="mnote">No payments yet. Every decision the agent makes lands here, paid or stopped.</p>}
+        {!a.decisions.length && !a.historyLoading && <p className="mnote">No payments yet. Every payment the agent tries lands here, paid or stopped.</p>}
         <MRow icon={<Glyph name="docs" size={16} />} title="Export, feed and badge" sub="CSV · JSON feed · status badge" onClick={() => setTools(true)} />
       </>}
 
       {tab === "fuses" && <>
-        <MLabel right={`${a.fuses.length} in series`}>The line</MLabel>
+        <MLabel right={`${a.fuses.length} in a row`}>Every payment must pass all of these <Term k="fuse">fuses</Term></MLabel>
         <div className="mrows">
           {a.fuses.map((f) => (
             <MRow key={f.slot} onClick={() => setFuse(f)} icon={<Glyph name={f.key === "daily-cap" ? "mine" : f.key === "payee-guard" ? "approve" : f.key === "breaker" ? "stop" : "x402"} size={16} color={f.latched ? "var(--red)" : "var(--lime)"} />}
-              title={f.name} sub={`TapeOut #${f.circuitId} · ${f.gates} gates`} value={fmt(f.fee, 4)} valueSub={f.latched ? <span className="mtag no">Blown</span> : <span className="mtag ok">Holds</span>} chev={false} />
+              title={f.name} sub={(GLOSS[f.key] ?? `TapeOut #${f.circuitId}`)} value={fmt(f.fee, 4)} valueSub={f.latched ? <span className="mtag no">Blown</span> : <span className="mtag ok">On</span>} chev={false} />
           ))}
         </div>
         <MLabel right={a.payees.length}>Saved payees</MLabel>
@@ -116,11 +125,12 @@ export default function WalletMobile({ a, fresh }: { a: Atlas; fresh: Set<number
       {tab === "spend" && <SpendView wallet={a.wallet} refreshKey={a.counts.decisions} />}
       {tab === "owner" && owner && <OwnerConsole data={a} />}
 
-      <MSheet open={!!dec} onClose={() => setDec(null)} title={dec ? `Decision #${dec.id}` : ""}>
+      <MSheet open={!!dec} onClose={() => setDec(null)} title={dec ? `Payment #${dec.id}` : ""}>
         {dec && <>
           <MHero label={dec.allowed ? "Paid" : "Stopped"} right={when(dec.time)} value={Number(dec.amount).toFixed(4)} unit="USD₮0" tone={dec.allowed ? undefined : "bad"}
             foot={<span>To {short(dec.to)} · {isPayee(dec.to) ? "saved payee" : "stranger"}</span>} />
-          <p className="mcap">“{dec.memo}”</p>
+          <p className="mcap">“{readableMemo(dec.memo)}”</p>
+          <p className="mnote">Each fuse checked this payment on X Layer. {dec.allowed ? "All said yes, so it was paid." : "One no is enough: nothing moved."}</p>
           <div className="mrows">{a.fuses.map((f, i) => <MRow key={f.slot} title={f.name} sub={`TapeOut #${f.circuitId}`} value={verdict(dec.status[i])} chev={false} />)}</div>
           <div className="mkv">
             <span>Time</span><span>{new Date(dec.time * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC</span>

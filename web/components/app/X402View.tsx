@@ -84,7 +84,7 @@ function SellerCard({ o }: { o: Offer }) {
       {err && <div className="err m">{err}</div>}
       {res && (
         <div className="x4-verdict">
-          <div className="why">{res.fuses.map((f) => <div key={f.name}><span className="m mute">{f.name}</span><b className={f.status === "pass" ? "pass" : "blew"}>{f.status === "pass" ? "Holds" : "Blew"}</b><p>{f.why}</p></div>)}</div>
+          <div className="why">{res.fuses.map((f) => <div key={f.name}><span className="m mute">{f.name}</span><b className={f.status === "pass" ? "pass" : "blew"}>{f.status === "pass" ? "Passed" : "Stopped"}</b><p>{f.why}</p></div>)}</div>
           <div className={`verdict2 m ${res.allowed ? "ok" : "no"}`}><span className="v">{res.allowed ? `Every fuse holds. Atlas would pay ${o.price} USD₮0 and get the response.` : `Refused before a cent moved: ${res.fuses.filter((f) => f.status !== "pass").map((f) => f.name).join(" and ")}.`}</span><span className="mute">check() · block {res.block.toLocaleString("en-US")}</span></div>
         </div>
       )}

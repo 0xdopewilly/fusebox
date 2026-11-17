@@ -86,7 +86,7 @@ export function MRow({ icon, title, sub, value, valueSub, href, ext, onClick, cl
 }
 
 /** The lime key card that opens a screen: one big number and what it means. */
-export function MHero({ label, right, value, unit, foot, tone }: { label: React.ReactNode; right?: React.ReactNode; value: React.ReactNode; unit?: string; foot?: React.ReactNode; tone?: "bad" }) {
+export function MHero({ label, right, value, unit, foot, tone }: { label: React.ReactNode; right?: React.ReactNode; value: React.ReactNode; unit?: React.ReactNode; foot?: React.ReactNode; tone?: "bad" }) {
   return (
     <div className={`mhero${tone === "bad" ? " bad" : ""}`}>
       <div className="mh-top m"><span>{label}</span>{right && <span>{right}</span>}</div>

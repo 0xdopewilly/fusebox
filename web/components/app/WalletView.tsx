@@ -14,6 +14,8 @@ import SpendView from "./SpendView";
 import Loading from "./Loading";
 import { Responsive } from "./m/useMobile";
 import WalletMobile from "./m/WalletMobile";
+import Term from "./m/Term";
+import { readableMemo } from "@/lib/plain";
 
 /** A number that rolls to its new value whenever it changes. */
 function Count({ value, d = 6, className }: { value: number; d?: number; className?: string }) {
@@ -98,13 +100,13 @@ export default function WalletView({ address, from }: { address?: string; from?:
       <h1 className="sr">{a.isAtlas ? "Atlas, the public Fusebox demo wallet" : `Fusebox wallet ${short(a.wallet)}`}</h1>
       <section className="w-hero">
         <div className="who" data-b>
-          <div className="m">{a.isAtlas ? <><span className="lime">[Atlas]</span> <span className="mute">ops agent · public demo wallet · fuses on TapeOut · owner {short(a.owner)}</span></> : <><span className="lime">[Fusebox wallet]</span> <span className="mute">owner {short(a.owner)} · agent {short(a.agent)}</span></>}</div>
+          <div className="m">{a.isAtlas ? <><span className="lime">[<Term k="atlas">Atlas</Term>]</span> <span className="mute">a live AI agent&apos;s wallet on X Layer · try to trick it into paying a scammer</span></> : <><span className="lime">[Fusebox wallet]</span> <span className="mute">owner {short(a.owner)} · agent {short(a.agent)}</span></>}</div>
           <div className="m addr">{a.wallet}<button onClick={copy} data-cursor="Copy">{copied ? "Copied" : "Copy"}</button><a href={`${OKLINK}/address/${a.wallet}`} target="_blank" rel="noreferrer" data-cursor="OKLink">↗</a>{a.isAtlas ? <a href={`https://repo.sourcify.dev/196/${a.wallet}`} target="_blank" rel="noreferrer" data-cursor="Source" style={{ color: "var(--dim)" }}>Verified source ↗</a> : null}</div>
           <div className="bal"><b><Count value={Number(a.balance)} /></b><span className="m">USD₮0 in the wallet</span></div>
           <div className={`state-line${blown || a.paused ? " bad" : ""}`}>
             <i />{a.paused ? <span><b>Paused.</b> The owner froze the wallet; nothing pays until they unfreeze it.</span>
               : blown ? <span><b>{blown.name} blown.</b> Nothing can be paid until the owner resets it.</span>
-              : <span><b>Line closed.</b> Every TapeOut fuse is holding; a payment reaches the payee only if all {a.fuses.length} say yes.</span>}
+              : <span><b>All {a.fuses.length} fuses holding.</b> A payment reaches the payee only if every <Term k="fuse">fuse</Term> says yes; one no and nothing moves.</span>}
           </div>
         </div>
         <div className="acts" data-b>
@@ -173,7 +175,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
                 <td className="num hide-s" style={{ textAlign: "left" }}>{new Date(r.time * 1000).toISOString().slice(5, 16).replace("T", " ")}</td>
                 <td><span className={`res ${r.allowed ? "ok" : "no"}`}>{r.allowed ? "Paid" : "Stopped"}</span>{!r.allowed && a.fuses.some((x, i) => x.key === "approval-2of3" && r.status[i] === "blew") ? <Link className="m lime" style={{ display: "block", marginTop: 6, fontSize: 10.5 }} href={`/app/approve?wallet=${a.wallet}&to=${r.to}&amount=${r.amount}`}>Approve ↗</Link> : null}</td>
                 <td className="num">{fmt(r.amount)}</td>
-                <td className="memo">“{r.memo}”<small>{short(r.to)} · {isPayee(r.to) ? "saved payee" : "stranger"}</small></td>
+                <td className="memo">“{readableMemo(r.memo)}”<small>{short(r.to)} · {isPayee(r.to) ? "saved payee" : "stranger"}</small></td>
                 <td><span className="sq">{r.status.map((s, i) => <i key={i} className={s} title={`${a.fuses[i]?.name ?? "fuse"}: ${s}`} />)}</span></td>
                 <td className="num hide-s">{fmt(r.fee)}</td>
                 <td className="hide-s"><a className="tx" href={`${OKLINK}/tx/${r.tx}`} target="_blank" rel="noreferrer">{r.tx.slice(0, 10)}…</a></td>
@@ -192,7 +194,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
             <div key={r.id} className={`dcard ${r.allowed ? "ok" : "no"}${fresh.has(r.id) ? " new" : ""}`}>
               <div className="dc-top m"><span className="mute">#{r.id} · {new Date(r.time * 1000).toISOString().slice(5, 16).replace("T", " ")} UTC</span><span className={`res ${r.allowed ? "ok" : "no"}`}>{r.allowed ? "Paid" : "Stopped"}</span></div>
               <div className="dc-amt"><b>{fmt(r.amount)}</b><span className="m mute">USD₮0 → {short(r.to)} · {isPayee(r.to) ? "saved payee" : "stranger"}</span></div>
-              <p className="dc-memo">“{r.memo}”</p>
+              <p className="dc-memo">“{readableMemo(r.memo)}”</p>
               <div className="dc-foot m">
                 <span className="sq">{r.status.map((s, i) => <i key={i} className={s} title={`${a.fuses[i]?.name ?? "fuse"}: ${s}`} />)}</span>
                 <span className="mute">{r.allowed ? "All fuses held" : `${blew.join(", ")} blew`}</span>
