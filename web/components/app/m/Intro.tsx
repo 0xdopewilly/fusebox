@@ -59,17 +59,17 @@ export default function Intro() {
   if (!open) return null;
   const c = CARDS[i], last = i === CARDS.length - 1;
   return (
-    <div className="intro-shade">
-      <div className="intro" ref={box} role="dialog" aria-modal="true" aria-labelledby="intro-h" tabIndex={-1} onPointerDown={onDown} onPointerUp={onUp}>
-        <div className="intro-top m"><span className="lime">Fusebox</span><button className="intro-skip" onClick={() => done()}>Skip</button></div>
-        <div className="intro-card" ref={card} aria-live="polite">
-          <div className="intro-art"><Glyph name={c.g} size={56} /></div>
+    <div className="onb-shade">
+      <div className="onb" ref={box} role="dialog" aria-modal="true" aria-labelledby="intro-h" tabIndex={-1} onPointerDown={onDown} onPointerUp={onUp}>
+        <div className="onb-top m"><span className="lime">Fusebox</span><button className="onb-skip" onClick={() => done()}>Skip</button></div>
+        <div className="onb-card" ref={card} aria-live="polite">
+          <div className="onb-art"><Glyph name={c.g} size={56} /></div>
           <span className="m mute">{String(i + 1).padStart(2, "0")} / {String(CARDS.length).padStart(2, "0")}</span>
           <h2 id="intro-h">{c.title}</h2>
           <p>{c.body}</p>
         </div>
-        <div className="intro-dots" role="tablist" aria-label="Intro cards">{CARDS.map((x, k) => <button key={x.title} role="tab" aria-selected={k === i} aria-label={`Card ${k + 1}`} className={k === i ? "on" : ""} onClick={() => go(k)} />)}</div>
-        <div className="intro-act">
+        <div className="onb-dots" role="tablist" aria-label="Intro cards">{CARDS.map((x, k) => <button key={x.title} role="tab" aria-selected={k === i} aria-label={`Card ${k + 1}`} className={k === i ? "on" : ""} onClick={() => go(k)} />)}</div>
+        <div className="onb-act">
           {last ? <>
             <button className="btn lime" onClick={() => done("/app/try")}>Try to scam Atlas <span className="k">→</span></button>
             <button className="btn" onClick={() => done()}>Look around first</button>

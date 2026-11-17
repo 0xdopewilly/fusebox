@@ -1128,22 +1128,22 @@ html.panel-open .msticky { visibility: hidden; }
 .mcallout p { font: 400 15px/1.5 var(--sans); color: var(--soft); }
 .mcallout .btn { justify-content: center; height: 52px; }
 /* first-visit intro */
-.intro-shade { position: fixed; inset: 0; z-index: 130; background: rgba(0, 0, 0, 0.82); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: grid; place-items: center; padding: 16px; }
-.intro { width: min(440px, 100%); background: #070707; border: 1px solid var(--hair3); border-top: 2px solid var(--lime); padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 18px; outline: none; touch-action: pan-y; user-select: none; }
-.intro-top { display: flex; justify-content: space-between; align-items: center; }
-.intro-skip { color: var(--mute); font: inherit; letter-spacing: inherit; text-transform: inherit; padding: 6px 0 6px 12px; }
-.intro-card { display: flex; flex-direction: column; gap: 12px; min-height: 290px; }
-.intro-art { width: 96px; height: 96px; display: grid; place-items: center; background: #0b0b0b; border: 1px solid var(--hair2); margin-bottom: 6px; }
-.intro-card h2 { font: 800 30px/1 var(--display); font-stretch: 108%; text-transform: uppercase; letter-spacing: -0.01em; }
-.intro-card p { font: 400 16px/1.55 var(--sans); color: var(--soft); }
-.intro-dots { display: flex; gap: 6px; }
-.intro-dots button { width: 22px; height: 4px; background: var(--hair2); padding: 0; }
-.intro-dots button.on { background: var(--lime); width: 38px; }
-.intro-act { display: flex; flex-direction: column; gap: 8px; }
-.intro-act .btn { justify-content: center; height: 52px; }
+.onb-shade { position: fixed; inset: 0; z-index: 130; background: rgba(0, 0, 0, 0.82); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: grid; place-items: center; padding: 16px; }
+.onb { width: min(440px, 100%); background: #070707; border: 1px solid var(--hair3); border-top: 2px solid var(--lime); padding: 18px 20px 20px; display: flex; flex-direction: column; gap: 18px; outline: none; touch-action: pan-y; user-select: none; }
+.onb-top { display: flex; justify-content: space-between; align-items: center; }
+.onb-skip { color: var(--mute); font: inherit; letter-spacing: inherit; text-transform: inherit; padding: 6px 0 6px 12px; }
+.onb-card { display: flex; flex-direction: column; gap: 12px; min-height: 290px; }
+.onb-art { width: 96px; height: 96px; display: grid; place-items: center; background: #0b0b0b; border: 1px solid var(--hair2); margin-bottom: 6px; }
+.onb-card h2 { font: 800 30px/1 var(--display); font-stretch: 108%; text-transform: uppercase; letter-spacing: -0.01em; }
+.onb-card p { font: 400 16px/1.55 var(--sans); color: var(--soft); }
+.onb-dots { display: flex; gap: 6px; }
+.onb-dots button { width: 22px; height: 4px; background: var(--hair2); padding: 0; }
+.onb-dots button.on { background: var(--lime); width: 38px; }
+.onb-act { display: flex; flex-direction: column; gap: 8px; }
+.onb-act .btn { justify-content: center; height: 52px; }
 @media (max-width: 900px) {
-  .intro-shade { place-items: end center; padding: 0; }
-  .intro { width: 100%; max-height: 100svh; border-width: 0; border-top: 2px solid var(--lime); padding: 18px 16px calc(22px + env(safe-area-inset-bottom)); }
+  .onb-shade { place-items: end center; padding: 0; }
+  .onb { width: 100%; max-height: 100svh; border-width: 0; border-top: 2px solid var(--lime); padding: 18px 16px calc(22px + env(safe-area-inset-bottom)); }
 }
 /* wire up: what you need */
 .need { display: flex; flex-direction: column; border-top: 1px solid var(--hair); }
@@ -1159,6 +1159,6 @@ html.panel-open .msticky { visibility: hidden; }
 .need.compact .need-st { grid-column: 2; }
 @media (max-width: 1240px) { .need.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 900px) {
-  .intro { height: 100svh; justify-content: space-between; }
-  .intro-card { flex: 1; justify-content: center; min-height: 0; }
+  .onb { height: 100svh; justify-content: space-between; }
+  .onb-card { flex: 1; justify-content: center; min-height: 0; }
 }
