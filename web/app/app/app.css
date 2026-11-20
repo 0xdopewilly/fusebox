@@ -1198,7 +1198,7 @@ html.panel-open .msticky { visibility: hidden; }
 .asst-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; padding: 18px 0; color: var(--mute); }
 .asst-empty p { font: 400 15px/1.5 var(--sans); color: var(--soft); max-width: 420px; }
 .asst-msg { max-width: 88%; padding: 10px 13px; border: 1px solid var(--hair2); background: #0b0b0b; }
-.asst-msg p { font: 400 15px/1.45 var(--sans); color: var(--ink); }
+.asst-msg p { font: 400 15px/1.45 var(--sans); color: var(--ink); overflow-wrap: anywhere; }
 .asst-msg.user { align-self: flex-end; background: rgba(187, 254, 47, 0.08); border-color: rgba(187, 254, 47, 0.4); }
 .asst-msg.assistant { align-self: flex-start; }
 .asst-pay { margin-top: 10px; border-top: 1px solid var(--hair2); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
@@ -1208,6 +1208,9 @@ html.panel-open .msticky { visibility: hidden; }
 .asst-pay-h .m { color: var(--soft); text-transform: none; letter-spacing: 0.02em; }
 .asst-fz { display: flex; flex-wrap: wrap; gap: 6px; }
 .asst-act { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.asst-why { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.asst-why li { font: 400 13.5px/1.45 var(--sans); color: var(--soft); padding-left: 10px; border-left: 2px solid var(--red); }
+.asst-why b { color: var(--ink); font-weight: 600; margin-right: 4px; }
 .asst-act .btn { height: 42px; justify-content: center; }
 .asst-in { position: sticky; bottom: calc(86px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: minmax(0, 1fr) 56px; gap: 8px; z-index: 5; background: #000; padding: 8px 0; }
 .asst-in input { height: 52px; padding: 0 14px; background: #0b0b0b; border: 1px solid var(--hair3); color: var(--ink); font: 400 16px var(--sans); border-radius: 0; }

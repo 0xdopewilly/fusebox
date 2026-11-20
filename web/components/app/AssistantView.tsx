@@ -5,6 +5,7 @@ import { getAddress, isAddress, type Address } from "viem";
 import { pub } from "@/lib/client-chain";
 import { fuseboxWalletAbi } from "@/lib/abi";
 import { OKLINK, short, useAtlas } from "@/lib/hooks";
+import type { FuseSlot } from "@/lib/atlas";
 import { agentPay, checkFor, gasNeeded, type CheckView, type PayResult } from "@/lib/agentPay";
 import { keyFrom, loadAgentKey, loadLabels, saveAgentKey, saveLabel, walletsWithKeys, type AgentKey } from "@/lib/agentKey";
 import { feeRunway } from "@/lib/plain";
@@ -14,6 +15,17 @@ import { PageChrome } from "./m/chrome";
 import { MChips, MRow, MSheet } from "./m/ui";
 
 interface Proposal { to: Address; amount: string; memo: string; check?: CheckView; result?: PayResult; error?: string; state: "checking" | "ready" | "paying" | "done" | "cancelled" }
+
+/** Why a fuse says no to a proposed payment, and the one fix only the owner can make. Nothing in the chat overrides it. */
+function stopWhy(f: FuseSlot, st: CheckView["status"][number], amount: string, saved: boolean): string {
+  if (st === "failed") return "The circuit call failed, so the fuse fails closed.";
+  if (st === "untrusted") return "TapeOut's processor code changed and isn't attested, so the fuse fails closed.";
+  if (f.key === "daily-cap") return `${amount} USD₮0 would take today past the ${f.a} USD₮0 cap (${Number(f.spentToday).toFixed(2)} spent). It resets at 00:00 UTC.`;
+  if (f.key === "payee-guard") return saved ? `Saved recently and still cooling off (${f.a} h), and ${amount} USD₮0 is over the ${f.b} USD₮0 trial.` : "Not a saved payee. Only the owner can save it, in the Owner tab, and it then starts on the trial amount.";
+  if (f.key === "breaker") return f.latched ? "Already blown. Nothing pays until the owner resets it." : "A payment to a stranger trips it, and it stays blown until the owner resets it.";
+  if (f.key === "approval-2of3") return `Over ${f.a} USD₮0, so two of the three approvers must sign this exact payment first.`;
+  return "Says no.";
+}
 interface Msg { role: "user" | "assistant"; text: string; pay?: Proposal }
 
 /** Pay by chatting. The model only proposes; the wallet's real fuses are checked, you tap Pay, and the agent key in
@@ -139,6 +151,9 @@ export default function AssistantView() {
                 {m.pay.check && m.pay.state !== "done" && (
                   <div className="asst-fz">{a.fuses.map((f, k) => <span key={f.slot} className={`mtag ${m.pay!.check!.status[k] === "pass" ? "ok" : "no"}`}>{f.name} · {m.pay!.check!.status[k] === "pass" ? "passes" : "says no"}</span>)}</div>
                 )}
+                {m.pay.check && !m.pay.check.allowed && m.pay.state !== "done" && (
+                  <ul className="asst-why">{a.fuses.map((f, k) => m.pay!.check!.status[k] === "pass" ? null : <li key={f.slot}><b>{f.name}</b> {stopWhy(f, m.pay!.check!.status[k], m.pay!.amount, a.payees.some((p) => p.address.toLowerCase() === m.pay!.to.toLowerCase()))}</li>)}</ul>
+                )}
                 {m.pay.result && (
                   <div className="asst-fz">{a.fuses.map((f, k) => <span key={f.slot} className={`mtag ${m.pay!.result!.status[k] === "pass" ? "ok" : "no"}`}>{f.name} · {m.pay!.result!.status[k] === "pass" ? "passed" : "stopped"}</span>)}</div>
                 )}
@@ -148,7 +163,7 @@ export default function AssistantView() {
                   <div className="asst-act">
                     {m.pay.check?.allowed
                       ? <button className="btn lime" disabled={m.pay.state === "paying" || !isAgent} onClick={() => pay(i, m.pay!)}>{m.pay.state === "paying" ? "Your fuses are deciding…" : "Pay as your agent"}</button>
-                      : <span className="mnote">{m.pay.check ? "Your fuses would stop this, so there's nothing to sign." : ""}</span>}
+                      : <span className="mnote">{m.pay.check ? "Your fuses would stop this, so there's nothing to sign, and nothing in this chat can change that." : ""}</span>}
                     {m.pay.state === "ready" && <button className="btn" onClick={() => patch(i, { state: "cancelled" })}>Cancel</button>}
                   </div>
                 )}
