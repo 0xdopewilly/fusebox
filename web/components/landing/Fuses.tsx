@@ -56,7 +56,7 @@ export default function Fuses() {
       <div className="wrap sh"><div className="m lime" data-scr>[05]</div><div className="m mute" data-scr>The fuses</div></div>
       <div className="wrap">
         <div className="head">
-          <h2 className="disp">Four TapeOut circuits.<br /><span className="lime">[244]</span> gates.<br />All on&#8209;chain.</h2>
+          <h2 className="disp">Five TapeOut circuits.<br /><span className="lime">[246]</span> gates.<br />All on&#8209;chain.</h2>
           <p>Each fuse is a real NAND circuit taped out on TapeOut, with its own circuit NFT, gate count and gas cost. The pictures below are their actual netlists, one square per gate, laid out by logic depth. Hover one to send a signal through it.</p>
         </div>
         <div>

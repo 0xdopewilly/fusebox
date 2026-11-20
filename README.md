@@ -32,15 +32,17 @@ AI agents now hold wallets and send real money, and one convincing message can m
 | What | Address / id |
 |---|---|
 | TapeOut processor (OrderGuard) | [`0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355`](https://www.oklink.com/xlayer/address/0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355) |
-| Circuits | **#15** Daily Cap · **#16** Payee Guard · **#17** Breaker · **#18** Two of Three |
-| FuseRegistry | [`0x852a278322667BB86A2665a38CbC5Bfd551B20d7`](https://www.oklink.com/xlayer/address/0x852a278322667BB86A2665a38CbC5Bfd551B20d7) |
-| FuseboxFactory | [`0x192C099a18ed42612b6e74f243f8dF1EE0E3E7a5`](https://www.oklink.com/xlayer/address/0x192C099a18ed42612b6e74f243f8dF1EE0E3E7a5) |
+| Circuits | **#15** Daily Cap · **#16** Payee Guard · **#17** Breaker · **#18** Two of Three · **#21** Repeat Guard |
+| FuseRegistry v2 (new wallets, the fuse market) | [`0x2583928546a614A2fD993B5C106ED9aD0E781AB6`](https://www.oklink.com/xlayer/address/0x2583928546a614A2fD993B5C106ED9aD0E781AB6) |
+| FuseboxFactory v2 | [`0xdFc9b1d715efB2bCDAd8f848A5E3b4e2c243EE9B`](https://www.oklink.com/xlayer/address/0xdFc9b1d715efB2bCDAd8f848A5E3b4e2c243EE9B) |
+| FuseRegistry v1 (Atlas and the first wallets) | [`0x852a278322667BB86A2665a38CbC5Bfd551B20d7`](https://www.oklink.com/xlayer/address/0x852a278322667BB86A2665a38CbC5Bfd551B20d7) |
+| FuseboxFactory v1 | [`0x192C099a18ed42612b6e74f243f8dF1EE0E3E7a5`](https://www.oklink.com/xlayer/address/0x192C099a18ed42612b6e74f243f8dF1EE0E3E7a5) |
 | Atlas (demo wallet) | [`0x0Db0457715a6445D8a65F820d717a6B39Be66800`](https://www.oklink.com/xlayer/address/0x0Db0457715a6445D8a65F820d717a6B39Be66800) |
 | Fees | USDT0 [`0x779Ded0c9e1022225f8E0630b35a9b54bE713736`](https://www.oklink.com/xlayer/address/0x779Ded0c9e1022225f8E0630b35a9b54bE713736) |
 
-Every address is in [`deployments/xlayer-mainnet.json`](deployments/xlayer-mainnet.json).
+Every address is in [`deployments/xlayer-mainnet.json`](deployments/xlayer-mainnet.json). v2 (Nov 20) stores socket pinouts as data and adds the Repeat Guard; v1 (Nov 15) keeps running Atlas unchanged. See [docs/V2-REPEAT-GUARD.md](docs/V2-REPEAT-GUARD.md).
 
-## The four fuses
+## The five fuses
 
 | Fuse | Circuit | What it does | Fee / check |
 |---|---|---|---|
@@ -48,6 +50,7 @@ Every address is in [`deployments/xlayer-mainnet.json`](deployments/xlayer-mainn
 | Payee Guard | 33 inputs · 79 NAND | Saved payees only; a new payee gets a small trial amount until its cooling-off ends. | 0.001 USDT0 |
 | Breaker | 4 inputs · 10 NAND + 1 LATCH | Trips on a payment to a stranger and stays blown until the owner resets it. | 0.0005 USDT0 |
 | Two of Three | 19 inputs · 46 NAND | Above a threshold, two of three approvers must sign that exact payment. | 0.002 USDT0 |
+| Repeat Guard (v2) | 2 inputs · 2 NAND | The same invoice sent twice gets paid once: the same amount to the same payee inside the owner's window is stopped, unless the owner clears one repeat. | 0.0005 USDT0 |
 
 ## How a payment works
 

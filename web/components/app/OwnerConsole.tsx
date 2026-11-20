@@ -1,13 +1,13 @@
 "use client";
 import { useEffect, useState } from "react";
-import { encodeFunctionData, formatUnits, getAddress, isAddress, parseUnits, type Address, type Hash } from "viem";
+import { encodeAbiParameters, encodeFunctionData, formatUnits, getAddress, isAddress, keccak256, parseUnits, type Address, type Hash } from "viem";
 import { fuseboxWalletAbi, fuseRegistryAbi } from "@/lib/abi";
 import { erc20Abi } from "@/lib/erc20";
 import { DEP, pub } from "@/lib/client-chain";
 import { useTxQueue, type TxStep } from "@/lib/useTxQueue";
 import { useMarket } from "@/lib/useMarket";
 import { SOCKETS, readField, toParams, describe, fieldsFor, type ParamField } from "@/lib/sockets";
-import { short } from "@/lib/hooks";
+import { OKLINK, short } from "@/lib/hooks";
 import type { Atlas, FuseSlot } from "@/lib/atlas";
 import { useWallet } from "./WalletProvider";
 
@@ -56,6 +56,61 @@ function parse(fields: ParamField[], vals: Record<string, string>): { a?: number
   return out;
 }
 
+// ------------------------------------------------------------------------------------------------ repeats
+const repeatKey = (token: Address, to: Address, amount: bigint) => keccak256(encodeAbiParameters([{ type: "address" }, { type: "address" }, { type: "uint256" }], [token, to, amount]));
+
+/**
+ * The Repeat Guard stops the same amount to the same payee inside its window. When a repeat is real (a second order,
+ * a monthly bill paid early), the owner lets exactly one more through: the clearance is used up by that payment and
+ * lapses after the approval window if it isn't used.
+ */
+function Repeats({ data, busy, one }: Pick<P, "data" | "busy" | "one">) {
+  const { write } = useWallet();
+  const guard = data.fuses.find((f) => f.key === "repeat-guard");
+  const W = { address: data.wallet, abi: fuseboxWalletAbi } as const;
+  const [to, setTo] = useState(""); const [amt, setAmt] = useState("");
+  // the payments still inside the window, newest first, one row per payee and amount
+  const recent = guard ? [...new Map(data.decisions.filter((d) => d.allowed && data.time - d.time < guard.a * 3600).map((d) => [`${d.to.toLowerCase()}:${d.amount}`, d] as const).reverse()).values()].reverse() : [];
+  const [cleared, setCleared] = useState<Record<string, number>>({});
+  const keys = recent.map((d) => repeatKey(USDT0, d.to, parseUnits(d.amount, 6)));
+  useEffect(() => {
+    if (!guard || !keys.length) return;
+    let on = true;
+    Promise.all(keys.map((k) => pub.readContract({ ...W, functionName: "repeatClearedUntil", args: [k] }).then((v) => [k, Number(v)] as const).catch(() => [k, 0] as const)))
+      .then((r) => { if (on) setCleared(Object.fromEntries(r)); });
+    return () => { on = false; };
+  }, [guard?.a, data.block, keys.join()]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!guard) return null;
+  const clear = (who: Address, amount: string, yes: boolean) => one(yes ? "Let it pay once more" : "Withdraw the clearance", () => write({ ...W, functionName: "clearRepeat", args: [USDT0, who, parseUnits(amount, 6), yes] }));
+  const ttl = Math.round((data.approvalTtl ?? 86400) / 3600);
+  return (
+    <>
+      <Row title="Repeats" say={<>The Repeat Guard stops the same amount to the same payee within {guard.a} h, so an invoice sent twice is paid once. If a repeat is real, let it pay once more: the next payment of exactly that amount to that payee goes through, then the guard is back. Unused, it lapses after {ttl} h.</>}>
+        <div className="two">
+          <input aria-label="Payee to let pay once more" value={to} onChange={(e) => setTo(e.target.value)} placeholder="Payee 0x…" spellCheck={false} />
+          <input aria-label="Exact amount, USD₮0" value={amt} onChange={(e) => setAmt(e.target.value)} placeholder="Exact amount, USD₮0" inputMode="decimal" />
+        </div>
+        <button className="btn" disabled={busy || !okAddr(to) || !okMoney(amt)} onClick={() => clear(toAddr(to), amt.trim(), true)}>Let it pay once more</button>
+      </Row>
+      {recent.length > 0 && (
+        <ul className="oc-list">
+          {recent.map((d, i) => {
+            const until = cleared[keys[i]] ?? 0, live = until > data.time;
+            const left = Math.max(0, Math.ceil((d.time + guard.a * 3600 - data.time) / 3600));
+            return (
+              <li key={`${d.to}-${d.amount}`}>
+                <span className="grow"><span>{d.amount} USD₮0 to {short(d.to)}</span><small><span className={live ? "lime" : "mute"}>{live ? `cleared once, until ${new Date(until * 1000).toISOString().slice(11, 16)} UTC` : `a repeat is stopped for ${left} h more`}</span><span className="mute"> · paid in <a className="mute" href={`${OKLINK}/tx/${d.tx}`} target="_blank" rel="noreferrer">decision #{d.id}</a></span></small></span>
+                {live ? <button className="btn btn-sm" disabled={busy} onClick={() => clear(d.to, d.amount, false)}>Withdraw</button>
+                  : <Confirm label="Let it pay once more" sure="Sure? Tap again" className="btn btn-sm" disabled={busy} onConfirm={() => clear(d.to, d.amount, true)} />}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </>
+  );
+}
+
 // ------------------------------------------------------------------------------------------------ safety
 function Safety({ data, busy, one }: P) {
   const { write } = useWallet();
@@ -79,6 +134,7 @@ function Safety({ data, busy, one }: P) {
           <Confirm label="Pause the wallet" sure="Pause it? Tap again" className="btn danger" disabled={busy} onConfirm={() => one("Pause", () => write({ ...W, functionName: "setPaused", args: [true] }))} />
         </Row>
       )}
+      <Repeats data={data} busy={busy} one={one} />
       <Row title="Daily budgets" say={<>Today: <b>{lim?.decisionsToday ?? 0}</b> of {lim?.maxDecisions ?? "?"} decisions, <b>{lim?.blockedToday ?? 0}</b> of {lim?.maxBlocked ?? "?"} blocked. Past either budget an attempt reverts, so a looping agent can&apos;t burn your fee balance. Days are UTC.</>}>
         <div className="two">
           <label className="oc-f m"><span>Decisions a day</span><input aria-label="Decisions a day" value={md} onChange={(e) => setMd(e.target.value)} inputMode="numeric" /></label>
@@ -131,25 +187,30 @@ function FuseRow({ f, i, data, busy, one }: P & { f: FuseSlot; i: number }) {
 }
 
 /** Install a listed fuse on a wallet: pick it, set its parameters, accept its fee. Also used by the market. */
-export function InstallFuse({ wallet, installed, busy, one, preset, lock }: { wallet: Address; installed: number[]; busy: boolean; one: One; preset?: number; lock?: boolean }) {
+export function InstallFuse({ wallet, version, installed, busy, one, preset, lock }: { wallet: Address; version?: "v1" | "v2"; installed: number[]; busy: boolean; one: One; preset?: number; lock?: boolean }) {
   const { write } = useWallet();
   const { data: market } = useMarket();
-  const listed = (market?.fuses ?? []).filter((f) => f.listed);
+  // the market is v2's registry; a v1 wallet installs the same circuit under its v1 id, and can't take newer fuses
+  const v1 = version === "v1";
+  const all = (market?.fuses ?? []).filter((f) => f.listed);
+  const listed = v1 ? all.filter((f) => f.v1FuseId !== undefined) : all;
+  const idOn = (f: (typeof all)[number]) => (v1 ? f.v1FuseId! : f.fuseId);
   const [id, setId] = useState<number | null>(preset ?? null);
   const pick = listed.find((f) => f.fuseId === id) ?? null;
+  const v2Only = v1 && id !== null && !pick && all.some((f) => f.fuseId === id);
   const spec = pick ? SOCKETS[pick.socket] : null;
   const fields = pick ? fieldsFor(pick.socket, pick.original ? undefined : pick.meta?.params) : [];
   const [vals, setVals] = useState<Record<string, string>>({});
   useEffect(() => { setVals(Object.fromEntries(fields.map((f) => [f.k, String(f.def)]))); }, [pick?.fuseId]); // eslint-disable-line react-hooks/exhaustive-deps
   const parsed = spec ? parse(fields, vals) : "Pick a fuse";
   const full = installed.length >= 8;
-  const dup = pick && installed.includes(pick.fuseId);
+  const dup = pick && installed.includes(idOn(pick));
   return (
     <div className="oc-install">
       <label className="oc-f m" hidden={lock}><span>Fuse</span>
         <select aria-label="Fuse to install" value={id ?? ""} onChange={(e) => setId(e.target.value ? Number(e.target.value) : null)}>
           <option value="">{market ? "Choose a listed fuse…" : "Reading the market…"}</option>
-          {listed.map((f) => <option key={f.fuseId} value={f.fuseId}>{f.meta?.name ?? f.name} · fuse {f.fuseId} · circuit #{f.circuitId} · {f.fee} USD₮0 a check{installed.includes(f.fuseId) ? " · installed" : ""}</option>)}
+          {listed.map((f) => <option key={f.fuseId} value={f.fuseId}>{f.meta?.name ?? f.name} · fuse {idOn(f)} · circuit #{f.circuitId} · {f.fee} USD₮0 a check{installed.includes(idOn(f)) ? " · installed" : ""}</option>)}
         </select>
       </label>
       {pick && spec && (
@@ -158,11 +219,12 @@ export function InstallFuse({ wallet, installed, busy, one, preset, lock }: { wa
           {fields.length ? <Fields fields={fields} vals={vals} set={(k, v) => setVals({ ...vals, [k]: v })} /> : null}
         </>
       )}
+      {v1 && <span className="m mute" style={{ fontSize: 11, lineHeight: 1.5 }}>{v2Only ? "This fuse needs a v2 wallet. " : ""}This wallet was made by Fusebox v1, which can install the first four fuses. The Repeat Guard and newer fuses go on wallets made since Nov 20: <a className="lime" href="/app/new">make one</a>.</span>}
       {typeof parsed === "string" && pick && <span className="oc-err">{parsed}</span>}
       {dup && <span className="oc-err" style={{ color: "var(--mute)" }}>Already on this wallet. A second copy checks every payment twice and charges twice.</span>}
       {full && <span className="oc-err">A wallet holds at most 8 fuses. Remove one first.</span>}
       <button className="btn lime" disabled={busy || !pick || !spec || typeof parsed === "string" || full}
-        onClick={() => { if (!pick || !spec || typeof parsed === "string") return; one(`Install ${pick.meta?.name ?? pick.name}`, () => write({ address: wallet, abi: fuseboxWalletAbi, functionName: "addFuse", args: [BigInt(pick.fuseId), toParams(pick.socket, parsed, USDT0), parseUnits(pick.fee, 6)] })); }}>
+        onClick={() => { if (!pick || !spec || typeof parsed === "string") return; one(`Install ${pick.meta?.name ?? pick.name}`, () => write({ address: wallet, abi: fuseboxWalletAbi, functionName: "addFuse", args: [BigInt(idOn(pick)), toParams(pick.socket, parsed, USDT0), parseUnits(pick.fee, 6)] })); }}>
         {pick ? `Install ${pick.meta?.name ?? pick.name} · ${pick.fee} USD₮0 a check` : "Install"}
       </button>
     </div>
@@ -178,7 +240,7 @@ function Fuses(p: P) {
       </Row>
       <ul className="oc-fuses">{data.fuses.map((f, i) => <FuseRow key={`${f.fuseId}-${i}`} {...p} f={f} i={i} />)}</ul>
       <Row title="Install a fuse" say="Any fuse listed in the registry, from any designer. Its fee is charged per check from your fee balance, and you only ever pay the fee you accept here.">
-        <InstallFuse wallet={data.wallet} installed={data.fuses.map((f) => f.fuseId)} busy={busy} one={one} />
+        <InstallFuse wallet={data.wallet} version={data.version} installed={data.fuses.map((f) => f.fuseId)} busy={busy} one={one} />
       </Row>
     </>
   );
@@ -286,10 +348,11 @@ function Money({ data, busy, one, many, account }: P) {
           <input aria-label="USD₮0 to prepay as fees" value={top} onChange={(e) => setTop(e.target.value)} placeholder="Top up, USD₮0" inputMode="decimal" />
           <button className="btn" disabled={busy || !okMoney(top) || over(top, mine)} onClick={() => many([
             { id: "approve", label: "Allow the registry to take the top-up", run: async () => {
-              const have = await pub.readContract({ address: USDT0, abi: erc20Abi, functionName: "allowance", args: [account, DEP.registry as Address] });
-              return have >= u(top) ? null : write({ address: USDT0, abi: erc20Abi, functionName: "approve", args: [DEP.registry as Address, u(top)] });
+              const have = await pub.readContract({ address: USDT0, abi: erc20Abi, functionName: "allowance", args: [account, data.registry] });
+              return have >= u(top) ? null : write({ address: USDT0, abi: erc20Abi, functionName: "approve", args: [data.registry, u(top)] });
             } },
-            { id: "deposit", label: "Top up fees", run: () => write({ address: DEP.registry as Address, abi: fuseRegistryAbi, functionName: "deposit", args: [data.wallet, u(top)] }) },
+            // fees are held by the registry the wallet was made with (v1 for Atlas and the first wallets, v2 since)
+            { id: "deposit", label: "Top up fees", run: () => write({ address: data.registry, abi: fuseRegistryAbi, functionName: "deposit", args: [data.wallet, u(top)] }) },
           ])}>Top up</button>
           <input aria-label="USD₮0 to withdraw" value={back} onChange={(e) => setBack(e.target.value)} placeholder="USD₮0" inputMode="decimal" />
           <button className="btn" disabled={busy || !okMoney(back) || over(back, fees)} onClick={() => one("Withdraw fees", () => write({ ...W, functionName: "withdrawFeeBalance", args: [u(back), account] }))}>Withdraw</button>

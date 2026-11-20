@@ -2,13 +2,13 @@ import "server-only";
 import { unstable_cache } from "next/cache";
 import { decodeEventLog, formatUnits, type Address, type Hex } from "viem";
 import { fuseboxLogs } from "./logs";
-import { client, DEPLOYMENT, IS_FORK, RPC } from "./chain";
+import { client, DEPLOYMENT, IS_FORK, isBuiltIn, RPC, V1, VERSIONS, versionOf } from "./chain";
 import { fuseboxWalletAbi, fuseRegistryAbi, fuseboxFactoryAbi, tapeoutProcessorAbi } from "./abi";
 import { decodeDataUri } from "./fuseMeta";
 
 const erc20 = [{ type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "a", type: "address" }], outputs: [{ type: "uint256" }] }] as const;
-const SOCKET_KEY: Record<number, string> = { 1: "daily-cap", 2: "payee-guard", 3: "breaker", 4: "approval-2of3" };
-const NAME: Record<string, string> = { "daily-cap": "Daily Cap", "payee-guard": "Payee Guard", breaker: "Breaker", "approval-2of3": "Two of Three" };
+const SOCKET_KEY: Record<number, string> = { 1: "daily-cap", 2: "payee-guard", 3: "breaker", 4: "approval-2of3", 5: "repeat-guard" };
+const NAME: Record<string, string> = { "daily-cap": "Daily Cap", "payee-guard": "Payee Guard", breaker: "Breaker", "approval-2of3": "Two of Three", "repeat-guard": "Repeat Guard" };
 export const STATUS = ["pass", "blew", "failed", "untrusted"] as const;
 export type FuseStatus = (typeof STATUS)[number];
 const usd = (v: bigint) => formatUnits(v, 6);
@@ -17,7 +17,7 @@ export interface FuseSlot {
   slot: number; fuseId: number; key: string; name: string; circuitId: number; processor: Address;
   gates: number; nState: number; fee: string; maxFee: string; unit: string; a: number; b: number; token: Address; socket: number;
   latched: boolean; designer: Address; decisions: number; earned: string; lifetimeEarned: string; spentToday: string;
-  /** one of the four fuses Fusebox shipped (they have hand-drawn schematics and built-in copy) */
+  /** one of the fuses Fusebox ships (built-in copy and schematics): fuses 1-4, and the Repeat Guard on v2 */
   original?: boolean; summary?: string; paramLabels?: { a?: string; b?: string };
 }
 export interface DecisionRow {
@@ -27,6 +27,8 @@ export interface DecisionRow {
 export interface Atlas {
   source: "fork" | "mainnet" | "snapshot"; block: number; time: number; isAtlas?: boolean;
   wallet: Address; registry: Address; processor: Address; owner: Address; agent: Address; usdt0: Address;
+  /** which Fusebox contracts made the wallet: v1 (Atlas and the first wallets) or v2 (the Repeat Guard) */
+  version?: "v1" | "v2";
   paused: boolean; balance: string; feeBalance: string; protocolBps: number;
   counts: { decisions: number; allowed: number; blocked: number };
   fuses: FuseSlot[]; decisions: DecisionRow[]; payees: { address: Address; since: number }[]; approvers: Address[];
@@ -36,6 +38,17 @@ export interface Atlas {
   limits?: { maxDecisions: number; maxBlocked: number; decisionsToday: number; blockedToday: number; day: number };
   /** The log history is still being read (a long gap after an RPC outage): decisions and payees fill in on a later poll. */
   historyLoading?: boolean;
+}
+
+// ------------------------------------------------------------------ which registry a wallet belongs to
+// A wallet's registry is immutable: read it once. Atlas is v1.
+const walletRegistry = new Map<string, Address>([[DEPLOYMENT.atlas.toLowerCase(), V1.registry]]);
+export async function registryOf(addr: Address): Promise<Address> {
+  const hit = walletRegistry.get(addr.toLowerCase());
+  if (hit) return hit;
+  const r = await client.readContract({ address: addr, abi: fuseboxWalletAbi, functionName: "registry" });
+  walletRegistry.set(addr.toLowerCase(), r);
+  return r;
 }
 
 // ------------------------------------------------------------------ decision log (from the shared log layer)
@@ -67,13 +80,13 @@ async function readHistory(addr: Address, head: bigint) {
 export async function getHistory(addr: Address) {
   const head = await client.getBlockNumber();
   const W = { address: addr, abi: fuseboxWalletAbi } as const;
-  const [hist, n] = await Promise.all([readHistory(addr, head), client.readContract({ ...W, functionName: "fuseCount" })]);
+  const [hist, n, registry] = await Promise.all([readHistory(addr, head), client.readContract({ ...W, functionName: "fuseCount" }), registryOf(addr)]);
   const slots = await Promise.all(Array.from({ length: Number(n) }, (_, i) => client.readContract({ ...W, functionName: "slotAt", args: [BigInt(i)] })));
   // the same names as the wallet page: the shipped fuses by socket, any other design by its own metadata
   const names = await Promise.all(slots.map(async (s) => {
     const byKey = NAME[SOCKET_KEY[Number(s.socket)] ?? ""] ?? `socket ${s.socket}`;
-    if (DEPLOYMENT.fuseIds.includes(Number(s.fuseId))) return byKey;
-    const uri = await client.readContract({ address: DEPLOYMENT.registry, abi: fuseRegistryAbi, functionName: "metadataURI", args: [s.fuseId] }).catch(() => "");
+    if (isBuiltIn(registry, Number(s.fuseId))) return byKey;
+    const uri = await client.readContract({ address: registry, abi: fuseRegistryAbi, functionName: "metadataURI", args: [s.fuseId] }).catch(() => "");
     return (uri && decodeDataUri(uri)?.name) || byKey;
   }));
   return { rows: hist.rows, payees: hist.payees, names, sockets: slots.map((s) => Number(s.socket)), settings: slots.map((s) => ({ a: Number(s.params.a), b: Number(s.params.b) })) };
@@ -98,14 +111,17 @@ export async function getWallet(addr: Address): Promise<Atlas> {
   return data;
 }
 
+/** Made by either Fusebox factory (v1 or v2). */
 export async function isFuseboxWallet(addr: Address) {
-  return client.readContract({ address: DEPLOYMENT.factory, abi: fuseboxFactoryAbi, functionName: "isWallet", args: [addr] });
+  const made = await Promise.all(VERSIONS.map((v) => client.readContract({ address: v.factory, abi: fuseboxFactoryAbi, functionName: "isWallet", args: [addr] })));
+  return made.some(Boolean);
 }
 
 const HISTORY_WAIT_MS = 20_000;
 async function build(addr: Address): Promise<Atlas> {
   const W = { address: addr, abi: fuseboxWalletAbi } as const;
-  const R = { address: DEPLOYMENT.registry, abi: fuseRegistryAbi } as const;
+  const registry = await registryOf(addr);
+  const R = { address: registry, abi: fuseRegistryAbi } as const;
   // the head, the wallet's state and (once the head is known) its history all load at once
   const headP = client.getBlock();
   const histP = headP.then((h) => readHistory(addr, h.number));
@@ -147,7 +163,7 @@ async function build(addr: Address): Promise<Atlas> {
       blocked,
     ]);
     const meta = uri ? decodeDataUri(uri) : null;
-    const original = DEPLOYMENT.fuseIds.includes(Number(s.fuseId));
+    const original = isBuiltIn(registry, Number(s.fuseId));
     const key = SOCKET_KEY[Number(s.socket)] ?? `socket-${s.socket}`;
     return {
       slot: i, fuseId: Number(s.fuseId), key, name: (original ? NAME[key] : meta?.name) ?? NAME[key] ?? key, circuitId: Number(s.circuitId), processor: s.processor,
@@ -163,7 +179,7 @@ async function build(addr: Address): Promise<Atlas> {
   const paidToDesigners = usd(hist.rows.reduce((t, r) => t + BigInt(Math.round(Number(r.fee) * 1e6)), 0n));
   return {
     source: IS_FORK ? "fork" : "mainnet", block: Number(head.number), time: Number(head.timestamp),
-    wallet: addr, registry: DEPLOYMENT.registry, processor: DEPLOYMENT.processor, owner, agent: isAtlas(addr) ? DEPLOYMENT.agent : ([...hist.agents][0] ?? ("0x0000000000000000000000000000000000000000" as Address)), usdt0: DEPLOYMENT.usdt0,
+    wallet: addr, registry, version: versionOf(registry)?.tag, processor: DEPLOYMENT.processor, owner, agent: isAtlas(addr) ? DEPLOYMENT.agent : ([...hist.agents][0] ?? ("0x0000000000000000000000000000000000000000" as Address)), usdt0: DEPLOYMENT.usdt0,
     paused, balance: usd(balance), feeBalance: usd(feeBalance), protocolBps: Number(protocolBps),
     counts: { decisions: Number(decisions), allowed: Number(allowed), blocked: Number(blocked) },
     fuses, decisions: [...hist.rows].sort((a, b) => b.id - a.id).slice(0, 60),
@@ -215,6 +231,8 @@ export async function checkPayment(to: Address, amount: bigint): Promise<CheckRe
       why = f.latched ? "Already blown. Nothing pays until the owner resets it." : ok ? "Not tripped." : "A payment to a stranger trips it, and it stays blown until the owner resets it.";
     } else if (f.key === "approval-2of3") {
       why = ok ? (amt > f.a ? `Over ${f.a} USD₮0 and approved by ${approvals} of 3.` : `Under the ${f.a} USD₮0 approval threshold.`) : `Over ${f.a} USD₮0: needs two of three approvers, has ${approvals}.`;
+    } else if (f.key === "repeat-guard") {
+      why = ok ? `Not a repeat: no payment of ${amt} USD₮0 to this payee in the last ${f.a} h (or the owner cleared it).` : `${amt} USD₮0 to this payee already went out in the last ${f.a} h. The owner can clear one repeat.`;
     }
     return { name: f.name, key: f.key, status: st, why };
   });

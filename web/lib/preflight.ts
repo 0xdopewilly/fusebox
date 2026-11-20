@@ -1,6 +1,6 @@
 import "server-only";
 import { parseUnits, toHex, type Address, type Hex } from "viem";
-import { client, DEPLOYMENT } from "./chain";
+import { client, CURRENT } from "./chain";
 import { fuseRegistryAbi, tapeoutProcessorAbi } from "./abi";
 import { decodeDataUri } from "./fuseMeta";
 import { SOCKETS } from "./sockets";
@@ -11,7 +11,8 @@ import { SOCKETS } from "./sockets";
  * Fusebox wallets keep the context on-chain; here the caller supplies it (what it spent today, whether the payee is
  * saved and since when, which approvers signed, the latch state from its last call), and gets the next latch state back.
  * Inputs are derived exactly as FuseboxWallet does: amounts rounded up to whole USD₮0 and saturated at 255, payee age
- * in hours saturated at 255, the Breaker's "suspect" = the payee isn't saved.
+ * in hours saturated at 255, the Breaker's "suspect" = the payee isn't saved, the Repeat Guard's "repeat" = the same
+ * payment went out less than its window ago.
  */
 export interface PreflightFuse { fuseId: number; a?: number; b?: number }
 export interface PreflightContext {
@@ -23,6 +24,10 @@ export interface PreflightContext {
   approvals?: [boolean, boolean, boolean] | number;
   /** latch state per line position, from the previous response's `state` (default: fresh) */
   state?: Record<string, Hex>;
+  /** hours since this exact payment (same payee, same amount) last went out, for the Repeat Guard (default: never) */
+  samePaymentHoursAgo?: number;
+  /** the owner cleared one repeat of this payment (default false) */
+  repeatCleared?: boolean;
 }
 export interface PreflightRequest { line: PreflightFuse[]; payment: { amount: string; to?: string }; context?: PreflightContext }
 export type PreflightVerdict = "pass" | "blew" | "error";
@@ -53,7 +58,7 @@ const heads = new Map<number, { at: number; v: { processor: Address; circuitId: 
 async function head(fuseId: number) {
   const hit = heads.get(fuseId);
   if (hit && Date.now() - hit.at < 60_000) return hit.v;
-  const R = { address: DEPLOYMENT.registry, abi: fuseRegistryAbi } as const;
+  const R = { address: CURRENT.registry, abi: fuseRegistryAbi } as const;
   const [f, uri] = await Promise.all([
     client.readContract({ ...R, functionName: "fuse", args: [BigInt(fuseId)] }).catch((e: Error) => { if (/UnknownFuse/.test(e?.message ?? "")) return null; throw e; }),
     client.readContract({ ...R, functionName: "metadataURI", args: [BigInt(fuseId)] }).catch(() => ""),
@@ -84,6 +89,8 @@ export async function preflight(req: PreflightRequest): Promise<PreflightResult>
   const approvals = (seats[0] ? 1 : 0) | (seats[1] ? 2 : 0) | (seats[2] ? 4 : 0);
   const amount = quantise(parseUnits(amountStr, 6)), spent = quantise(parseUnits(spentStr, 6));
   const age = saved ? Math.min(255, hours ?? 255) : 0;
+  const lastSame = intIn(ctx.samePaymentHoursAgo, 0, 1_000_000, "context.samePaymentHoursAgo");
+  const cleared = !!ctx.repeatCleared;
 
   const [block, line] = await Promise.all([client.getBlockNumber(), Promise.all(req.line.map(async (f, i) => {
     const id = intIn(f.fuseId, 1, 1_000_000, `line[${i}].fuseId`)!;
@@ -101,6 +108,7 @@ export async function preflight(req: PreflightRequest): Promise<PreflightResult>
     f.socket === 1 ? { amount, spent, cap: f.a }
     : f.socket === 2 ? { listed: saved ? 1 : 0, age, cooldown: f.a, amount, trial: f.b }
     : f.socket === 3 ? { set: 0, clear: 0, attempt: 1, suspect: saved ? 0 : 1 }
+    : f.socket === 5 ? { repeat: lastSame !== undefined && lastSame < f.a ? 1 : 0, cleared: cleared ? 1 : 0 }
     : { approvals, amount, threshold: f.a };
 
   const state: Record<string, Hex> = {};
@@ -129,6 +137,7 @@ export async function preflight(req: PreflightRequest): Promise<PreflightResult>
     else if (f.socket === 1) why = pass ? `${amt} USD₮0 fits today's ${f.a} USD₮0 cap (${spentN} spent)` : `${amt} USD₮0 would take today's spend past the ${f.a} USD₮0 cap (${spentN} spent)`;
     else if (f.socket === 2) why = !saved ? (pass ? "the payee isn't saved, but this design allows it" : "the payee isn't in the payee book") : pass ? (age >= f.a ? "a saved payee, past its cooling-off" : `saved ${age} h ago; within the ${f.b} USD₮0 trial`) : `saved ${age} h ago, still cooling off (${f.a} h); over the ${f.b} USD₮0 trial`;
     else if (f.socket === 3) why = !pass ? (saved ? "already blown; nothing pays until it's reset" : "a payment to a stranger trips it") : r.blownAfter ? "this one passes, but it leaves the breaker blown" : "not tripped";
+    else if (f.socket === 5) why = pass ? (lastSame !== undefined && lastSame < f.a ? "a repeat inside the window, but the owner cleared it" : `not a repeat inside the ${f.a} h window`) : `the same payment went out ${lastSame} h ago, inside the ${f.a} h window`;
     else why = pass ? (amt > f.a ? `over ${f.a} USD₮0 and signed by ${signed} of 3` : `under the ${f.a} USD₮0 approval threshold`) : `over ${f.a} USD₮0: needs two of three approvers, has ${signed}`;
     if (f.name !== SOCKETS[f.socket]?.name && r.verdict !== "error") why = pass ? "holds under its own rule" : "refused under its own rule";
     return { fuseId: f.fuseId, name: f.name, socket: f.socket, circuitId: Number(f.circuitId), processor: f.processor, settings: { a: f.a, b: f.b }, verdict: r.verdict, why, ...(r.blownAfter !== undefined ? { blownAfter: r.blownAfter } : {}) };

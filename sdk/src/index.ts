@@ -22,17 +22,23 @@ export const xLayer: Chain = defineChain({
   contracts: { multicall3: { address: "0xcA11bde05977b3631167028862bE2a173976CA11" } },
 });
 
-/** Fusebox on X Layer mainnet. Atlas is the public demo wallet. */
+/**
+ * Fusebox on X Layer mainnet. `registry` and `factory` are v2 (Nov 20): new wallets and the fuse market, with the
+ * Repeat Guard. v1 (Nov 15) holds Atlas, the public demo wallet, and the first wallets, which keep working. A wallet
+ * always reads its own registry, so the client below works with either.
+ */
 export const ADDRESSES = {
-  registry: "0x852a278322667BB86A2665a38CbC5Bfd551B20d7",
-  factory: "0x192C099a18ed42612b6e74f243f8dF1EE0E3E7a5",
+  registry: "0x2583928546a614A2fD993B5C106ED9aD0E781AB6",
+  factory: "0xdFc9b1d715efB2bCDAd8f848A5E3b4e2c243EE9B",
+  registryV1: "0x852a278322667BB86A2665a38CbC5Bfd551B20d7",
+  factoryV1: "0x192C099a18ed42612b6e74f243f8dF1EE0E3E7a5",
   atlas: "0x0Db0457715a6445D8a65F820d717a6B39Be66800",
   usdt0: "0x779Ded0c9e1022225f8E0630b35a9b54bE713736",
 } as const satisfies Record<string, Address>;
 
 const EXPLORER = "https://www.oklink.com/xlayer";
-const SHIPPED = new Set([1, 2, 3, 4]); // the four fuses Fusebox shipped; other designs describe themselves in metadata
-const SOCKET_NAME: Record<number, string> = { 1: "Daily Cap", 2: "Payee Guard", 3: "Breaker", 4: "Two of Three" };
+const SHIPPED = new Set([1, 2, 3, 4, 5]); // the fuses Fusebox ships (5, the Repeat Guard, is v2); other designs describe themselves in metadata
+const SOCKET_NAME: Record<number, string> = { 1: "Daily Cap", 2: "Payee Guard", 3: "Breaker", 4: "Two of Three", 5: "Repeat Guard" };
 const STATUS: Verdict[] = ["pass", "blew", "failed", "untrusted"];
 const erc20 = [{ type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "a", type: "address" }], outputs: [{ type: "uint256" }] }] as const;
 const usd = (v: bigint) => formatUnits(v, 6);
@@ -259,6 +265,7 @@ export class Fusebox {
       else if (f.socket === 1) why = pass ? `within today's cap (${Math.max(0, p - Number(f.spentToday))} of ${p} USDT0 left)` : `${a} USDT0 would pass today's ${p} USDT0 cap (${f.spentToday} spent)`;
       else if (f.socket === 2) why = pass ? (since && hours >= p ? "a saved payee, past its cooling-off" : `saved ${hours.toFixed(1)} h ago and within the ${q} USDT0 trial`) : !since ? "not a saved payee" : `saved ${hours.toFixed(1)} h ago: until ${p} h have passed it can receive at most ${q} USDT0`;
       else if (f.socket === 3) why = f.blown ? "already blown; nothing pays until the owner resets it" : pass ? "not tripped" : "a payment to a stranger trips it, and it stays blown until the owner resets it";
+      else if (f.socket === 5) why = pass ? `not a repeat of a payment in the last ${p} h (or the owner cleared one)` : `the same amount to this payee already went out in the last ${p} h; the owner can clear one repeat`;
       else why = pass ? (a > p ? `over ${p} USDT0 and approved by ${approvals} of 3` : `under the ${p} USDT0 approval threshold`) : `over ${p} USDT0: needs two of three approvers, has ${approvals}`;
       return { name: f.name, verdict: v, why };
     });

@@ -59,6 +59,11 @@ export const CONDS: Record<number, CondDef[]> = {
     { kind: "fixed", label: (k) => `this payment is at most ${k} USD₮0`, param: { label: "Fixed limit (USD₮0)", min: 1, max: 254, def: 50 },
       build: (b, p, k) => lessOrEqual(b, p("amount"), konst(k)), spec: (f, k) => f.amount <= k },
   ],
+  // the Repeat Guard socket (v2): the wallet works out both bits from its own records; the window is the owner's setting
+  5: [
+    { kind: "fresh", label: () => "the same payment hasn't gone out inside the window", uses: { a: "Window" }, build: (b, p) => b.not(p("repeat")[0]), spec: (f) => f.repeat === 0 },
+    { kind: "cleared", label: () => "the owner cleared this repeat", build: (b, p) => p("cleared")[0], spec: (f) => f.cleared === 1 },
+  ],
 };
 export const condOf = (socket: number, kind: string) => CONDS[socket]?.find((c) => c.kind === kind);
 
@@ -154,7 +159,7 @@ export function decodeDraft(s: string): { rule: Rule; name: string } | null {
     const json = typeof atob === "function" ? decodeURIComponent(escape(atob(b64))) : Buffer.from(b64, "base64").toString("utf8");
     const j = JSON.parse(json) as { s: number; g: [string, number][][]; n: number; name?: string };
     const rule: Rule = { socket: Number(j.s), groups: (j.g ?? []).map((g) => g.map(([kind, k]) => ({ kind: String(kind), k: Number(k) }))), strikes: Number(j.n) || 1 };
-    if (![1, 2, 3, 4].includes(rule.socket) || ruleProblem(rule)) return null;
+    if (![1, 2, 3, 4, 5].includes(rule.socket) || ruleProblem(rule)) return null;
     return { rule, name: typeof j.name === "string" ? j.name.slice(0, 40) : "" };
   } catch { return null; }
 }

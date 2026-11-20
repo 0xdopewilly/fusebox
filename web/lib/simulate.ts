@@ -11,7 +11,8 @@ import { bitsFromFields } from "./studio";
  * an `eval` (or `step`, for fuses with latches) eth_call. Free and read-only. The inputs are derived exactly as
  * FuseboxWallet._paymentInputs does: amounts rounded up to whole units and saturated at 255, today's spend counted
  * from paid payments only, payee age in hours saturated at 255, the Breaker's "suspect" = not in the payee book,
- * and latch state carried forward after every decision, paid or stopped.
+ * the Repeat Guard's "repeat" = the same payee and amount was already paid earlier in the run (a run is one day, inside
+ * any window), and latch state carried forward after every decision, paid or stopped.
  */
 export interface SimFuse {
   fuseId: number; name: string; socket: number; processor: Address; circuitId: number; nState: number; a: number; b: number;
@@ -37,13 +38,14 @@ export function packInputs(socket: number, fields: Record<string, number>): Hex 
   return toHex(bytes);
 }
 
-function inputsFor(f: SimFuse, p: SimPayment, spentRaw: bigint, newPayeeHours: number): Record<string, number> {
+function inputsFor(f: SimFuse, p: SimPayment, spentRaw: bigint, newPayeeHours: number, repeat: boolean): Record<string, number> {
   const amount = quantise(parseUnits(p.amount || "0", 6));
   const listed = p.to !== "stranger" ? 1 : 0;
   if (f.socket === 1) return { amount, spent: quantise(spentRaw), cap: f.a };
   if (f.socket === 2) return { listed, age: p.to === "saved" ? 255 : p.to === "new" ? Math.min(255, newPayeeHours) : 0, cooldown: f.a, amount, trial: f.b };
   if (f.socket === 3) return { set: 0, clear: 0, attempt: 1, suspect: 1 - listed };
   if (f.socket === 4) return { approvals: (p.seats[0] ? 1 : 0) | (p.seats[1] ? 2 : 0) | (p.seats[2] ? 4 : 0), amount, threshold: f.a };
+  if (f.socket === 5) return { repeat: repeat ? 1 : 0, cleared: 0 };
   return {};
 }
 
@@ -54,12 +56,14 @@ export async function runLine(fuses: SimFuse[], payments: SimPayment[], opts: { 
   let spent = parseUnits(opts.spentToday || "0", 6);
   const state: Hex[] = fuses.map((f) => toHex(new Uint8Array(Math.ceil(f.nState / 8))));
   const latched = fuses.map(() => false);
+  const paid = new Set<string>(); // payee:amount of every payment that went through, for the Repeat Guard
   const out: SimStep[] = [];
   for (let i = 0; i < payments.length; i++) {
     const p = payments[i];
     const spentBefore = Number(spent) / 1e6;
+    const same = `${p.to}:${parseUnits(p.amount || "0", 6)}`;
     const res = await Promise.all(fuses.map(async (f, k) => {
-      const fields = inputsFor(f, p, spent, opts.newPayeeHours);
+      const fields = inputsFor(f, p, spent, opts.newPayeeHours, paid.has(same));
       if (f.local) {
         const st = Array.from({ length: f.nState }, (_, i) => (parseInt(state[k].slice(2) || "0", 16) >> i) & 1);
         const r = beat(f.local, st, bitsFromFields(f.socket, fields));
@@ -93,7 +97,7 @@ export async function runLine(fuses: SimFuse[], payments: SimPayment[], opts: { 
         latched[k] = !okOut(o);
       } catch { /* keep the last answer */ }
     }));
-    if (allowed) spent += parseUnits(p.amount || "0", 6);
+    if (allowed) { spent += parseUnits(p.amount || "0", 6); paid.add(same); }
     const step: SimStep = { allowed, verdicts: res.map((r) => r.v), spentBefore, latchedAfter: [...latched] };
     out.push(step);
     onStep?.(i, step);

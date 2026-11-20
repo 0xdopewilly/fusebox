@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { decodeEventLog, formatEther, parseUnits, type Address, type Hex } from "viem";
 import { fuseRegistryAbi, tapeoutProcessorAbi } from "@/lib/abi";
-import { DEP, pub } from "@/lib/client-chain";
+import { CURRENT, DEP, pub } from "@/lib/client-chain";
 import { SOCKETS } from "@/lib/sockets";
 import { CONDS, compile, condOf, decodeDraft, encodeDraft, paramLabels, ruleProblem, ruleText, type Cond, type Rule } from "@/lib/studio";
 import { prove, type Proof } from "@/lib/studioProof";
@@ -26,8 +26,8 @@ const transistorsAbi = [
   { type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "a", type: "address" }, { name: "id", type: "uint256" }], outputs: [{ type: "uint256" }] },
 ] as const;
 const PROCESSOR = DEP.processor as Address;
-const START: Record<number, Cond[][]> = { 1: [[{ kind: "each", k: 0 }]], 2: [[{ kind: "listed", k: 0 }, { kind: "cooled", k: 0 }]], 3: [], 4: [[{ kind: "small", k: 0 }], [{ kind: "seat", k: 1 }, { kind: "kof3", k: 2 }]] };
-const SOCKET_ORDER = [1, 2, 3, 4];
+const START: Record<number, Cond[][]> = { 1: [[{ kind: "each", k: 0 }]], 2: [[{ kind: "listed", k: 0 }, { kind: "cooled", k: 0 }]], 3: [], 4: [[{ kind: "small", k: 0 }], [{ kind: "seat", k: 1 }, { kind: "kof3", k: 2 }]], 5: [[{ kind: "fresh", k: 0 }]] };
+const SOCKET_ORDER = [1, 2, 3, 4, 5];
 interface Ctx { circuitId?: bigint; fuseId?: number }
 // the shared write() is typed for any ABI, where viem can't see that these calls are payable; it passes value through
 type WriteArg = Parameters<ReturnType<typeof useWallet>["write"]>[0];
@@ -131,7 +131,7 @@ export default function StudioView() {
     if (needL > 0n) steps.push({ id: "latch", label: `Mint ${needL} LATCH transistor${needL > 1n ? "s" : ""}`, detail: `${formatEther(cost.price * needL + cost.pfee)} OKB`, run: () => write(payable({ address: cost.T, abi: transistorsAbi, functionName: "mint", args: [1n, needL], value: cost.price * needL + cost.pfee })) });
     steps.push({ id: "tape", label: "Tape it out on TapeOut", detail: `${net.gates} gates · ${formatEther(cost.tape)} OKB`, run: () => write(payable({ address: PROCESSOR, abi: tapeoutProcessorAbi, functionName: "tapeout", args: [net.hex as Hex, active.nIn, 1], value: cost.tape })),
       after: (r: { logs: { address: string; data: Hex; topics: Hex[] }[] }, c: Ctx) => { for (const l of r.logs) { if (l.address.toLowerCase() !== PROCESSOR.toLowerCase()) continue; try { const ev = decodeEventLog({ abi: tapeoutProcessorAbi, data: l.data, topics: l.topics as [Hex, ...Hex[]] }); if (ev.eventName === "TapedOut") c.circuitId = ev.args.circuitId; } catch {} } } });
-    steps.push({ id: "list", label: "List it in the fuse market", detail: `${fee} USD₮0 a check, described on-chain`, run: (c: Ctx) => write({ address: DEP.registry as Address, abi: fuseRegistryAbi, functionName: "list", args: [PROCESSOR, c.circuitId!, socket, net.keccak as Hex, parseUnits(fee.trim(), 6), metaUri] }),
+    steps.push({ id: "list", label: "List it in the fuse market", detail: `${fee} USD₮0 a check, described on-chain`, run: (c: Ctx) => write({ address: CURRENT.registry, abi: fuseRegistryAbi, functionName: "list", args: [PROCESSOR, c.circuitId!, socket, net.keccak as Hex, parseUnits(fee.trim(), 6), metaUri] }),
       after: (r: { logs: { address: string; data: Hex; topics: Hex[] }[] }, c: Ctx) => { for (const l of r.logs) { try { const ev = decodeEventLog({ abi: fuseRegistryAbi, data: l.data, topics: l.topics as [Hex, ...Hex[]] }); if (ev.eventName === "FuseListed") c.fuseId = Number(ev.args.fuseId); } catch {} } } });
     const ok = await q.start(steps as Parameters<typeof q.start>[0], {});
     if (ok) setMade({ ...(q.ctx() ?? {}) });

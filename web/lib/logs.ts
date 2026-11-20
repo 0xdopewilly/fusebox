@@ -1,12 +1,12 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
 import { toEventSelector, type Address, type Hex } from "viem";
-import { DEPLOYMENT, IS_FORK, RPC } from "./chain";
+import { DEPLOYMENT, IS_FORK, RPC, VERSIONS } from "./chain";
 import { fuseboxFactoryAbi, fuseboxWalletAbi, fuseRegistryAbi } from "./abi";
 import index from "./deployments/mainnet-index.json";
 
 /**
- * Every Fusebox event the app reads, for Atlas, the registry, the factory and every wallet the factory made,
+ * Every Fusebox event the app reads, for Atlas, both registries, both factories and every wallet they made,
  * without scanning X Layer's whole history on each request:
  *  - one shared scan filtered by event signature (no address filter), so a single pass serves every wallet;
  *  - blocks before `scannedTo` come from mainnet-index.json (scripts/index-logs.mjs, refreshed on every build);
@@ -130,21 +130,24 @@ async function extend(head: number) {
   if (head > state.scannedTo) (await scan(state.scannedTo + 1, head)).forEach(keep);
 }
 
-/** Every Fusebox log up to `head`: registry, factory, and every wallet the factory created (Atlas included). */
+const FACTORIES = VERSIONS.map((v) => v.factory.toLowerCase()); // v1 (Atlas) and v2
+const created = (l: RawLog) => l.topics[0] === TOPIC.walletCreated && FACTORIES.includes(l.address) && l.topics[1] ? ("0x" + l.topics[1].slice(26)).toLowerCase() : null;
+
+/** Every Fusebox log up to `head`: both registries, both factories, and every wallet they created (Atlas included). */
 export function fuseboxLogs(head: number): Promise<RawLog[]> {
   if (inflight) return inflight;
   inflight = (async () => {
     await extend(head);
-    const known = new Set([DEPLOYMENT.registry.toLowerCase(), DEPLOYMENT.factory.toLowerCase(), DEPLOYMENT.atlas.toLowerCase()]);
-    for (const l of state.logs) if (l.topics[0] === TOPIC.walletCreated && l.address === DEPLOYMENT.factory.toLowerCase() && l.topics[1]) known.add(("0x" + l.topics[1].slice(26)).toLowerCase());
+    const known = new Set([...VERSIONS.flatMap((v) => [v.registry.toLowerCase(), v.factory.toLowerCase()]), DEPLOYMENT.atlas.toLowerCase()]);
+    for (const l of state.logs) { const w = created(l); if (w) known.add(w); }
     return state.logs.filter((l) => known.has(l.address));
   })().finally(() => { inflight = null; });
   return inflight;
 }
 
-/** Every wallet the Fusebox factory has created, from its WalletCreated events (Atlas included). */
+/** Every wallet either Fusebox factory has created, from their WalletCreated events (Atlas included). */
 export async function factoryWallets(head: number): Promise<Address[]> {
   const out = new Set<string>([DEPLOYMENT.atlas.toLowerCase()]);
-  for (const l of await fuseboxLogs(head)) if (l.topics[0] === TOPIC.walletCreated && l.address === DEPLOYMENT.factory.toLowerCase() && l.topics[1]) out.add(("0x" + l.topics[1].slice(26)).toLowerCase());
+  for (const l of await fuseboxLogs(head)) { const w = created(l); if (w) out.add(w); }
   return [...out] as Address[];
 }

@@ -19,6 +19,9 @@ export const SOCKETS: Record<number, SocketSpec> = {
   4: { socket: 4, key: "approval-2of3", name: "Two of Three", say: "Above a threshold, two of three approvers must sign that exact payment.",
     fields: [{ k: "a", label: "Approvals above", suffix: "USD₮0", max: 254, def: 20, money: true }],
     pins: [["approvals", 3, "bit k: seat k approved this exact payment in time"], ["amount", 8, "this payment in units (255 for another token)"], ["threshold", 8, "payments up to this need no approval"]] },
+  5: { socket: 5, key: "repeat-guard", name: "Repeat Guard", say: "The same payment (payee and amount) twice inside the window is stopped, unless the owner clears it once.",
+    fields: [{ k: "a", label: "Window", suffix: "hours", max: 254, def: 24, money: false }],
+    pins: [["repeat", 1, "this exact payment (token, payee, amount) already went out inside the window"], ["cleared", 1, "the owner cleared one repeat of it, not yet used or expired"]] },
 };
 export const socketOf = (key: string) => Object.values(SOCKETS).find((s) => s.key === key);
 
@@ -44,6 +47,7 @@ export function readField(f: ParamField, v: string): { n: number } | { error: st
 /** Params for addFuse / setFuseParams. Editing keeps the install's token and unit (changing them resets the cap's count). */
 export function toParams(socket: number, vals: { a?: number; b?: number }, token: Address, unit: bigint = USDT_UNIT) {
   if (socket === 3) return { token: ZERO, unit: 0n, a: 0, b: 0 };
+  if (socket === 5) return { token: ZERO, unit: 0n, a: vals.a ?? 0, b: 0 }; // a window in hours, nothing else
   return { token, unit, a: vals.a ?? 0, b: socket === 2 ? vals.b ?? 0 : 0 };
 }
 
@@ -55,5 +59,6 @@ export function describe(socket: number, a: number, b: number, unit = "1", label
   if (socket === 2) return `${a} h cooling-off · ${amt(b)} trial`;
   if (socket === 3) return "Trips on strangers";
   if (socket === 4) return `Approvals above ${amt(a)}`;
+  if (socket === 5) return `Same payment once per ${a} h`;
   return "";
 }

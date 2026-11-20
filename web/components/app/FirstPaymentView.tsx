@@ -39,7 +39,7 @@ export default function FirstPaymentView() {
   const agentAddr = key?.address ?? (a && !a.isAtlas ? a.agents?.[0] ?? a.agent : undefined);
   const [agentOkb, setAgentOkb] = useState<bigint | null>(null);
   const [need, setNeed] = useState<bigint | null>(null);
-  useEffect(() => { gasNeeded().then(setNeed).catch(() => {}); }, []);
+  useEffect(() => { gasNeeded(a?.fuses.length).then(setNeed).catch(() => {}); }, [a?.fuses.length]);
   useEffect(() => {
     if (!agentAddr) return;
     let live = true;

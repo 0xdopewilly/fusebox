@@ -56,8 +56,9 @@ The app always shows the live figures.
 
 | Check | Result |
 |---|---|
-| `circuits`: `npm test` | 17/17 pass. These include TAP-02's official vectors, all 2^24 Daily Cap inputs, all 2^19 Two of Three inputs, Payee Guard block-exhaustive plus 4M random, every Breaker state and input pair, and stuck-at fault coverage. |
-| `contracts`: `forge test` | 61 pass offline, including fuzz tests for the daily cap, quantisation and registry solvency. The X Layer fork suite passes 4/4 against mainnet state (re-run 2026-11-15). |
+| `circuits`: `npm test` | 32/32 pass (five fuses). These include TAP-02's official vectors, all 2^24 Daily Cap inputs, all 2^19 Two of Three inputs, Payee Guard block-exhaustive plus 4M random, every Breaker state and input pair, and stuck-at fault coverage. |
+| `contracts`: `forge test` | 75 pass offline, including fuzz tests for the daily cap, quantisation and registry solvency, and 14 for the Repeat Guard and socket definitions. The X Layer fork suite passes 5/5 against mainnet state (re-run 2026-11-19). |
+| v2 deploy (2026-11-20) | Rehearsed on a fresh mainnet fork minutes before the broadcast, then 11/11 transactions landed. Live checks after: 5 fuses listed, sockets 1–5 defined, circuit #21 answers `eval` correctly for first, repeat and cleared payments. |
 | End to end, on a mainnet fork | 19 desktop flows and 11 phone flows pass, driven by a test wallet: the wizard, agent payments, the Breaker blowing and being reset, payees, fee withdrawal, freeze, My wallets, 2-of-3 approve and revoke, the playground, no-wallet, wrong-network and declined-signature paths. |
 | Owner console, market install, designer tools (fork) | 35 flows: every console action checked on-chain, install from a market card, set fee, delist/relist, the on-chain description. |
 | Rival fuses (fork) | 17 flows: a wallet running all four rivals, one strike vs two, reset, names, setting labels, CSV, the fuse page. |
@@ -84,7 +85,7 @@ What was verified against the real TapeOut contracts on a fork before launch:
 | Which processor | OrderGuard (`0x57F3…A355`), TapeOut's OKB-priced processor, verified on the fork. |
 | Do blocked attempts pay the designer? | Yes. A fuse that stops a scam has done its job. Each wallet records at most 100 decisions and 20 blocks per UTC day, so spam can't drain its fee balance. |
 | Protocol share | 10% of every fee; the contract caps it at 20%. |
-| Fees for our fuses | Daily Cap and Payee Guard 0.001 USDT0 per check, Breaker 0.0005, Two of Three 0.002. |
+| Fees for our fuses | Daily Cap and Payee Guard 0.001 USDT0 per check, Breaker 0.0005, Two of Three 0.002, Repeat Guard 0.0005. |
 | Who can freeze | The owner, agents and approvers can freeze; only the owner can reset. |
 | Registry admin | The deployer for now; a multisig before any real value. |
 
@@ -92,7 +93,8 @@ What was verified against the real TapeOut contracts on a fork before launch:
 
 - The contracts are unaudited. Atlas is a public demo wallet with small balances.
 - The DeWEB edition's mainnet publish waits on TapeOut's one-time 0.08 OKB container fee.
-- The duplicate-invoice gap (shown in *Try to scam it*) is closed by the Repeat Guard, a fifth fuse that is built and fork-tested but **not on mainnet yet**: it ships with v2 contracts. See [V2-REPEAT-GUARD.md](V2-REPEAT-GUARD.md).
+- Atlas is a v1 wallet, so it can't run the Repeat Guard: *Try to scam it* still shows the duplicate-invoice gap on Atlas. Wallets made since 2026-11-20 are v2 and can. See [V2-REPEAT-GUARD.md](V2-REPEAT-GUARD.md).
+- The Repeat Guard has no live mainnet decision yet: no v2 wallet has been made.
 - An OKX Agentic Wallet has not been tested as the agent key. It needs to send `pay` on X Layer with a ~3M gas limit.
 - A release-after-delivery fuse isn't built: it needs a delivery attestation source and a new socket.
 - Delisting a fuse stops new installs only; there is no designer-side kill switch, by design.

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import GuardrailsCard from "./GuardrailsCard";
 import { decodeEventLog, isAddress, parseUnits, getAddress, toHex, type Address } from "viem";
 import { fuseboxFactoryAbi, fuseboxWalletAbi, fuseRegistryAbi } from "@/lib/abi";
-import { DEP, pub } from "@/lib/client-chain";
+import { CURRENT, DEP, pub } from "@/lib/client-chain";
 import { useTxQueue, type TxStep } from "@/lib/useTxQueue";
 import { short, OKLINK } from "@/lib/hooks";
 import { useMarket } from "@/lib/useMarket";
@@ -69,26 +69,29 @@ const erc20 = [
   { type: "function", name: "transfer", stateMutability: "nonpayable", inputs: [{ name: "t", type: "address" }, { name: "v", type: "uint256" }], outputs: [{ type: "bool" }] },
 ] as const;
 const USDT = 1_000_000n;
+// new wallets are made by the v2 factory, so they can splice in the Repeat Guard (fuse 5)
 const FUSES = [
-  { key: "daily-cap", id: DEP.fuseIds[0], name: "Daily Cap", fee: 1000n, say: "No more than your cap in a UTC day, however the agent is asked." },
-  { key: "payee-guard", id: DEP.fuseIds[1], name: "Payee Guard", fee: 1000n, say: "Saved payees only. A newly saved payee gets a small trial amount until its cooling-off ends." },
-  { key: "breaker", id: DEP.fuseIds[2], name: "Breaker", fee: 500n, say: "Trips on a payment to a stranger and stays blown until you reset it." },
-  { key: "approval-2of3", id: DEP.fuseIds[3], name: "Two of Three", fee: 2000n, say: "Above a threshold, two of three approvers must sign that exact payment." },
+  { key: "daily-cap", id: CURRENT.fuseIds[0], name: "Daily Cap", fee: 1000n, say: "No more than your cap in a UTC day, however the agent is asked." },
+  { key: "payee-guard", id: CURRENT.fuseIds[1], name: "Payee Guard", fee: 1000n, say: "Saved payees only. A newly saved payee gets a small trial amount until its cooling-off ends." },
+  { key: "breaker", id: CURRENT.fuseIds[2], name: "Breaker", fee: 500n, say: "Trips on a payment to a stranger and stays blown until you reset it." },
+  { key: "approval-2of3", id: CURRENT.fuseIds[3], name: "Two of Three", fee: 2000n, say: "Above a threshold, two of three approvers must sign that exact payment." },
+  { key: "repeat-guard", id: CURRENT.fuseIds[4], name: "Repeat Guard", fee: 500n, say: "The same invoice sent twice gets paid once: the same amount to the same payee inside the window is stopped. You can clear a real repeat. Leave it off for an agent that pays per call." },
 ] as const;
 type Key = (typeof FUSES)[number]["key"];
 interface Ctx { wallet?: Address; block?: number }
 const clamp = (v: string) => Math.max(0, Math.min(254, Math.floor(Number(v) || 0)));
+const hours = (v: string) => Math.max(1, clamp(v)); // the Repeat Guard's window: 1 to 254 hours
 
 /** Starting points: a whole line with its limits, and why it fits that kind of agent. */
-const STARTERS: { id: string; name: string; why: string; on: Record<Key, boolean>; cap: string; cool: string; trial: string; thr: string }[] = [
+const STARTERS: { id: string; name: string; why: string; on: Record<Key, boolean>; cap: string; cool: string; trial: string; thr: string; win: string }[] = [
   { id: "invoice", name: "Invoice agent", why: "Pays a known set of suppliers. New bank details get a test payment, never the invoice; big ones need two people.",
-    on: { "daily-cap": true, "payee-guard": true, breaker: true, "approval-2of3": true }, cap: "50", cool: "24", trial: "2", thr: "20" },
+    on: { "daily-cap": true, "payee-guard": true, breaker: true, "approval-2of3": true, "repeat-guard": true }, cap: "50", cool: "24", trial: "2", thr: "20", win: "24" },
   { id: "procure", name: "Procurement bot", why: "Larger, less frequent orders. A higher cap and threshold, a longer cooling-off for a new vendor.",
-    on: { "daily-cap": true, "payee-guard": true, breaker: true, "approval-2of3": true }, cap: "200", cool: "72", trial: "5", thr: "50" },
+    on: { "daily-cap": true, "payee-guard": true, breaker: true, "approval-2of3": true, "repeat-guard": true }, cap: "200", cool: "72", trial: "5", thr: "50", win: "72" },
   { id: "refund", name: "Refund desk", why: "Pays customers it has never paid before, so no payee book or Breaker: the daily cap and approvals carry the weight.",
-    on: { "daily-cap": true, "payee-guard": false, breaker: false, "approval-2of3": true }, cap: "100", cool: "24", trial: "2", thr: "10" },
+    on: { "daily-cap": true, "payee-guard": false, breaker: false, "approval-2of3": true, "repeat-guard": true }, cap: "100", cool: "24", trial: "2", thr: "10", win: "24" },
   { id: "allowance", name: "Small allowance", why: "For a new or experimental agent: a few USD₮0 a day, saved payees only, one stranger blows it.",
-    on: { "daily-cap": true, "payee-guard": true, breaker: true, "approval-2of3": false }, cap: "10", cool: "24", trial: "1", thr: "20" },
+    on: { "daily-cap": true, "payee-guard": true, breaker: true, "approval-2of3": false, "repeat-guard": false }, cap: "10", cool: "24", trial: "1", thr: "20", win: "24" },
 ];
 
 function Toggle({ on, flip, name }: { on: boolean; flip: () => void; name: string }) {
@@ -105,8 +108,8 @@ export default function NewWalletView() {
   const { data: market } = useMarket();
   const feeOf = (f: (typeof FUSES)[number]) => { const m = market?.fuses.find((x) => x.fuseId === f.id); return m ? parseUnits(m.fee, 6) : f.fee; };
   const [agent, setAgent] = useState("");
-  const [on, setOn] = useState<Record<Key, boolean>>({ "daily-cap": true, "payee-guard": true, breaker: true, "approval-2of3": true });
-  const [cap, setCap] = useState("50"); const [cool, setCool] = useState("24"); const [trial, setTrial] = useState("2"); const [thr, setThr] = useState("20");
+  const [on, setOn] = useState<Record<Key, boolean>>({ "daily-cap": true, "payee-guard": true, breaker: true, "approval-2of3": true, "repeat-guard": true });
+  const [cap, setCap] = useState("50"); const [cool, setCool] = useState("24"); const [trial, setTrial] = useState("2"); const [thr, setThr] = useState("20"); const [win, setWin] = useState("24");
   const [approvers, setApprovers] = useState(["", "", ""]);
   const [payees, setPayees] = useState<string[]>([""]);
   const [deposit, setDeposit] = useState("0.1"); const [float, setFloat] = useState("0");
@@ -133,10 +136,10 @@ export default function NewWalletView() {
     const ask = new Map(f.split(",").map((t) => { const [id, a, b] = t.split(":"); return [Number(id), { a, b }] as const; }));
     setOn(Object.fromEntries(FUSES.map((x) => [x.key, ask.has(x.id)])) as Record<Key, boolean>);
     const v = (id: number, k: "a" | "b") => ask.get(id)?.[k];
-    const [dc, pg, , ap] = FUSES;
-    if (v(dc.id, "a")) setCap(v(dc.id, "a")!); if (v(pg.id, "a")) setCool(v(pg.id, "a")!); if (v(pg.id, "b")) setTrial(v(pg.id, "b")!); if (v(ap.id, "a")) setThr(v(ap.id, "a")!);
+    const [dc, pg, , ap, rg] = FUSES;
+    if (v(dc.id, "a")) setCap(v(dc.id, "a")!); if (v(pg.id, "a")) setCool(v(pg.id, "a")!); if (v(pg.id, "b")) setTrial(v(pg.id, "b")!); if (v(ap.id, "a")) setThr(v(ap.id, "a")!); if (v(rg.id, "a")) setWin(v(rg.id, "a")!);
   }, []);
-  const simLink = `/app/simulate?f=${FUSES.filter((x) => on[x.key]).map((x) => (x.key === "daily-cap" ? `${x.id}:${clamp(cap)}` : x.key === "payee-guard" ? `${x.id}:${clamp(cool)}:${clamp(trial)}` : x.key === "approval-2of3" ? `${x.id}:${clamp(thr)}` : `${x.id}`)).join(",")}`;
+  const simLink = `/app/simulate?f=${FUSES.filter((x) => on[x.key]).map((x) => (x.key === "daily-cap" ? `${x.id}:${clamp(cap)}` : x.key === "payee-guard" ? `${x.id}:${clamp(cool)}:${clamp(trial)}` : x.key === "approval-2of3" ? `${x.id}:${clamp(thr)}` : x.key === "repeat-guard" ? `${x.id}:${hours(win)}` : `${x.id}`)).join(",")}`;
   useEffect(() => {
     if (!account) return;
     Promise.all([pub.getBalance({ address: account }), pub.readContract({ address: DEP.usdt0 as Address, abi: erc20, functionName: "balanceOf", args: [account] })]).then(([okb, usdt]) => setBal({ okb, usdt })).catch(() => {});
@@ -168,7 +171,7 @@ export default function NewWalletView() {
     const steps: TxStep<Ctx>[] = [
       {
         id: "create", label: "Create your Fusebox wallet", detail: `owner ${short(account!)} · agent ${short(agent.trim())}`,
-        run: () => write({ address: DEP.factory as Address, abi: fuseboxFactoryAbi, functionName: "createWallet", args: [account!, [getAddress(agent.trim().toLowerCase())], toHex(crypto.getRandomValues(new Uint8Array(32)))] }),
+        run: () => write({ address: CURRENT.factory, abi: fuseboxFactoryAbi, functionName: "createWallet", args: [account!, [getAddress(agent.trim().toLowerCase())], toHex(crypto.getRandomValues(new Uint8Array(32)))] }),
         after: (r, c) => {
           for (const l of r.logs) { try { const ev = decodeEventLog({ abi: fuseboxFactoryAbi, data: l.data, topics: l.topics }); if (ev.eventName === "WalletCreated") c.wallet = ev.args.wallet; } catch {} }
           c.block = Number(r.blockNumber);
@@ -178,19 +181,21 @@ export default function NewWalletView() {
       { id: "token", label: "Let it pay in USD₮0", run: (c) => write({ ...W(), address: c.wallet!, functionName: "setToken", args: [DEP.usdt0 as Address, true] }) },
     ];
     FUSES.filter((f) => on[f.key]).forEach((f) => {
-      const params = f.key === "breaker" ? { token: "0x0000000000000000000000000000000000000000" as Address, unit: 0n, a: 0, b: 0 }
+      const ZERO = "0x0000000000000000000000000000000000000000" as Address;
+      const params = f.key === "breaker" ? { token: ZERO, unit: 0n, a: 0, b: 0 }
+        : f.key === "repeat-guard" ? { token: ZERO, unit: 0n, a: hours(win), b: 0 }
         : { token: DEP.usdt0 as Address, unit: USDT, a: f.key === "daily-cap" ? clamp(cap) : f.key === "payee-guard" ? clamp(cool) : clamp(thr), b: f.key === "payee-guard" ? clamp(trial) : 0 };
-      const detail = f.key === "daily-cap" ? `${clamp(cap)} USD₮0 a day` : f.key === "payee-guard" ? `${clamp(cool)} h cooling-off, ${clamp(trial)} USD₮0 trial` : f.key === "approval-2of3" ? `approvals over ${clamp(thr)} USD₮0` : "trips on strangers";
+      const detail = f.key === "daily-cap" ? `${clamp(cap)} USD₮0 a day` : f.key === "payee-guard" ? `${clamp(cool)} h cooling-off, ${clamp(trial)} USD₮0 trial` : f.key === "approval-2of3" ? `approvals over ${clamp(thr)} USD₮0` : f.key === "repeat-guard" ? `the same payment once per ${hours(win)} h` : "trips on strangers";
       steps.push({ id: `fuse-${f.key}`, label: `Splice in ${f.name}`, detail: `${detail} · ${Number(feeOf(f)) / 1e6} USD₮0 per check`, run: (c) => write({ ...W(), address: c.wallet!, functionName: "addFuse", args: [BigInt(f.id), params, feeOf(f)] }) });
     });
     goodPayees.forEach((p, i) => steps.push({ id: `payee-${i}`, label: "Save a payee", detail: short(p.trim()), run: (c) => write({ ...W(), address: c.wallet!, functionName: "addPayee", args: [getAddress(p.trim().toLowerCase())] }) }));
     if (on["approval-2of3"]) steps.push({ id: "approvers", label: "Seat the three approvers", detail: approvers.map((a) => short(a.trim())).join(" · "), run: (c) => write({ ...W(), address: c.wallet!, functionName: "setApprovers", args: [approvers.map((a) => getAddress(a.trim().toLowerCase())) as [Address, Address, Address]] }) });
     if (depositUnits > 0n) {
       steps.push({ id: "approve", label: "Allow the registry to take the fee deposit", detail: `${deposit} USD₮0`, run: async () => {
-        const have = await pub.readContract({ address: DEP.usdt0 as Address, abi: erc20, functionName: "allowance", args: [account!, DEP.registry as Address] });
-        return have >= depositUnits ? null : write({ address: DEP.usdt0 as Address, abi: erc20, functionName: "approve", args: [DEP.registry as Address, depositUnits] });
+        const have = await pub.readContract({ address: DEP.usdt0 as Address, abi: erc20, functionName: "allowance", args: [account!, CURRENT.registry] });
+        return have >= depositUnits ? null : write({ address: DEP.usdt0 as Address, abi: erc20, functionName: "approve", args: [CURRENT.registry, depositUnits] });
       } });
-      steps.push({ id: "deposit", label: "Prepay fees", detail: `${deposit} USD₮0 ≈ ${perDecision ? Number(depositUnits / perDecision) : 0} decisions`, run: (c) => write({ address: DEP.registry as Address, abi: fuseRegistryAbi, functionName: "deposit", args: [c.wallet!, depositUnits] }) });
+      steps.push({ id: "deposit", label: "Prepay fees", detail: `${deposit} USD₮0 ≈ ${perDecision ? Number(depositUnits / perDecision) : 0} decisions`, run: (c) => write({ address: CURRENT.registry, abi: fuseRegistryAbi, functionName: "deposit", args: [c.wallet!, depositUnits] }) });
     }
     if (gasWei > 0n) steps.push({ id: "gas", label: "Send your agent gas", detail: `${gas} OKB · about ${Math.floor(Number(gas) / GAS_PER_PAY)} payments`, run: () => send(getAddress(agent.trim().toLowerCase()), gasWei) });
     if (floatUnits > 0n) steps.push({ id: "float", label: "Fund the wallet for payments", detail: `${float} USD₮0`, run: (c) => write({ address: DEP.usdt0 as Address, abi: erc20, functionName: "transfer", args: [c.wallet!, floatUnits] }) });
@@ -211,10 +216,10 @@ export default function NewWalletView() {
   const [step, setStep] = useState(0);
   const [describe, setDescribe] = useState(false);
   const STEPS = ["Start", "Owner", "Agent", "Fuses", "People", "Fund"];
-  const GL: Record<Key, GlyphName> = { "daily-cap": "mine", "payee-guard": "approve", breaker: "stop", "approval-2of3": "x402" };
+  const GL: Record<Key, GlyphName> = { "daily-cap": "mine", "payee-guard": "approve", breaker: "stop", "approval-2of3": "x402", "repeat-guard": "copy" };
   const agentErr = !agent.trim() ? "Enter the address your agent signs with." : !isAddress(agent.trim(), { strict: false }) ? "That isn't an address." : account && agent.trim().toLowerCase() === account.toLowerCase() ? "Use a separate key for the agent, not your own." : null;
   const blockNext = step === 2 && !!agentErr;
-  const activeStarter = STARTERS.find((x) => FUSES.every((f) => on[f.key] === x.on[f.key]) && (!x.on["daily-cap"] || cap === x.cap) && (!x.on["payee-guard"] || (cool === x.cool && trial === x.trial)) && (!x.on["approval-2of3"] || thr === x.thr));
+  const activeStarter = STARTERS.find((x) => FUSES.every((f) => on[f.key] === x.on[f.key]) && (!x.on["daily-cap"] || cap === x.cap) && (!x.on["payee-guard"] || (cool === x.cool && trial === x.trial)) && (!x.on["approval-2of3"] || thr === x.thr) && (!x.on["repeat-guard"] || win === x.win));
   const go = (n: number) => { setStep(n); window.scrollTo({ top: 0 }); };
   const mobileView = (
     <div className="mpage wzm">
@@ -257,7 +262,7 @@ export default function NewWalletView() {
         </>}
         {step === 3 && <>
           <div><div className="mtitle">Pick the fuses</div><p className="mcap" style={{ marginTop: 8 }}>Every payment must pass all of them.</p></div>
-          <MChips label="Start from a line" items={STARTERS.map((x) => [x.id, x.name] as const)} value={activeStarter?.id ?? null} onChange={(id) => { const x = STARTERS.find((s) => s.id === id)!; setOn(x.on); setCap(x.cap); setCool(x.cool); setTrial(x.trial); setThr(x.thr); }} />
+          <MChips label="Start from a line" items={STARTERS.map((x) => [x.id, x.name] as const)} value={activeStarter?.id ?? null} onChange={(id) => { const x = STARTERS.find((s) => s.id === id)!; setOn(x.on); setWin(x.win); setCap(x.cap); setCool(x.cool); setTrial(x.trial); setThr(x.thr); }} />
           {activeStarter && <p className="mnote">{activeStarter.why}</p>}
           <MRow icon={<Glyph name="rob" size={16} />} title="Describe your agent instead" sub="Get a line of fuses, with reasons" onClick={() => setDescribe(true)} />
           {FUSES.map((f) => (
@@ -269,6 +274,7 @@ export default function NewWalletView() {
               </div>
               {on[f.key] && f.key === "daily-cap" && <label className="mfield"><span className="m">Cap per day · USD₮0</span><input aria-label="Cap per day (USD₮0)" value={cap} onChange={(e) => setCap(e.target.value)} inputMode="decimal" /></label>}
               {on[f.key] && f.key === "payee-guard" && <div className="mopt-2"><label className="mfield"><span className="m">Cooling-off · h</span><input aria-label="Cooling-off (hours)" value={cool} onChange={(e) => setCool(e.target.value)} inputMode="decimal" /></label><label className="mfield"><span className="m">Trial · USD₮0</span><input aria-label="Trial amount (USD₮0)" value={trial} onChange={(e) => setTrial(e.target.value)} inputMode="decimal" /></label></div>}
+              {on[f.key] && f.key === "repeat-guard" && <label className="mfield"><span className="m">Window · h</span><input aria-label="Repeat window (hours)" value={win} onChange={(e) => setWin(e.target.value)} inputMode="numeric" /></label>}
               {on[f.key] && f.key === "approval-2of3" && <label className="mfield"><span className="m">Approvals above · USD₮0</span><input aria-label="Approvals above (USD₮0)" value={thr} onChange={(e) => setThr(e.target.value)} inputMode="decimal" /></label>}
               {!on[f.key] && <p className="mnote">{f.say}</p>}
             </div>
@@ -298,6 +304,7 @@ export default function NewWalletView() {
             <span>Fees cover</span><span>{perDecision && depositUnits > 0n ? `${Number(depositUnits / perDecision)} decisions` : "—"}</span>
             <span>Daily cap</span><span>{on["daily-cap"] ? `${clamp(cap)} USD₮0` : "off"}</span>
             <span>Approvals over</span><span>{on["approval-2of3"] ? `${clamp(thr)} USD₮0` : "off"}</span>
+            <span>Repeats</span><span>{on["repeat-guard"] ? `once per ${hours(win)} h` : "off"}</span>
             <span>Saved payees</span><span>{goodPayees.length}</span>
           </div></div>
           {q.steps.length > 0 && <ul className="txs">{q.steps.map((s) => (
@@ -317,7 +324,7 @@ export default function NewWalletView() {
       </>}
       <MSheet open={describe} onClose={() => setDescribe(false)} title="Describe your agent">
         <GuardrailsCard onApply={(g) => {
-          setOn({ "daily-cap": g.line.dailyCap.on, "payee-guard": g.line.payeeGuard.on, breaker: g.line.breaker.on, "approval-2of3": g.line.twoOfThree.on });
+          setOn((o) => ({ ...o, "daily-cap": g.line.dailyCap.on, "payee-guard": g.line.payeeGuard.on, breaker: g.line.breaker.on, "approval-2of3": g.line.twoOfThree.on }));
           setCap(String(g.line.dailyCap.cap)); setCool(String(g.line.payeeGuard.coolingHours)); setTrial(String(g.line.payeeGuard.trial)); setThr(String(g.line.twoOfThree.threshold));
           if (g.payees.length) setPayees(g.payees);
           if (g.approvers.length) setApprovers((cur) => [0, 1, 2].map((i) => g.approvers[i] ?? cur[i]));
@@ -371,18 +378,18 @@ export default function NewWalletView() {
               <h3>Pick the fuses</h3>
               <p className="lead">Each fuse is a TapeOut circuit on X Layer. A payment needs a yes from every fuse you splice in, and each check pays the fuse&apos;s designer.</p>
               <GuardrailsCard onApply={(g) => {
-                setOn({ "daily-cap": g.line.dailyCap.on, "payee-guard": g.line.payeeGuard.on, breaker: g.line.breaker.on, "approval-2of3": g.line.twoOfThree.on });
+                setOn((o) => ({ ...o, "daily-cap": g.line.dailyCap.on, "payee-guard": g.line.payeeGuard.on, breaker: g.line.breaker.on, "approval-2of3": g.line.twoOfThree.on }));
                 setCap(String(g.line.dailyCap.cap)); setCool(String(g.line.payeeGuard.coolingHours)); setTrial(String(g.line.payeeGuard.trial)); setThr(String(g.line.twoOfThree.threshold));
                 if (g.payees.length) setPayees(g.payees);
                 if (g.approvers.length) setApprovers((cur) => [0, 1, 2].map((i) => g.approvers[i] ?? cur[i]));
               }} />
               <div className="starters" role="group" aria-label="Start from a line">
                 {STARTERS.map((x) => {
-                  const active = FUSES.every((f) => on[f.key] === x.on[f.key]) && (!x.on["daily-cap"] || cap === x.cap) && (!x.on["payee-guard"] || (cool === x.cool && trial === x.trial)) && (!x.on["approval-2of3"] || thr === x.thr);
-                  const f = FUSES.filter((y) => x.on[y.key]).map((y) => (y.key === "daily-cap" ? `${y.id}:${x.cap}` : y.key === "payee-guard" ? `${y.id}:${x.cool}:${x.trial}` : y.key === "approval-2of3" ? `${y.id}:${x.thr}` : `${y.id}`)).join(",");
+                  const active = FUSES.every((f) => on[f.key] === x.on[f.key]) && (!x.on["daily-cap"] || cap === x.cap) && (!x.on["payee-guard"] || (cool === x.cool && trial === x.trial)) && (!x.on["approval-2of3"] || thr === x.thr) && (!x.on["repeat-guard"] || win === x.win);
+                  const f = FUSES.filter((y) => x.on[y.key]).map((y) => (y.key === "daily-cap" ? `${y.id}:${x.cap}` : y.key === "payee-guard" ? `${y.id}:${x.cool}:${x.trial}` : y.key === "approval-2of3" ? `${y.id}:${x.thr}` : y.key === "repeat-guard" ? `${y.id}:${x.win}` : `${y.id}`)).join(",");
                   return (
                     <div key={x.id} className={`starter${active ? " on" : ""}`}>
-                      <button onClick={() => { setOn(x.on); setCap(x.cap); setCool(x.cool); setTrial(x.trial); setThr(x.thr); }} aria-pressed={active}>
+                      <button onClick={() => { setOn(x.on); setWin(x.win); setCap(x.cap); setCool(x.cool); setTrial(x.trial); setThr(x.thr); }} aria-pressed={active}>
                         <b>{x.name}</b>
                         <span className="m mute">{FUSES.filter((y) => x.on[y.key]).map((y) => y.name).join(" · ")}</span>
                         <span className="starter-why">{x.why}</span>
@@ -400,6 +407,7 @@ export default function NewWalletView() {
                     <p>{f.say}</p>
                     {on[f.key] && f.key === "daily-cap" && <div className="prow"><Field label="Cap per day" suffix="USD₮0" v={cap} set={setCap} /></div>}
                     {on[f.key] && f.key === "payee-guard" && <div className="prow"><Field label="Cooling-off" suffix="hours" v={cool} set={setCool} /><Field label="Trial amount" suffix="USD₮0" v={trial} set={setTrial} /></div>}
+                    {on[f.key] && f.key === "repeat-guard" && <div className="prow"><Field label="Window" suffix="hours" v={win} set={setWin} /></div>}
                     {on[f.key] && f.key === "approval-2of3" && (
                       <>
                         <div className="prow"><Field label="Approvals above" suffix="USD₮0" v={thr} set={setThr} /></div>
@@ -446,6 +454,7 @@ export default function NewWalletView() {
               <div><span>Fee balance covers</span><span>{perDecision && depositUnits > 0n ? `${Number(depositUnits / perDecision)} decisions` : "—"}</span></div>
               <div><span>Daily cap</span><span>{on["daily-cap"] ? `${clamp(cap)} USD₮0` : "off"}</span></div>
               <div><span>Approvals over</span><span>{on["approval-2of3"] ? `${clamp(thr)} USD₮0` : "off"}</span></div>
+              <div><span>Repeats</span><span>{on["repeat-guard"] ? `once per ${hours(win)} h` : "off"}</span></div>
               <div><span>Saved payees</span><span>{goodPayees.length}</span></div>
             </div>
             <Link className="m lime sim-link" href={simLink}>Test this line on sample payments first →</Link>

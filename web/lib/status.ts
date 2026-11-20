@@ -1,5 +1,5 @@
 import "server-only";
-import { client, DEPLOYMENT, RPCS } from "./chain";
+import { client, DEPLOYMENT, RPCS, VERSIONS } from "./chain";
 import { fuseRegistryAbi } from "./abi";
 import { getAtlas } from "./atlas";
 import { agentMode } from "./robAgent";
@@ -33,11 +33,11 @@ async function rpcHead(url: string): Promise<number> {
 let cached: Status | null = null;
 export async function getStatus(origin: string): Promise<Status> {
   if (cached && Date.now() - cached.at < 30_000) return cached;
-  const R = { address: DEPLOYMENT.registry, abi: fuseRegistryAbi } as const;
   const [rpcs, atlas, trusted, offer, subs, near] = await Promise.all([
     Promise.all(RPCS.map((u) => timed(() => rpcHead(u), 6000).then((r) => ({ u, ...r })))),
     timed(() => getAtlas(), 20_000),
-    timed(() => client.readContract({ ...R, functionName: "isTrustedProcessor", args: [DEPLOYMENT.processor] })),
+    // both registries (v1 runs Atlas, v2 the new wallets) must still trust TapeOut's processor
+    timed(async () => (await Promise.all(VERSIONS.map((v) => client.readContract({ address: v.registry, abi: fuseRegistryAbi, functionName: "isTrustedProcessor", args: [DEPLOYMENT.processor] })))).every(Boolean)),
     timed(async () => { const g = await gate(new Request(origin + DEMO_APIS[0].path), DEMO_APIS[0]); if (g.paid) throw new Error("unexpected"); return g.response.headers.get("PAYMENT-REQUIRED") ? g.response.status : 0; }),
     timed(() => (PUSH_READY ? subscribedApprovers().then((a) => a.length) : Promise.resolve(-1))),
     timed(async () => {

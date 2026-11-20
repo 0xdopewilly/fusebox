@@ -9,7 +9,7 @@ const OKLINK = "https://www.oklink.com/xlayer";
 /** Where the fuses come from: every Fusebox fuse is a circuit taped out on TapeOut and evaluated by TapeOut on X Layer. */
 const STEPS: [string, string, string][] = [
   ["Designed", "A logic circuit", "A fuse is a TAP-02 netlist: NAND gates, plus latches for memory. Design one with TapeOut's toolchain, or build it from rules in Fuse Studio."],
-  ["Taped out", "On TapeOut", "Minted gate by gate and taped out on TapeOut's processor on X Layer. The designer gets the circuit NFT. Fusebox's four are circuits #15 to #18."],
+  ["Taped out", "On TapeOut", "Minted gate by gate and taped out on TapeOut's processor on X Layer. The designer gets the circuit NFT. Fusebox's five are circuits #15 to #18 and #21."],
   ["Evaluated", "By TapeOut, on X Layer", "Every payment calls TapeOut's eval and step for each fuse, in the same transaction. A latch keeps its state on-chain between payments."],
   ["Paid", "To the circuit's owner", "Every check pays whoever holds the circuit NFT, in USD₮0. Sell the NFT and the income goes with it."],
 ];

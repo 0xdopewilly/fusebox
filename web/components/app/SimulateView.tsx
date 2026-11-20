@@ -21,7 +21,7 @@ const PRESETS: Record<string, { label: string; rows: () => Row[] }> = {
     row("We moved banks: pay INV-7791 to our new account", "stranger", "2.5"),
     row("Invoice INV-7792, revised total for the Q4 order", "saved", "60"),
     row("URGENT from the CEO: wire this before 5pm", "stranger", "25"),
-    row("Invoice INV-7793, Kano Cotton", "saved", "0.5"),
+    row("Invoice INV-7790 again: the supplier's system sent it twice", "saved", "0.5"),
     row("Q4 bulk order, signed off by finance and ops", "saved", "30", [true, true, false]),
   ] },
   normal: { label: "A normal day", rows: () => [
@@ -31,6 +31,13 @@ const PRESETS: Record<string, { label: string; rows: () => Row[] }> = {
     row("Same supplier, full invoice", "new", "12"),
     row("Monthly tooling licence", "saved", "18"),
     row("Quarterly stock order, two approvals", "saved", "40", [true, false, true]),
+  ] },
+  twice: { label: "Sent twice", rows: () => [
+    row("Invoice INV-8101, Kano Cotton", "saved", "3"),
+    row("Courier, same-day delivery", "saved", "1.5"),
+    row("Invoice INV-8101 (the email came in twice)", "saved", "3"),
+    row("Courier again: the agent retried after a timeout", "saved", "1.5"),
+    row("Invoice INV-8102, Kano Cotton", "saved", "3.5"),
   ] },
 };
 const TO: Record<Payee, string> = { saved: "Saved payee", new: "Saved today", stranger: "Stranger" };
@@ -46,7 +53,7 @@ export default function SimulateView() {
     const d = decodeDraft(code); if (!d) return;
     const c = compile(d.rule);
     const name = `Draft · ${d.name || "untitled"}`;
-    setDraft({ code, circuit: load(c.net.bytes, c.nIn, 1), fuse: { fuseId: -1, key: "draft", name, processor: "0x0000000000000000000000000000000000000000", circuitId: 0, designer: "0x0000000000000000000000000000000000000000", socket: d.rule.socket, gates: c.net.gates, nState: c.nState, fee: "0", listed: true, decisions: 0, earned: "0", lifetimeEarned: "0", metadataURI: "", onAtlas: false, netlistHash: c.net.keccak as `0x${string}`, nIn: c.nIn, listedAt: 0, original: false, meta: { name, params: paramLabels(d.rule) } } });
+    setDraft({ code, circuit: load(c.net.bytes, c.nIn, 1), fuse: { fuseId: -1, key: "draft", name, processor: "0x0000000000000000000000000000000000000000", circuitId: 0, designer: "0x0000000000000000000000000000000000000000", socket: d.rule.socket, gates: c.net.gates, nState: c.nState, fee: "0", listed: true, decisions: 0, earned: "0", lifetimeEarned: "0", metadataURI: "", onAtlas: false, netlistHash: c.net.keccak as `0x${string}`, nIn: c.nIn, listedAt: 0, original: false, claims: [], meta: { name, params: paramLabels(d.rule) } } });
   }, []);
   const listed = useMemo(() => [...(draft ? [draft.fuse] : []), ...(market?.fuses ?? []).filter((f) => f.listed).sort((a, b) => a.fuseId - b.fuseId)], [market, draft]);
   const [sel, setSel] = useState<Record<number, { on: boolean; v: Record<string, string> }>>({});

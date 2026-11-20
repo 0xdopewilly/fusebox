@@ -19,6 +19,8 @@ export const FUSEBOX_SCHEME = "fusebox";
 export const XLAYER_NETWORK = "eip155:196";
 export const USDT0: Address = "0x779Ded0c9e1022225f8E0630b35a9b54bE713736";
 export const FACTORY: Address = "0x192C099a18ed42612b6e74f243f8dF1EE0E3E7a5";
+/** Both Fusebox factories on X Layer mainnet: v1 (Nov 15, Atlas) and v2 (Nov 20, the Repeat Guard). */
+export const FACTORIES: Address[] = [FACTORY, "0xdFc9b1d715efB2bCDAd8f848A5E3b4e2c243EE9B"];
 /** the x402 v2 headers (v1 servers used X-PAYMENT / X-PAYMENT-RESPONSE and the JSON body) */
 export const HEADER = { required: "PAYMENT-REQUIRED", signature: "PAYMENT-SIGNATURE", response: "PAYMENT-RESPONSE", v1Payment: "X-PAYMENT", v1Response: "X-PAYMENT-RESPONSE" } as const;
 
@@ -105,7 +107,7 @@ const decisionAbi = parseAbi([
  * Check a Fusebox payment against what was asked for. Read-only: it doesn't mark the transaction used (do that with
  * your own store once this says it's valid, so one payment can't buy twice).
  */
-export async function verifyFuseboxPayment(client: PublicClient, payload: PaymentPayload, required: PaymentRequirements, opts: { factory?: Address } = {}): Promise<VerifyResponse> {
+export async function verifyFuseboxPayment(client: PublicClient, payload: PaymentPayload, required: PaymentRequirements, opts: { factory?: Address | Address[] } = {}): Promise<VerifyResponse> {
   const bad = (invalidReason: string, invalidMessage: string): VerifyResponse => ({ isValid: false, invalidReason, invalidMessage });
   const a = payload.accepted, p = payload.payload;
   if (a?.scheme !== FUSEBOX_SCHEME || a.network !== XLAYER_NETWORK) return bad("unsupported_scheme", "Only the fusebox scheme on eip155:196 is checked here.");
@@ -116,7 +118,9 @@ export async function verifyFuseboxPayment(client: PublicClient, payload: Paymen
   const need = BigInt(required.amount), nonce = String(required.extra?.nonce ?? "");
 
   const [genuine, receipt] = await Promise.all([
-    client.readContract({ address: opts.factory ?? FACTORY, abi: decisionAbi, functionName: "isWallet", args: [wallet] }).catch(() => null),
+    // made by any of the given factories (default: both of mainnet's); null only if none could be read
+    Promise.all([opts.factory ?? FACTORIES].flat().map((f) => client.readContract({ address: f, abi: decisionAbi, functionName: "isWallet", args: [wallet] }).catch(() => null)))
+      .then((r) => (r.some((x) => x === true) ? true : r.every((x) => x === null) ? null : false)),
     client.getTransactionReceipt({ hash: p.transaction as Hash }).catch(() => null),
   ]);
   if (genuine === null) return bad("unavailable", "Couldn't reach X Layer to check the wallet.");
@@ -151,8 +155,8 @@ export interface SellerOptions {
   /** a long random string kept on the server: it signs the nonces */
   secret: string;
   client: PublicClient;
-  /** the Fusebox factory that must have made the paying wallet (default: mainnet's) */
-  factory?: Address;
+  /** the Fusebox factory, or factories, one of which must have made the paying wallet (default: both of mainnet's) */
+  factory?: Address | Address[];
   description?: string; mimeType?: string;
   /** how long an offer stays good (default 600 s) */
   ttlSeconds?: number;

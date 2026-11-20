@@ -24,6 +24,7 @@ function stopWhy(f: FuseSlot, st: CheckView["status"][number], amount: string, s
   if (f.key === "payee-guard") return saved ? `Saved recently and still cooling off (${f.a} h), and ${amount} USD₮0 is over the ${f.b} USD₮0 trial.` : "Not a saved payee. Only the owner can save it, in the Owner tab, and it then starts on the trial amount.";
   if (f.key === "breaker") return f.latched ? "Already blown. Nothing pays until the owner resets it." : "A payment to a stranger trips it, and it stays blown until the owner resets it.";
   if (f.key === "approval-2of3") return `Over ${f.a} USD₮0, so two of the three approvers must sign this exact payment first.`;
+  if (f.key === "repeat-guard") return `The same ${amount} USD₮0 to this payee already went out in the last ${f.a} h, so this looks like the same invoice twice. If it really is a second payment, only the owner can let it through once, in the Owner tab.`;
   return "Says no.";
 }
 interface Msg { role: "user" | "assistant"; text: string; pay?: Proposal }
@@ -51,7 +52,7 @@ export default function AssistantView() {
     setAgentOk(null);
     pub.readContract({ address: wallet, abi: fuseboxWalletAbi, functionName: "isAgent", args: [key.address] }).then(setAgentOk).catch(() => setAgentOk(null));
   }, [key, wallet]);
-  useEffect(() => { gasNeeded().then(setNeed).catch(() => {}); }, []);
+  useEffect(() => { gasNeeded(a?.fuses.length).then(setNeed).catch(() => {}); }, [a?.fuses.length]);
   useEffect(() => {
     if (!key) return;
     let live = true;
@@ -78,7 +79,7 @@ export default function AssistantView() {
     try {
       const r = await fetch("/api/assistant", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({
         message, history,
-        context: { wallet, balance: a.balance, payees: a.payees.map((p) => ({ address: p.address, label: labels[p.address.toLowerCase()] })), fuses: a.fuses.map((f) => ({ name: f.name, limit: f.key === "daily-cap" ? `${f.a} USD₮0 a day, ${Number(f.spentToday).toFixed(2)} spent today` : f.key === "approval-2of3" ? `approvals above ${f.a} USD₮0` : f.key === "payee-guard" ? `saved payees only, new ones get ${f.b} USD₮0 for ${f.a} h` : undefined })) },
+        context: { wallet, balance: a.balance, payees: a.payees.map((p) => ({ address: p.address, label: labels[p.address.toLowerCase()] })), fuses: a.fuses.map((f) => ({ name: f.name, limit: f.key === "daily-cap" ? `${f.a} USD₮0 a day, ${Number(f.spentToday).toFixed(2)} spent today` : f.key === "approval-2of3" ? `approvals above ${f.a} USD₮0` : f.key === "payee-guard" ? `saved payees only, new ones get ${f.b} USD₮0 for ${f.a} h` : f.key === "repeat-guard" ? `the same amount to the same payee once per ${f.a} h` : undefined })) },
       }) });
       const j = await r.json();
       if (!r.ok) { setErr(j.error ?? "The assistant couldn't answer."); return; }

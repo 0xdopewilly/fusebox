@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { fuseRegistryAbi } from "./abi";
-import { client, DEPLOYMENT } from "./chain";
+import { client, CURRENT } from "./chain";
 import { decodeDataUri } from "./fuseMeta";
 import { SOCKETS } from "./sockets";
 
@@ -11,7 +11,7 @@ import { SOCKETS } from "./sockets";
  * Returns undefined when X Layer doesn't answer in time, null when the registry has no such fuse.
  */
 export const fuseHead = cache(async (id: number): Promise<{ name: string; summary?: string } | null | undefined> => {
-  const R = { address: DEPLOYMENT.registry, abi: fuseRegistryAbi } as const;
+  const R = { address: CURRENT.registry, abi: fuseRegistryAbi } as const;
   const read = Promise.all([
     // the registry reverts UnknownFuse for an id it never issued: that's a definite "no such fuse"
     client.readContract({ ...R, functionName: "fuse", args: [BigInt(id)] }).catch((e: Error) => { if (/UnknownFuse/.test(e?.message ?? "")) return null; throw e; }),

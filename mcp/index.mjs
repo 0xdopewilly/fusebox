@@ -29,7 +29,7 @@ const pub = createPublicClient({ chain, transport: http(RPC), batch: { multicall
 const agent = KEY ? privateKeyToAccount(KEY.startsWith("0x") ? KEY : `0x${KEY}`) : null;
 const signer = agent ? createWalletClient({ chain, transport: http(RPC), account: agent }) : null;
 const erc20 = [{ type: "function", name: "balanceOf", stateMutability: "view", inputs: [{ name: "a", type: "address" }], outputs: [{ type: "uint256" }] }];
-const SOCKET = { 1: ["daily-cap", "Daily Cap"], 2: ["payee-guard", "Payee Guard"], 3: ["breaker", "Breaker"], 4: ["approval-2of3", "Two of Three"] };
+const SOCKET = { 1: ["daily-cap", "Daily Cap"], 2: ["payee-guard", "Payee Guard"], 3: ["breaker", "Breaker"], 4: ["approval-2of3", "Two of Three"], 5: ["repeat-guard", "Repeat Guard"] };
 const STATUS = ["pass", "blew", "failed", "untrusted"];
 const W = { address: WALLET, abi: ABI.wallet };
 const usd = (v) => formatUnits(v, 6);
@@ -67,6 +67,7 @@ async function explain(fs, status, to, amount) {
     else if (f.key === "payee-guard") why = ok ? (since && hours >= f.a ? "a saved payee, past its cooling-off" : `saved ${hours.toFixed(1)} h ago, still cooling off, but ${amt} USDT0 is within the ${f.b} USDT0 trial`) : !since ? "not a saved payee" : `saved ${hours.toFixed(1)} h ago and still cooling off (${f.a} h); ${amt} USDT0 is over the ${f.b} USDT0 trial`;
     else if (f.key === "breaker") why = f.latched ? "already blown; nothing pays until the owner resets it" : ok ? "not tripped" : "a payment to a stranger trips it, and it stays blown until the owner resets it";
     else if (f.key === "approval-2of3") why = ok ? (amt > f.a ? `over ${f.a} USDT0 and approved by ${approvals} of 3` : `under the ${f.a} USDT0 approval threshold`) : `over ${f.a} USDT0: needs two of three approvers, has ${approvals}`;
+    else if (f.key === "repeat-guard") why = ok ? `not a repeat of a payment in the last ${f.a} h (or the owner cleared one)` : `the same amount to this payee already went out in the last ${f.a} h; the owner can clear one repeat`;
     return { fuse: f.name, circuit: `#${f.circuitId}`, verdict: ok ? "holds" : "blew", why };
   });
 }

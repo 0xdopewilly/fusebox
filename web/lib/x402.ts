@@ -1,6 +1,6 @@
 import "server-only";
 import type { Address, PublicClient } from "viem";
-import { client, DEPLOYMENT } from "./chain";
+import { client, DEPLOYMENT, VERSIONS } from "./chain";
 import { putOnce, STORE_KIND } from "./store";
 import { requirePayment, verifyFuseboxPayment, type PaymentPayload, type PaymentRequirements, type SettleResponse, type VerifyResponse, XLAYER_NETWORK } from "./x402core";
 
@@ -31,14 +31,14 @@ export const DEMO_APIS: DemoApi[] = [
 
 export function gate(req: Request, api: DemoApi) {
   return requirePayment(req, {
-    payTo: api.payTo, price: api.price, secret: secret(), client: client as unknown as PublicClient, factory: DEPLOYMENT.factory,
+    payTo: api.payTo, price: api.price, secret: secret(), client: client as unknown as PublicClient, factory: VERSIONS.map((v) => v.factory),
     description: `${api.name} (${api.seller}), ${api.price} USD₮0 per call, paid from a Fusebox wallet`, markUsed,
   });
 }
 
 /** Facilitator-style check for sellers using their own x402 stack: verify reads the chain; settle also marks it used. */
 export async function facilitate(op: "verify" | "settle", paymentPayload: PaymentPayload, paymentRequirements: PaymentRequirements): Promise<VerifyResponse | SettleResponse> {
-  const v = await verifyFuseboxPayment(client as unknown as PublicClient, paymentPayload, paymentRequirements, { factory: DEPLOYMENT.factory });
+  const v = await verifyFuseboxPayment(client as unknown as PublicClient, paymentPayload, paymentRequirements, { factory: VERSIONS.map((v) => v.factory) });
   if (op === "verify") return v;
   const tx = paymentPayload.payload.transaction;
   if (!v.isValid) return { success: false, transaction: tx ?? "", network: XLAYER_NETWORK, errorReason: v.invalidReason, errorMessage: v.invalidMessage };

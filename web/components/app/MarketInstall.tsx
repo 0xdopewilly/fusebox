@@ -34,10 +34,10 @@ export default function MarketInstall({ fuseId, name }: { fuseId: number; name: 
               <>
                 <label className="oc-f"><span>Wallet</span>
                   <select aria-label={`Wallet to install ${name} on`} value={w} onChange={(e) => setW(e.target.value)}>
-                    {mine.map((m) => <option key={m.address} value={m.address}>{short(m.address)} · {m.fuses} fuse{m.fuses === 1 ? "" : "s"}</option>)}
+                    {mine.map((m) => <option key={m.address} value={m.address}>{short(m.address)} · {m.fuses} fuse{m.fuses === 1 ? "" : "s"}{m.version === "v1" ? " · v1" : ""}</option>)}
                   </select>
                 </label>
-                {sel && <InstallFuse key={sel.address} wallet={sel.address as Address} installed={sel.fuseIds} busy={q.running} one={one} preset={fuseId} lock />}
+                {sel && <InstallFuse key={sel.address} wallet={sel.address as Address} version={sel.version} installed={sel.fuseIds} busy={q.running} one={one} preset={fuseId} lock />}
                 {status && <p className={cur?.state === "error" ? "red" : "mute"} role="status">{status}{cur?.state === "done" && sel ? <> · <Link className="lime" href={`/app/w/${sel.address}`}>Open the wallet →</Link></> : null}</p>}
               </>
             )}

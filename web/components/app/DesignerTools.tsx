@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { getAddress, isAddress, keccak256, parseUnits, type Address, type Hex } from "viem";
 import { fuseRegistryAbi, tapeoutProcessorAbi } from "@/lib/abi";
-import { DEP, pub } from "@/lib/client-chain";
+import { CURRENT, DEP, pub, V1 } from "@/lib/client-chain";
 import { short, fmt, OKLINK } from "@/lib/hooks";
 import { useTxQueue } from "@/lib/useTxQueue";
 import type { Market } from "@/lib/market";
@@ -11,13 +11,24 @@ import { encodeMeta, metaSource } from "@/lib/fuseMeta";
 import { useWallet } from "./WalletProvider";
 import ConnectChoices from "./ConnectChoices";
 
-const SOCKETS: Record<number, [number, string]> = { 24: [1, "Daily Cap"], 33: [2, "Payee Guard"], 4: [3, "Breaker"], 19: [4, "Two of Three"] };
+const SOCKETS: Record<number, [number, string]> = { 24: [1, "Daily Cap"], 33: [2, "Payee Guard"], 4: [3, "Breaker"], 19: [4, "Two of Three"], 2: [5, "Repeat Guard"] };
 interface Info { owner: Address; nIn: number; nOut: number; nState: number; gates: number; hash: Hex }
+
+/**
+ * One claim per registry that holds earnings for these fuses: v2 (the market), and v1 for fuses 1-4, whose Atlas
+ * decisions were paid there. Each claim sends that registry's balance to `to`.
+ */
+export function claimSteps(fuses: Market["fuses"], to: Address, write: ReturnType<typeof useWallet>["write"]) {
+  return fuses.flatMap((f) => f.claims.filter((c) => Number(c.earned) > 0).map((c) => {
+    const v1 = c.registry.toLowerCase() === V1.registry.toLowerCase();
+    return { id: `c${v1 ? "v1-" : ""}${c.fuseId}`, label: `Claim fuse #${f.fuseId}${v1 ? " (v1, Atlas)" : ""}`, run: () => write({ address: c.registry, abi: fuseRegistryAbi, functionName: "claim", args: [BigInt(c.fuseId), to] }) };
+  }));
+}
 
 /** Price, listing and description link for one fuse you own. A fee rise only reaches wallets that accept it. */
 export function ManageFuse({ f, busy, run }: { f: Market["fuses"][number]; busy: boolean; run: (label: string, fn: () => Promise<Hex>) => void }) {
   const { write } = useWallet();
-  const R = { address: DEP.registry as Address, abi: fuseRegistryAbi } as const;
+  const R = { address: CURRENT.registry, abi: fuseRegistryAbi } as const; // price, listing and description live on v2
   const [fee, setFee] = useState(f.fee);
   const [sum, setSum] = useState(f.meta?.summary ?? ""); const [desc, setDesc] = useState(f.meta?.description ?? ""); const [rule, setRule] = useState(f.meta?.rule ?? "");
   const [uri, setUri] = useState(metaSource(f.metadataURI) === "link" ? f.metadataURI : "");
@@ -77,8 +88,8 @@ export function useListCircuit(market: Market | null) {
   const socket = info ? SOCKETS[info.nIn] : undefined;
   const listed = info && market?.fuses.find((f) => f.processor.toLowerCase() === proc.toLowerCase() && f.circuitId === Number(cid));
   const problem = !account ? "Connect the wallet that owns the circuit NFT." : !info ? (infoErr ?? "Enter a processor and circuit id.") : listed ? `Already listed as fuse #${listed.fuseId}.`
-    : info.owner.toLowerCase() !== account.toLowerCase() ? `The circuit belongs to ${short(info.owner)}, not your connected wallet.` : !socket ? `${info.nIn} inputs doesn't match a Fusebox socket (24, 33, 4 or 19).` : info.nOut !== 1 ? "Fuses answer with exactly one output." : info.gates > 512 ? "Over the 512-gate budget." : !(Number(fee) >= 0) ? "Enter a fee." : null;
-  const submit = () => write({ address: DEP.registry as Address, abi: fuseRegistryAbi, functionName: "list", args: [getAddress(proc.toLowerCase()), BigInt(cid), socket![0], info!.hash, parseUnits(fee || "0", 6), fname.trim() || fsum.trim() ? encodeMeta({ name: fname.trim() || undefined, summary: fsum.trim() || undefined, designer: short(account!) }) : ""] });
+    : info.owner.toLowerCase() !== account.toLowerCase() ? `The circuit belongs to ${short(info.owner)}, not your connected wallet.` : !socket ? `${info.nIn} inputs doesn't match a Fusebox socket (24, 33, 4, 19 or 2).` : info.nOut !== 1 ? "Fuses answer with exactly one output." : info.gates > 512 ? "Over the 512-gate budget." : !(Number(fee) >= 0) ? "Enter a fee." : null;
+  const submit = () => write({ address: CURRENT.registry, abi: fuseRegistryAbi, functionName: "list", args: [getAddress(proc.toLowerCase()), BigInt(cid), socket![0], info!.hash, parseUnits(fee || "0", 6), fname.trim() || fsum.trim() ? encodeMeta({ name: fname.trim() || undefined, summary: fsum.trim() || undefined, designer: short(account!) }) : ""] });
   return { proc, setProc, cid, setCid, fee, setFee, fname, setFname, fsum, setFsum, info, socket, problem, submit };
 }
 
@@ -107,11 +118,11 @@ export default function DesignerTools({ market }: { market: Market | null }) {
                     {mine.map((f) => (
                       <div className="trick" key={f.fuseId} style={{ gridTemplateColumns: "60px 1fr auto" }}>
                         <span className="n">#{f.fuseId}</span><span>{f.name} · {f.decisions} decisions · {fmt(f.earned)} USD₮0 claimable</span>
-                        <button className="btn" style={{ height: 34 }} disabled={q.running || Number(f.earned) <= 0} onClick={() => q.start([{ id: `c${f.fuseId}`, label: `Claim fuse #${f.fuseId}`, run: () => write({ address: DEP.registry as Address, abi: fuseRegistryAbi, functionName: "claim", args: [BigInt(f.fuseId), account] }) }], {})}>Claim</button>
+                        <button className="btn" style={{ height: 34 }} disabled={q.running || Number(f.earned) <= 0} onClick={() => q.start(claimSteps([f], account, write), {})}>Claim</button>
                       </div>
                     ))}
                   </div>
-                  {claimable.length > 1 && <button className="btn lime" style={{ marginTop: 14 }} disabled={q.running} onClick={() => q.start(claimable.map((f) => ({ id: `c${f.fuseId}`, label: `Claim fuse #${f.fuseId}`, run: () => write({ address: DEP.registry as Address, abi: fuseRegistryAbi, functionName: "claim", args: [BigInt(f.fuseId), account] }) })), {})}>Claim all</button>}
+                  {claimable.length > 1 && <button className="btn lime" style={{ marginTop: 14 }} disabled={q.running} onClick={() => q.start(claimSteps(claimable, account, write), {})}>Claim all</button>}
                 </>
               )}
           </div>

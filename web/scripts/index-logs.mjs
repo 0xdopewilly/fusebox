@@ -1,4 +1,4 @@
-// Records which blocks hold Fusebox events (registry, factory, and every wallet the factory made, Atlas included),
+// Records which blocks hold Fusebox events (both registries, both factories, and every wallet they made, Atlas included),
 // so the app never scans X Layer's whole history. Same event-signature filter as lib/logs.ts.
 // X Layer RPCs cap eth_getLogs ranges (rpc.xlayer.tech and drpc: 100 blocks, tapeout.net: 1000). tapeout.net can sit
 // behind a Cloudflare challenge (403) and rpc.xlayer.tech rate-limits bursts, so each source has its own concurrency
@@ -30,7 +30,9 @@ const rpc = async (url, method, params) => {
     }
   }
 };
-const known = new Set([dep.registry, dep.factory, dep.atlas, ...(idx.wallets ?? [])].map((a) => a.toLowerCase()));
+const FACTORIES = [dep.factory, dep.v2?.factory].filter(Boolean).map((a) => a.toLowerCase()); // v1 (Atlas) and v2
+const CORE = [dep.registry, dep.v2?.registry, ...FACTORIES].filter(Boolean).map((a) => a.toLowerCase());
+const known = new Set([...CORE, dep.atlas.toLowerCase(), ...(idx.wallets ?? [])].map((a) => a.toLowerCase()));
 const head = parseInt(await rpc(RPCS[1][0], "eth_blockNumber", []).catch(() => rpc(RPCS[2][0], "eth_blockNumber", [])), 16);
 const blocks = new Set(idx.blocks);
 let from = idx.scannedTo + 1, calls = 0;
@@ -45,7 +47,7 @@ for (const [url, step, conc] of RPCS) {
       const done = await Promise.all(jobs);
       for (const { logs } of done) for (const l of logs) {
         const addr = l.address.toLowerCase();
-        if (l.topics[0] === CREATED && addr === dep.factory.toLowerCase()) known.add(("0x" + l.topics[1].slice(26)).toLowerCase());
+        if (l.topics[0] === CREATED && FACTORIES.includes(addr)) known.add(("0x" + l.topics[1].slice(26)).toLowerCase());
         if (known.has(addr)) blocks.add(parseInt(l.blockNumber, 16));
       }
       idx.scannedTo = Math.max(...done.map((d) => d.b));
@@ -54,6 +56,6 @@ for (const [url, step, conc] of RPCS) {
   } catch (e) { console.log(`${url} failed (${e.message}); falling back`); from = idx.scannedTo + 1; }
 }
 idx.blocks = [...blocks].sort((a, b) => a - b);
-idx.wallets = [...known].filter((a) => ![dep.registry, dep.factory].map((x) => x.toLowerCase()).includes(a));
+idx.wallets = [...known].filter((a) => !CORE.includes(a));
 writeFileSync(idxUrl, JSON.stringify(idx, null, 1) + "\n");
 console.log(`index: scanned to ${idx.scannedTo} (head ${head}) in ${calls} calls · ${idx.blocks.length} blocks with Fusebox events · ${idx.wallets.length} wallets`);

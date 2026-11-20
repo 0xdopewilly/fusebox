@@ -1,15 +1,12 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import type { Address } from "viem";
-import { fuseRegistryAbi } from "@/lib/abi";
-import { DEP } from "@/lib/client-chain";
 import { OKLINK, fmt, short } from "@/lib/hooks";
 import type { Market } from "@/lib/market";
 import { useTxQueue } from "@/lib/useTxQueue";
 import { useWallet } from "../WalletProvider";
 import ConnectChoices from "../ConnectChoices";
-import { ManageFuse, useListCircuit } from "../DesignerTools";
+import { claimSteps, ManageFuse, useListCircuit } from "../DesignerTools";
 import { Glyph, Plate, type GlyphName } from "../Pixel";
 import { PageChrome } from "./chrome";
 import { MHero, MLabel, MRow, MSeg, MSheet, MSticky } from "./ui";
@@ -33,7 +30,7 @@ export default function SellMobile({ market }: { market: Market }) {
   const mine = account ? market.fuses.filter((f) => f.designer.toLowerCase() === account.toLowerCase()) : [];
   const claimable = mine.filter((f) => Number(f.earned) > 0);
   const toClaim = claimable.reduce((t, f) => t + Number(f.earned), 0);
-  const claim = (fs: typeof mine) => q.start(fs.map((f) => ({ id: `c${f.fuseId}`, label: `Claim fuse #${f.fuseId}`, run: () => write({ address: DEP.registry as Address, abi: fuseRegistryAbi, functionName: "claim", args: [BigInt(f.fuseId), account!] }) })), {});
+  const claim = (fs: typeof mine) => q.start(claimSteps(fs, account!, write), {});
   const last = q.steps[q.steps.length - 1];
   const status = last && <p className="m mute" role="status">{last.label}: {last.state === "done" ? "done" : last.state === "error" ? last.error : last.state === "skip" ? "not needed" : last.state === "mine" ? "confirming…" : "sign in your wallet…"}{last.hash ? <> · <a className="lime" href={`${OKLINK}/tx/${last.hash}`} target="_blank" rel="noreferrer">tx ↗</a></> : null}</p>;
   const f = open !== null ? mine.find((x) => x.fuseId === open) : undefined;

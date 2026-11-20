@@ -9,11 +9,12 @@ export const STATUS = ["pass", "blew", "failed", "untrusted"] as const;
 export interface PayResult { hash: Hex; allowed: boolean; decisionId: number; status: (typeof STATUS)[number][] }
 export interface CheckView { allowed: boolean; status: (typeof STATUS)[number][] }
 
-/** OKB an agent must hold to send one payment: the wallet reserves gas for every fuse up front (about 3M gas), priced
- *  at today's gas price with headroom. The real cost is far lower (about a third); this is what the network checks. */
-export async function gasNeeded(): Promise<bigint> {
+/** OKB an agent must hold to send one payment: the wallet reserves gas for every fuse up front (about 3M gas with four
+ *  fuses, 3.5M with five), priced at today's gas price with headroom. The real cost is far lower (about a third); this
+ *  is what the network checks. */
+export async function gasNeeded(fuses = 4): Promise<bigint> {
   const price = await pub.getGasPrice().catch(() => 25_000_000n);
-  return (3_000_000n * price * 13n) / 10n;
+  return ((fuses > 4 ? 3_500_000n : 3_000_000n) * price * 13n) / 10n;
 }
 
 /** What the wallet's fuses would say about a payment right now: its real check(), read-only and free. */
@@ -39,7 +40,8 @@ export async function agentPay(key: Hex, wallet: Address, to: Address, amount: s
   catch (e) {
     const m = String((e as Error).message);
     if (/exceeds the balance|insufficient funds|gas required exceeds/i.test(m)) {
-      const [have, need] = await Promise.all([pub.getBalance({ address: account.address }), gasNeeded()]);
+      const [have, n] = await Promise.all([pub.getBalance({ address: account.address }), pub.readContract({ address: wallet, abi: fuseboxWalletAbi, functionName: "fuseCount" }).catch(() => 4n)]);
+      const need = await gasNeeded(Number(n));
       throw new Error(`Your agent needs a little more OKB for gas: it holds ${(Number(have) / 1e18).toFixed(5)}, a payment needs about ${(Number(need) / 1e18).toFixed(5)} up front.`);
     }
     throw new Error(m.split("\n")[0]);

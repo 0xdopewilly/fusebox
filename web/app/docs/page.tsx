@@ -9,9 +9,9 @@ import { GLOSSARY } from "@/lib/plain";
 
 export const metadata: Metadata = {
   title: "Docs · Fusebox",
-  description: "How Fusebox works: wallets for AI agents whose payments must pass logic circuits taped out on TapeOut. Quickstart, the four fuses, the wallet API, MCP tools, selling a fuse, and every contract on X Layer.",
-  openGraph: { title: "Fusebox docs · Build with Fusebox", description: "Quickstart, the four fuses, the wallet API, MCP tools, selling a fuse, and every contract on X Layer.", url: "/docs" },
-  twitter: { title: "Fusebox docs · Build with Fusebox", description: "Quickstart, the four fuses, the wallet API, MCP tools, selling a fuse, and every contract on X Layer." },
+  description: "How Fusebox works: wallets for AI agents whose payments must pass logic circuits taped out on TapeOut. Quickstart, the five fuses, the wallet API, MCP tools, selling a fuse, and every contract on X Layer.",
+  openGraph: { title: "Fusebox docs · Build with Fusebox", description: "Quickstart, the five fuses, the wallet API, MCP tools, selling a fuse, and every contract on X Layer.", url: "/docs" },
+  twitter: { title: "Fusebox docs · Build with Fusebox", description: "Quickstart, the five fuses, the wallet API, MCP tools, selling a fuse, and every contract on X Layer." },
 };
 
 const OKLINK = "https://www.oklink.com/xlayer";
@@ -25,7 +25,7 @@ const SECTIONS = [
   { id: "first", title: "Your first payment", group: "Start" },
   { id: "assistant", title: "The Fusebox assistant", group: "Start" },
   { id: "payment", title: "How a payment works", group: "Concepts" },
-  { id: "fuses", title: "The four fuses", group: "Concepts" },
+  { id: "fuses", title: "The five fuses", group: "Concepts" },
   { id: "fees", title: "Fees and budgets", group: "Concepts" },
   { id: "wallet", title: "The wallet API", group: "Build" },
   { id: "mcp", title: "MCP tools", group: "Build" },
@@ -189,18 +189,19 @@ export default function DocsPage() {
             </section>
 
             <section id="fuses">
-              <h2>The four fuses</h2>
+              <h2>The five fuses</h2>
               <p>A <b>socket</b> is the contract between the wallet and a circuit: the wallet derives the bits, the circuit decides. Bits are packed least-significant first (TAP-02 §5). Amounts are rounded up to the install&apos;s unit and saturate at 255, while owner limits stop at 254, so a saturated amount can never pass.</p>
-              <div className="tbl-w" tabIndex={0} role="region" aria-label="The four fuses table"><table>
+              <div className="tbl-w" tabIndex={0} role="region" aria-label="The five fuses table"><table>
                 <thead><tr><th>Fuse</th><th>Circuit</th><th>Inputs</th><th>Says no when</th><th>Fee</th></tr></thead>
                 <tbody>
                   <tr><td><b>Daily Cap</b></td><td>#15 · 108 NAND</td><td>24: amount, spent today, cap</td><td>The payment would pass today&apos;s cap (UTC day)</td><td>0.001</td></tr>
                   <tr><td><b>Payee Guard</b></td><td>#16 · 79 NAND</td><td>33: saved?, age (h), cooldown, amount, trial</td><td>The payee isn&apos;t saved, or is new and over the trial amount</td><td>0.001</td></tr>
                   <tr><td><b>Breaker</b></td><td>#17 · 10 NAND + 1 LATCH</td><td>4: set, clear, attempt, suspect</td><td>A payment goes to a stranger: it latches and stays blown</td><td>0.0005</td></tr>
                   <tr><td><b>Two of Three</b></td><td>#18 · 46 NAND</td><td>19: three approver bits, amount, threshold</td><td>Over the threshold without two approvals for that exact payment</td><td>0.002</td></tr>
+                  <tr><td><b>Repeat Guard</b> (v2)</td><td>#21 · 2 NAND</td><td>2: repeat, cleared</td><td>The same amount to the same payee already went out inside the owner&apos;s window (24 h by default), and the owner hasn&apos;t cleared one repeat</td><td>0.0005</td></tr>
                 </tbody>
               </table></div>
-              <p className="small">Fees are in USD₮0 per check; a payment checked by all four costs 0.0045. Every netlist is on TapeOut&apos;s processor, and the <Link href="/app/market">fuse market</Link> checks each one against the hash the registry pinned at listing.</p>
+              <p className="small">Fees are in USD₮0 per check; a payment checked by the first four costs 0.0045, all five 0.005. Every netlist is on TapeOut&apos;s processor, and the <Link href="/app/market">fuse market</Link> checks each one against the hash the registry pinned at listing.</p>
             </section>
 
             <section id="fees">
@@ -374,20 +375,22 @@ await wallet.sendTransaction(…);`}</Code>
                 <li><b>Run it like a product.</b> From the designers page, change the fee (<code>setFee</code>), delist it from new installs (<code>setListed</code>) or link a page that explains it (<code>setMetadataURI</code>). A lower fee applies to everyone at once; a higher one only to wallets whose owner accepts it.</li>
               </ol>
               <p>Several designs can compete on one socket. The repo ships four rivals for the same sockets, exhaustively tested and rehearsed on a mainnet fork but not yet taped out on mainnet: <b>Per-Payment Cap</b> (no single payment over the cap), <b>Strict Payee Book</b> (no trial amount), <b>Two-Strike Breaker</b> (two latches: the first stranger is refused, the second blows it) and <b>Lead Approver</b> (seat 1 must be one of the two signers). A rival names its settings in its metadata, and the app labels them that way.</p>
-              <p className="small">Duplicate-invoice checks, business hours only, per-payee caps, velocity limits: there&apos;s room for many more fuses.</p>
+              <p className="small">Business hours only, per-payee caps, velocity limits: there&apos;s room for many more fuses. The duplicate-invoice check is now the fifth: the Repeat Guard.</p>
             </section>
 
             <section id="contracts">
               <h2>Contracts</h2>
-              <p>X Layer mainnet, chain 196. The registry, factory and Atlas have verified source on <a href={`https://repo.sourcify.dev/196/${dep.registry}`} target="_blank" rel="noreferrer">Sourcify</a> (exact match).</p>
+              <p>X Layer mainnet, chain 196. Two sets of contracts run side by side. <b>v2</b> (Nov 20) makes new wallets and holds the fuse market: its registry stores socket pinouts as data, so new kinds of fuse never need another registry, and its wallets can run the Repeat Guard. <b>v1</b> (Nov 15) holds Atlas and the first wallets, which keep working unchanged. Fuses 1–4 are the same circuits with the same ids on both. Every contract has verified source on <a href={`https://repo.sourcify.dev/196/${dep.v2.registry}`} target="_blank" rel="noreferrer">Sourcify</a> (exact match).</p>
               <div className="tbl-w" tabIndex={0} role="region" aria-label="Contract addresses table"><table className="addrs">
                 <tbody>
-                  <tr><td><b>FuseRegistry</b></td><td><A a={dep.registry} label={dep.registry} /></td></tr>
-                  <tr><td><b>FuseboxFactory</b></td><td><A a={dep.factory} label={dep.factory} /></td></tr>
+                  <tr><td><b>FuseRegistry v2</b></td><td><A a={dep.v2.registry} label={dep.v2.registry} /></td></tr>
+                  <tr><td><b>FuseboxFactory v2</b></td><td><A a={dep.v2.factory} label={dep.v2.factory} /></td></tr>
+                  <tr><td><b>FuseRegistry v1</b></td><td><A a={dep.registry} label={dep.registry} /></td></tr>
+                  <tr><td><b>FuseboxFactory v1</b></td><td><A a={dep.factory} label={dep.factory} /></td></tr>
                   <tr><td><b>Atlas</b> (demo wallet)</td><td><A a={dep.atlas} label={dep.atlas} /></td></tr>
                   <tr><td><b>OrderGuard</b> (TapeOut processor)</td><td><A a={dep.processor} label={dep.processor} /></td></tr>
                   <tr><td><b>USD₮0</b></td><td><A a={dep.usdt0} label={dep.usdt0} /></td></tr>
-                  <tr><td><b>Circuits</b></td><td>#15 Daily Cap · #16 Payee Guard · #17 Breaker · #18 Two of Three (fuse ids 1–4)</td></tr>
+                  <tr><td><b>Circuits</b></td><td>#15 Daily Cap · #16 Payee Guard · #17 Breaker · #18 Two of Three (fuse ids 1–4) · #21 Repeat Guard (fuse 5, v2)</td></tr>
                 </tbody>
               </table></div>
             </section>
@@ -419,7 +422,7 @@ await wallet.sendTransaction(…);`}</Code>
               <details><summary>Does the agent ever see or control the fuses?</summary><p>No. The agent&apos;s key can call <code>pay</code> and <code>freeze</code>. Fuses, limits, payees and approvers belong to the owner.</p></details>
               <details><summary>What does a payment cost?</summary><p>Gas on X Layer (fractions of a cent) plus the fees of the fuses on the line. On Atlas, all four fuses together cost 0.0045 USD₮0.</p></details>
               <details><summary>Why do blocked payments pay fees?</summary><p>Stopping the scam is the fuse&apos;s job. Daily budgets cap how much blocked attempts can cost.</p></details>
-              <details><summary>Can I use my own circuit?</summary><p>Yes: tape it out for one of the four sockets and list it. Wallets can install it straight away.</p></details>
+              <details><summary>Can I use my own circuit?</summary><p>Yes: tape it out for one of the five sockets and list it. Wallets can install it straight away (a Repeat Guard design needs a wallet made since Nov 20).</p></details>
               <details><summary>Is there a version with no server at all?</summary><p>The <Link href="/onchain">DeWEB edition</Link> is one self-contained page that reads X Layer from your browser, built to be stored on-chain at 15.2.272.tape and served by TapeKit.</p></details>
             </section>
 
