@@ -64,6 +64,12 @@ function vectorsFor(f: FuseDesign): Vec[] {
       add("over threshold, approvers 1 and 2", { approvals: 0b110, amount: 100, threshold: 0 });
       add("over threshold, approver 2 only", { approvals: 0b100, amount: 100, threshold: 0 });
       break;
+    case "repeat-guard":
+      add("first payment of this invoice", { repeat: 0, cleared: 0 });
+      add("same invoice again inside the window", { repeat: 1, cleared: 0 });
+      add("a repeat the owner cleared", { repeat: 1, cleared: 1 });
+      add("cleared but not a repeat", { repeat: 0, cleared: 1 });
+      break;
     default:
       throw new Error(`no vectors for ${f.key}`);
   }

@@ -92,6 +92,7 @@ What was verified against the real TapeOut contracts on a fork before launch:
 
 - The contracts are unaudited. Atlas is a public demo wallet with small balances.
 - The DeWEB edition's mainnet publish waits on TapeOut's one-time 0.08 OKB container fee.
+- The duplicate-invoice gap (shown in *Try to scam it*) is closed by the Repeat Guard, a fifth fuse that is built and fork-tested but **not on mainnet yet**: it ships with v2 contracts. See [V2-REPEAT-GUARD.md](V2-REPEAT-GUARD.md).
 - An OKX Agentic Wallet has not been tested as the agent key. It needs to send `pay` on X Layer with a ~3M gas limit.
 - A release-after-delivery fuse isn't built: it needs a delivery attestation source and a new socket.
 - Delisting a fuse stops new installs only; there is no designer-side kill switch, by design.

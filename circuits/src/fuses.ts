@@ -120,7 +120,21 @@ export const SOCKET_APPROVAL_2OF3: Socket = {
   doc: "Human approvals recorded on chain become input bits; the circuit decides when they are needed.",
 };
 
-export const SOCKETS: Socket[] = [SOCKET_DAILY_CAP, SOCKET_PAYEE_GUARD, SOCKET_BREAKER, SOCKET_APPROVAL_2OF3];
+const repeatPins = pins(
+  ["repeat", 1, "an allowed payment with the same token, payee and amount went out within the install's window"],
+  ["cleared", 1, "the owner cleared this exact repeat: one-shot, expires with the approval TTL"],
+);
+export const SOCKET_REPEAT_GUARD: Socket = {
+  id: 5,
+  key: "REPEAT_GUARD",
+  nIn: width(repeatPins),
+  nOut: 1,
+  pins: repeatPins,
+  ownerPins: [],
+  doc: "Duplicate payments: the wallet remembers when each exact (token, payee, amount) last went out; the circuit decides what a repeat inside the window needs.",
+};
+
+export const SOCKETS: Socket[] = [SOCKET_DAILY_CAP, SOCKET_PAYEE_GUARD, SOCKET_BREAKER, SOCKET_APPROVAL_2OF3, SOCKET_REPEAT_GUARD];
 
 /** Input bits (LSB-first order) from named fields. */
 export function bitsFromFields(socket: Socket, f: Fields): number[] {
@@ -252,4 +266,25 @@ export const APPROVAL_2OF3: FuseDesign = {
   },
 };
 
-export const FUSES: FuseDesign[] = [DAILY_CAP, PAYEE_GUARD, BREAKER, APPROVAL_2OF3];
+// ---------------------------------------------------------------------------------------------
+// Fuse 5: repeat guard. The same invoice twice inside the window needs the owner's say-so.
+//   out = NOT repeat OR cleared  =  NAND(repeat, NOT cleared)
+// ---------------------------------------------------------------------------------------------
+export const REPEAT_GUARD: FuseDesign = {
+  key: "repeat-guard",
+  title: "Repeat Guard",
+  socket: SOCKET_REPEAT_GUARD,
+  nState: 0,
+  story: "The same invoice sent twice gets paid once. A real repeat goes through only after the owner clears it.",
+  build() {
+    const s = SOCKET_REPEAT_GUARD;
+    const b = new Builder(s.nIn);
+    const out = b.nand(pin(b, s, "repeat"), b.not(pin(b, s, "cleared")));
+    return b.build("repeat-guard", [out]);
+  },
+  spec(f) {
+    return { out: f.repeat === 0 || f.cleared === 1 ? 1 : 0, newState: [] };
+  },
+};
+
+export const FUSES: FuseDesign[] = [DAILY_CAP, PAYEE_GUARD, BREAKER, APPROVAL_2OF3, REPEAT_GUARD];

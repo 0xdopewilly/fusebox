@@ -50,8 +50,8 @@ contract XLayerForkTest is Test {
 
     FuseRegistry registry;
     FuseboxWallet wallet;
-    uint256[4] circuitIds;
-    uint256[4] fuseIds;
+    uint256[5] circuitIds;
+    uint256[5] fuseIds;
     uint256 okbSpent;
 
     function setUp() public {
@@ -329,6 +329,30 @@ contract XLayerForkTest is Test {
         console.log("[gas] pay() allowed, + breaker", g3);
         console.log("[gas] pay() allowed, all four fuses", g4);
         console.log("[gas] pay() blocked (scam), all four fuses", g5);
+    }
+
+    /// @notice The Repeat Guard on TapeOut's real processor: the same invoice twice is paid once; the owner
+    ///         clears a real repeat and it goes through, once.
+    function test_repeat_guard_on_the_real_processor() public {
+        vm.prank(owner);
+        uint256 slot = wallet.addFuse(fuseIds[4], Sockets.Params(address(0), 0, 24, 0), FEE); // 24 h window
+        (bool ok, uint256 gasFirst) = _pay(supplier, 10 * USDT, "invoice 7793");
+        assertTrue(ok, "first payment of the invoice");
+        vm.warp(vm.getBlockTimestamp() + 2 hours);
+        (bool allowed, uint8[] memory status,,) = wallet.check(USDT0, supplier, 10 * USDT);
+        assertFalse(allowed);
+        assertEq(status[slot], wallet.BLEW(), "check sees the repeat");
+        (ok,) = _pay(supplier, 10 * USDT, "invoice 7793, resent");
+        assertFalse(ok, "same invoice again: stopped");
+        vm.prank(owner);
+        wallet.clearRepeat(USDT0, supplier, 10 * USDT, true);
+        (ok,) = _pay(supplier, 10 * USDT, "a real second order");
+        assertTrue(ok, "cleared repeat");
+        (ok,) = _pay(supplier, 10 * USDT, "and again");
+        assertFalse(ok, "the clearance was used up");
+        assertEq(usdt0.balanceOf(supplier), 20 * USDT);
+        assertEq(registry.decisions(fuseIds[4]), 4);
+        console.log("pay() gas with all five fuses:", gasFirst);
     }
 
     function test_upgrade_of_tapeout_implementation_fails_closed() public {

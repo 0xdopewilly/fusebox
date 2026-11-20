@@ -6,10 +6,11 @@
  * - Payee Guard (33 inputs, 2^33 is too many): exhaustive over each comparator's 2^16 operand pairs
  *   for both values of `listed` with the other block held at every boundary case, plus 4M random vectors.
  * - Breaker (1 LATCH): every (state, input) pair, plus scripted sequences.
+ * - Repeat Guard (2 inputs): all 4 vectors, plus every gate stuck at 0 and at 1.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { APPROVAL_2OF3, BREAKER, DAILY_CAP, FUSES, PAYEE_GUARD, bitsFromFields, fieldsFromBits, type FuseDesign } from "../src/fuses.ts";
+import { APPROVAL_2OF3, BREAKER, DAILY_CAP, FUSES, PAYEE_GUARD, REPEAT_GUARD, bitsFromFields, fieldsFromBits, type FuseDesign } from "../src/fuses.ts";
 import { beat, compileBitsliced, load, pack, unpack } from "../src/tap02.ts";
 
 const LANE = [0xaaaaaaaa | 0, 0xcccccccc | 0, 0xf0f0f0f0 | 0, 0xff00ff00 | 0, 0xffff0000 | 0];
@@ -156,7 +157,7 @@ test("Breaker: every (state, input) pair and the scam story", () => {
 });
 
 test("gate budget: every fuse stays small", () => {
-  const budget: Record<string, number> = { "daily-cap": 108, "payee-guard": 79, breaker: 11, "approval-2of3": 46 };
+  const budget: Record<string, number> = { "daily-cap": 108, "payee-guard": 79, breaker: 11, "approval-2of3": 46, "repeat-guard": 2 };
   for (const f of FUSES) {
     const n = f.build();
     assert.equal(n.gates, budget[f.key], `${f.key} gate count changed: ${n.gates}`);
@@ -220,4 +221,30 @@ test("stuck-at faults: every gate of every combinational fuse is observable", ()
         assert.ok(seen, `${f.key}: gate ${g} stuck-at-${stuck & 1} is not observable`);
       }
   }
+});
+
+test("Repeat Guard: all 4 vectors match NOT repeat OR cleared, and every gate is observable", () => {
+  const { c } = loaded(REPEAT_GUARD);
+  assert.equal(c.nIn, 2);
+  const cases = [0, 1, 2, 3].map((i) => ({ repeat: i & 1, cleared: (i >> 1) & 1 }));
+  for (const f of cases) {
+    const r = beat(c, [], bitsFromFields(REPEAT_GUARD.socket, f));
+    assert.equal(r.outputs[0], REPEAT_GUARD.spec(f, []).out, JSON.stringify(f));
+  }
+  assert.deepEqual(cases.map((f) => REPEAT_GUARD.spec(f, []).out), [1, 0, 1, 1], "only an uncleared repeat is stopped");
+  // stuck-at faults over all 4 vectors, bitsliced in one word (lanes 0..3)
+  const w = new Int32Array([0b1010, 0b1100]);
+  const want = 0b1101;
+  const base = 2 + c.nIn;
+  const s = new Int32Array(c.nSignals);
+  const run = (gate: number, stuck: number) => {
+    s[0] = 0;
+    s[1] = -1;
+    s[2] = w[0];
+    s[3] = w[1];
+    c.elements.forEach((e, k) => { s[base + k] = k === gate ? stuck : ~(s[e.ins[0]] & s[e.ins[1]]); });
+    return s[c.nSignals - 1] & 0b1111;
+  };
+  assert.equal(run(-1, 0), want);
+  for (let g = 0; g < c.elements.length; g++) for (const stuck of [0, -1]) assert.notEqual(run(g, stuck), want, `gate ${g} stuck-at-${stuck & 1}`);
 });

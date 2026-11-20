@@ -16,6 +16,11 @@ library Sockets {
     uint32 internal constant BREAKER = 3;
     /// Human approvals. in[0..2] approver bits, in[3..10] amount, in[11..18] threshold. 19 inputs.
     uint32 internal constant APPROVAL_2OF3 = 4;
+    /// Duplicate payments. in[0] repeat: an allowed payment with the same (token, to, amount) went out
+    /// within the install's window; in[1] cleared: the owner cleared this exact repeat. 2 inputs.
+    uint32 internal constant REPEAT_GUARD = 5;
+    /// Highest socket id this library (and so this wallet) can drive.
+    uint32 internal constant LAST = REPEAT_GUARD;
 
     /// @notice Largest value an 8-bit owner parameter (cap, trial, threshold) may take. 255 is reserved
     ///         for "saturated" amounts, so a saturated amount can never satisfy amount <= parameter.
@@ -25,7 +30,8 @@ library Sockets {
     /// @param token The token the amount pins measure (address(0) = native OKB). Payments in any other
     ///        token read amount = 255, which fails closed.
     /// @param unit Token base units per quantisation step (e.g. 1e6 = 1 USDT0).
-    /// @param a DAILY_CAP: cap. PAYEE_GUARD: cooldown hours. APPROVAL_2OF3: threshold. BREAKER: unused.
+    /// @param a DAILY_CAP: cap. PAYEE_GUARD: cooldown hours. APPROVAL_2OF3: threshold.
+    ///        REPEAT_GUARD: window in hours (1..254). BREAKER: unused.
     /// @param b PAYEE_GUARD: trial allowance. Others: unused.
     struct Params {
         address token;
@@ -44,6 +50,7 @@ library Sockets {
         if (socket == PAYEE_GUARD) return (33, 1);
         if (socket == BREAKER) return (4, 1);
         if (socket == APPROVAL_2OF3) return (19, 1);
+        if (socket == REPEAT_GUARD) return (2, 1);
         return (0, 0);
     }
 
@@ -68,6 +75,13 @@ library Sockets {
         if (!exists(socket)) revert UnknownSocket(socket);
         if (socket == BREAKER) {
             if (p.token != address(0) || p.unit != 0 || p.a != 0 || p.b != 0) revert BadParams(socket);
+            return;
+        }
+        if (socket == REPEAT_GUARD) {
+            // a repeat is the exact (token, to, amount), so there is no token or unit; a = window in hours
+            if (p.token != address(0) || p.unit != 0 || p.a == 0 || p.a > MAX_PARAM || p.b != 0) {
+                revert BadParams(socket);
+            }
             return;
         }
         if (p.unit == 0 || p.b > MAX_PARAM) revert BadParams(socket);
@@ -108,6 +122,10 @@ library Sockets {
 
     function approvalInputs(uint8 approvalMask, uint8 amount, uint8 threshold) internal pure returns (bytes memory) {
         return pack(uint256(approvalMask & 7) | (uint256(amount) << 3) | (uint256(threshold) << 11), 19);
+    }
+
+    function repeatInputs(bool repeat, bool cleared) internal pure returns (bytes memory) {
+        return pack((repeat ? 1 : 0) | (cleared ? 2 : 0), 2);
     }
 
     /// @notice The low `nBits` of `v` as ceil(nBits / 8) bytes, least-significant byte first.

@@ -15,7 +15,8 @@ import {MockBeacon, MockFactory, MockProcessor} from "./mocks/MockTapeout.sol";
 import {MockUSDT0} from "./mocks/MockTokens.sol";
 
 /// @notice Shared world for unit tests: a mock TapeOut processor running the real netlists,
-///         a registry with the four shipped fuses listed, and one wallet with all four installed.
+///         a registry with the five shipped fuses listed, and one wallet with the first four installed
+///         (the Repeat Guard tests add the fifth).
 abstract contract Base is Test {
     uint256 internal constant USDT = 1e6;
     uint16 internal constant PROTOCOL_BPS = 1_000; // 10%
@@ -25,6 +26,7 @@ abstract contract Base is Test {
     uint96 internal constant FEE_PAYEE = 2_000; // 0.002
     uint96 internal constant FEE_BREAKER = 500; // 0.0005
     uint96 internal constant FEE_APPROVAL = 1_500; // 0.0015
+    uint96 internal constant FEE_REPEAT = 300; // 0.0003
 
     address internal admin = makeAddr("admin");
     address internal designer = makeAddr("designer");
@@ -46,8 +48,8 @@ abstract contract Base is Test {
     FuseboxWallet internal wallet;
 
     // fuse ids in the registry, by fixture index
-    uint256[4] internal fuseIds;
-    uint256[4] internal circuitIds;
+    uint256[5] internal fuseIds;
+    uint256[5] internal circuitIds;
 
     function setUp() public virtual {
         vm.warp(1_800_000_000); // a fixed, realistic timestamp (2027)
@@ -63,7 +65,7 @@ abstract contract Base is Test {
         registry.setTrustedImplementation(impl, true);
         vm.stopPrank();
 
-        uint96[4] memory fees = [FEE_CAP, FEE_PAYEE, FEE_BREAKER, FEE_APPROVAL];
+        uint96[5] memory fees = [FEE_CAP, FEE_PAYEE, FEE_BREAKER, FEE_APPROVAL, FEE_REPEAT];
         for (uint256 k; k < FuseFixtures.COUNT; ++k) {
             FuseFixtures.Fixture memory f = FuseFixtures.fixture(k);
             vm.prank(designer);
@@ -119,6 +121,10 @@ abstract contract Base is Test {
 
     function approvalParams(uint8 threshold) internal view returns (Sockets.Params memory) {
         return Sockets.Params({token: address(usdt), unit: uint128(USDT), a: threshold, b: 0});
+    }
+
+    function repeatParams(uint8 windowHours) internal pure returns (Sockets.Params memory) {
+        return Sockets.Params({token: address(0), unit: 0, a: windowHours, b: 0});
     }
 
     function totalFee() internal pure returns (uint256) {

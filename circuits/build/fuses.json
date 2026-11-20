@@ -393,6 +393,70 @@
           "note": "over threshold, approver 2 only"
         }
       ]
+    },
+    {
+      "key": "repeat-guard",
+      "title": "Repeat Guard",
+      "story": "The same invoice sent twice gets paid once. A real repeat goes through only after the owner clears it.",
+      "socket": {
+        "id": 5,
+        "key": "REPEAT_GUARD",
+        "pins": [
+          {
+            "name": "repeat",
+            "offset": 0,
+            "width": 1,
+            "doc": "an allowed payment with the same token, payee and amount went out within the install's window"
+          },
+          {
+            "name": "cleared",
+            "offset": 1,
+            "width": 1,
+            "doc": "the owner cleared this exact repeat: one-shot, expires with the approval TTL"
+          }
+        ],
+        "ownerPins": [],
+        "doc": "Duplicate payments: the wallet remembers when each exact (token, payee, amount) last went out; the circuit decides what a repeat inside the window needs."
+      },
+      "nIn": 2,
+      "nOut": 1,
+      "nState": 0,
+      "nand": 2,
+      "latch": 0,
+      "gates": 2,
+      "bytes": 14,
+      "keccak256": "0x5cac7b4654fd758e3b2a5d6b29962c3fe45cf090c913fd185e6bff06e6221c83",
+      "netlist": "0x0000000300000300000002000004",
+      "vectors": [
+        {
+          "state": "0x",
+          "inputs": "0x00",
+          "newState": "0x",
+          "outputs": "0x01",
+          "note": "first payment of this invoice"
+        },
+        {
+          "state": "0x",
+          "inputs": "0x01",
+          "newState": "0x",
+          "outputs": "0x00",
+          "note": "same invoice again inside the window"
+        },
+        {
+          "state": "0x",
+          "inputs": "0x03",
+          "newState": "0x",
+          "outputs": "0x01",
+          "note": "a repeat the owner cleared"
+        },
+        {
+          "state": "0x",
+          "inputs": "0x02",
+          "newState": "0x",
+          "outputs": "0x01",
+          "note": "cleared but not a repeat"
+        }
+      ]
     }
   ]
 }

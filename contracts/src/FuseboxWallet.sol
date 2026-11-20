@@ -70,6 +70,9 @@ contract FuseboxWallet is ReentrancyGuard {
         uint8 ageHours;
         uint8 approvalMask;
         bytes32 intent;
+        bytes32 repeatKey;
+        uint64 lastPaid;
+        bool repeatCleared;
     }
 
     struct Verdict {
@@ -103,6 +106,12 @@ contract FuseboxWallet is ReentrancyGuard {
     uint64 public approvalEpoch;
     uint32 public approvalTtl;
     mapping(bytes32 intent => Approval) public approvals;
+
+    /// @notice When each exact payment (token, to, amount) last went out; the REPEAT_GUARD socket reads it.
+    mapping(bytes32 repeatKey => uint64 at) public lastPaidAt;
+    /// @notice Owner clearance for one repeat of an exact payment, valid until this time. Used up by the next
+    ///         allowed payment of exactly that (token, to, amount).
+    mapping(bytes32 repeatKey => uint64 until) public repeatClearedUntil;
 
     uint64 public decisionCount;
     uint64 public allowedCount;
@@ -152,6 +161,7 @@ contract FuseboxWallet is ReentrancyGuard {
     event ApprovalTtlSet(uint32 ttl);
     event Approved(bytes32 indexed intent, address indexed approver, uint8 mask);
     event ApprovalRevoked(bytes32 indexed intent, address indexed approver, uint8 mask);
+    event RepeatCleared(bytes32 indexed repeatKey, address indexed to, address token, uint256 amount, uint64 until);
     event PausedSet(bool paused);
     event DailyLimitsSet(uint32 maxDecisions, uint32 maxBlocked);
     event BreakerSkipped(uint256 indexed slot, uint8 status);
@@ -274,6 +284,8 @@ contract FuseboxWallet is ReentrancyGuard {
                 }
             }
             if (c.approvalMask != 0) delete approvals[c.intent];
+            lastPaidAt[c.repeatKey] = uint64(block.timestamp);
+            if (c.repeatCleared) delete repeatClearedUntil[c.repeatKey];
         } else {
             blockedCount++;
             blockedToday++;
@@ -382,6 +394,11 @@ contract FuseboxWallet is ReentrancyGuard {
         return keccak256(abi.encode(block.chainid, address(this), approvalEpoch, token, to, amount));
     }
 
+    /// @notice The key the Repeat Guard remembers a payment by: the exact token, payee and amount.
+    function repeatKey(address token, address to, uint256 amount) public pure returns (bytes32) {
+        return keccak256(abi.encode(token, to, amount));
+    }
+
     /// @notice Approver bits currently valid for a payment, as the 2-of-3 socket will see them.
     function approvalMaskOf(address token, address to, uint256 amount) public view returns (uint8) {
         Approval memory a = approvals[intentHash(token, to, amount)];
@@ -468,6 +485,15 @@ contract FuseboxWallet is ReentrancyGuard {
     function setToken(address token, bool enabled) external onlyOwner {
         tokenEnabled[token] = enabled;
         emit TokenSet(token, enabled);
+    }
+
+    /// @notice Let the next payment of exactly (token, to, amount) past the Repeat Guard once, for the approval
+    ///         TTL: the owner saying "yes, this really is a second payment". `clear = false` withdraws it.
+    function clearRepeat(address token, address to, uint256 amount, bool clear) external onlyOwner {
+        bytes32 k = repeatKey(token, to, amount);
+        uint64 until = clear ? uint64(block.timestamp + approvalTtl) : 0;
+        repeatClearedUntil[k] = until;
+        emit RepeatCleared(k, to, token, amount, until);
     }
 
     /// @notice Add a payee. Its cooling-off clock starts now.
@@ -584,6 +610,9 @@ contract FuseboxWallet is ReentrancyGuard {
         }
         c.intent = intentHash(token, to, amount);
         c.approvalMask = approvalMaskOf(token, to, amount);
+        c.repeatKey = repeatKey(token, to, amount);
+        c.lastPaid = lastPaidAt[c.repeatKey];
+        c.repeatCleared = block.timestamp <= repeatClearedUntil[c.repeatKey];
     }
 
     function _decide(Ctx memory c) internal view returns (Verdict memory v) {
@@ -628,6 +657,10 @@ contract FuseboxWallet is ReentrancyGuard {
         }
         if (socket == Sockets.APPROVAL_2OF3) {
             return Sockets.approvalInputs(c.approvalMask, Sockets.amountPin(p, c.token, c.amount), p.a);
+        }
+        if (socket == Sockets.REPEAT_GUARD) {
+            bool repeat = c.lastPaid != 0 && block.timestamp < uint256(c.lastPaid) + uint256(p.a) * 1 hours;
+            return Sockets.repeatInputs(repeat, c.repeatCleared);
         }
         revert Sockets.UnknownSocket(socket);
     }

@@ -25,11 +25,12 @@ library FuseFixtures {
         string note;
     }
 
-    uint256 internal constant COUNT = 4;
+    uint256 internal constant COUNT = 5;
     uint256 internal constant DAILY_CAP = 0;
     uint256 internal constant PAYEE_GUARD = 1;
     uint256 internal constant BREAKER = 2;
     uint256 internal constant APPROVAL_2OF3 = 3;
+    uint256 internal constant REPEAT_GUARD = 4;
 
     function fixture(uint256 k) internal pure returns (Fixture memory f) {
         if (k == 0) {
@@ -88,6 +89,20 @@ library FuseFixtures {
                 netlist: hex"0000000500000d000000050000150000000600000e000000060000170000000e000017000000160000180000001900001a0000000700000f0000000700001c0000000f00001c0000001b00001d0000001e00001f000000080000100000000800002100000010000021000000200000220000002300002400000009000011000000090000260000001100002600000025000027000000280000290000000a0000120000000a00002b0000001200002b0000002a00002c0000002d00002e0000000b0000130000000b000030000000130000300000002f000031000000320000330000000c0000140000000c000035000000140000350000003400003600000037000038000000020000030000000200003a0000000300003a0000003b00003c0000000400003d0000003a00003e000000390000390000003f00003f00000040000041"
             });
         }
+        if (k == 4) {
+            return Fixture({
+                key: "repeat-guard",
+                socket: 5,
+                nIn: 2,
+                nOut: 1,
+                nState: 0,
+                gates: 2,
+                nand: 2,
+                latch: 0,
+                netlistHash: 0x5cac7b4654fd758e3b2a5d6b29962c3fe45cf090c913fd185e6bff06e6221c83,
+                netlist: hex"0000000300000300000002000004"
+            });
+        }
         revert("FuseFixtures: unknown fuse");
     }
 
@@ -135,6 +150,14 @@ library FuseFixtures {
             v[3] = Vector(hex"", hex"ffa700", hex"", hex"01", "over threshold, three approvals");
             v[4] = Vector(hex"", hex"260300", hex"", hex"01", "over threshold, approvers 1 and 2");
             v[5] = Vector(hex"", hex"240300", hex"", hex"00", "over threshold, approver 2 only");
+            return v;
+        }
+        if (k == 4) {
+            v = new Vector[](4);
+            v[0] = Vector(hex"", hex"00", hex"", hex"01", "first payment of this invoice");
+            v[1] = Vector(hex"", hex"01", hex"", hex"00", "same invoice again inside the window");
+            v[2] = Vector(hex"", hex"03", hex"", hex"01", "a repeat the owner cleared");
+            v[3] = Vector(hex"", hex"02", hex"", hex"01", "cleared but not a repeat");
             return v;
         }
         revert("FuseFixtures: unknown fuse");

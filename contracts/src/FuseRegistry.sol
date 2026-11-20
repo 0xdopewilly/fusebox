@@ -25,6 +25,9 @@ import {Sockets} from "./libraries/Sockets.sol";
 ///      - Listing reads circuitInfo and the netlist from the processor itself: the pinout must match the
 ///        socket, the gate count is bounded, and keccak256(netlist) must equal the hash the designer signed.
 ///      - Fee accounting never transfers tokens during a decision; `charge` only moves internal balances.
+///      - Socket pinouts are data, append-only: the built-in sockets are defined at deploy and the admin may
+///        add new ones later, but never change one, so every listing stays valid. A new socket needs new
+///        wallet code to drive it (a new FuseboxFactory), never a new registry, so the market stays one.
 contract FuseRegistry is Ownable2Step, ReentrancyGuard {
     using SafeERC20 for IERC20;
 
@@ -34,6 +37,12 @@ contract FuseRegistry is Ownable2Step, ReentrancyGuard {
     uint32 public constant MAX_STATE_BITS = 64;
     /// @notice The protocol's share of each fee can never exceed 20%.
     uint16 public constant MAX_PROTOCOL_FEE_BPS = 2_000;
+
+    struct SocketDef {
+        uint32 nIn;
+        uint32 nOut;
+        bool sequential;
+    }
 
     struct Fuse {
         address processor;
@@ -53,6 +62,9 @@ contract FuseRegistry is Ownable2Step, ReentrancyGuard {
     IERC20 public immutable feeToken;
     /// @notice The TapeOut processor factory.
     ITapeoutFactory public immutable factory;
+
+    /// @notice Pinout of every defined socket (nOut == 0: undefined). Append-only.
+    mapping(uint32 socket => SocketDef) public socketDef;
 
     uint256 public fuseCount;
     mapping(uint256 fuseId => Fuse) internal _fuses;
@@ -101,6 +113,7 @@ contract FuseRegistry is Ownable2Step, ReentrancyGuard {
     event ProcessorCodehashSet(bytes32 indexed codehash, address beacon);
     event ImplementationTrusted(address indexed implementation, bool trusted);
     event ProtocolFeeSet(uint16 bps);
+    event SocketDefined(uint32 indexed socket, uint32 nIn, uint32 nOut, bool sequential);
 
     error UntrustedProcessor(address processor);
     error NotCircuitOwner(address caller, address owner);
@@ -118,6 +131,8 @@ contract FuseRegistry is Ownable2Step, ReentrancyGuard {
     error InsufficientFeeBalance(uint256 balance, uint256 needed);
     error ZeroAddress();
     error FeeTooHigh();
+    error SocketExists(uint32 socket);
+    error BadSocket(uint32 socket);
 
     constructor(IERC20 feeToken_, ITapeoutFactory factory_, address admin, uint16 protocolFeeBps_) Ownable(admin) {
         if (address(feeToken_) == address(0) || address(factory_) == address(0)) revert ZeroAddress();
@@ -126,6 +141,26 @@ contract FuseRegistry is Ownable2Step, ReentrancyGuard {
         factory = factory_;
         protocolFeeBps = protocolFeeBps_;
         emit ProtocolFeeSet(protocolFeeBps_);
+        for (uint32 k = 1; k <= Sockets.LAST; ++k) {
+            (uint32 nIn, uint32 nOut) = Sockets.pinout(k);
+            _defineSocket(k, nIn, nOut, Sockets.sequential(k));
+        }
+    }
+
+    // ---------------------------------------------------------------------------------------------
+    // Sockets (admin, append-only)
+    // ---------------------------------------------------------------------------------------------
+
+    /// @notice Define a new socket's pinout. A socket can never be changed once defined.
+    function defineSocket(uint32 socket, uint32 nIn, uint32 nOut, bool sequential) external onlyOwner {
+        _defineSocket(socket, nIn, nOut, sequential);
+    }
+
+    function _defineSocket(uint32 socket, uint32 nIn, uint32 nOut, bool sequential) internal {
+        if (socket == 0 || nIn == 0 || nOut == 0) revert BadSocket(socket);
+        if (socketDef[socket].nOut != 0) revert SocketExists(socket);
+        socketDef[socket] = SocketDef({nIn: nIn, nOut: nOut, sequential: sequential});
+        emit SocketDefined(socket, nIn, nOut, sequential);
     }
 
     // ---------------------------------------------------------------------------------------------
@@ -154,13 +189,13 @@ contract FuseRegistry is Ownable2Step, ReentrancyGuard {
         uint256 existing = fuseIdOf[processor][circuitId];
         if (existing != 0) revert AlreadyListed(existing);
 
-        (uint32 sIn, uint32 sOut) = Sockets.pinout(socket);
-        if (sOut == 0) revert Sockets.UnknownSocket(socket);
+        SocketDef memory sd = socketDef[socket];
+        if (sd.nOut == 0) revert Sockets.UnknownSocket(socket);
         (uint32 nIn, uint32 nOut, uint32 nState, uint32 gates) = ITapeoutProcessor(processor).circuitInfo(circuitId);
-        if (nIn != sIn || nOut != sOut) revert PinoutMismatch(socket, nIn, nOut);
+        if (nIn != sd.nIn || nOut != sd.nOut) revert PinoutMismatch(socket, nIn, nOut);
         if (gates == 0 || gates > MAX_GATES) revert TooManyGates(gates);
         if (nState > MAX_STATE_BITS) revert TooMuchState(nState);
-        if (Sockets.sequential(socket) ? nState == 0 : nState != 0) revert StateMismatch(socket, nState);
+        if (sd.sequential ? nState == 0 : nState != 0) revert StateMismatch(socket, nState);
         bytes memory nl = ITapeoutProcessor(processor).netlist(circuitId);
         bytes32 actual = keccak256(nl);
         if (actual != netlistHash) revert NetlistHashMismatch(netlistHash, actual);
