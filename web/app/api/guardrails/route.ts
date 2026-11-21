@@ -1,3 +1,4 @@
+import { ipKey } from "@/lib/clientIp";
 import { propose } from "@/lib/guardrails";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ function allow(ip: string) {
 
 /** Plain-English guardrails: describe the agent, get a proposed line of fuses with reasons and test payments. */
 export async function POST(req: Request) {
-  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "local";
+  const ip = ipKey(req);
   if (!allow(ip)) return Response.json({ error: "A few proposals a minute is plenty. Try again shortly." }, { status: 429 });
   let description = "";
   try { description = String((await req.json()).description ?? "").trim(); } catch { /* empty */ }

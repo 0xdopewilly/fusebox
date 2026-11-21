@@ -1,3 +1,4 @@
+import { ipKey } from "@/lib/clientIp";
 import type { Address } from "viem";
 import { parseUnits } from "viem";
 import { checkPayment } from "@/lib/atlas";
@@ -27,7 +28,7 @@ export function GET() {
  * refused, what the message asked for) goes through Atlas's real check() on X Layer. Read-only: nothing is paid.
  */
 export async function POST(req: Request) {
-  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "local";
+  const ip = ipKey(req);
   if (!allow(ip)) return Response.json({ error: "That's a lot of heists in a minute. Give it a moment." }, { status: 429 });
   let message = "";
   try { message = String((await req.json()).message ?? ""); } catch { /* empty */ }

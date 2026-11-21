@@ -1,12 +1,24 @@
-import { getAddress, isAddress, parseUnits, recoverMessageAddress, type Address, type Hex } from "viem";
+import { formatUnits, getAddress, isAddress, parseUnits, recoverMessageAddress, type Address, type Hex } from "viem";
 import { client, DEPLOYMENT } from "@/lib/chain";
 import { fuseboxWalletAbi } from "@/lib/abi";
 import { isFuseboxWallet } from "@/lib/atlas";
 import { alertFor, requestMessage, sendOnce } from "@/lib/push";
+import { getJson, putJson } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 const APPROVAL_SOCKET = 4, BLEW = 1;
+/** Alert requests one wallet can make per hour, across every instance (a soft cap kept in the store). */
+const PER_WALLET_HOURLY = 10;
+async function takeWalletSlot(wallet: Address): Promise<boolean> {
+  const key = `push/rate/${wallet.toLowerCase()}/${new Date().toISOString().slice(0, 13).replace(/[-T:]/g, "")}.json`;
+  try {
+    const n = (await getJson<{ n: number }>(key))?.n ?? 0;
+    if (n >= PER_WALLET_HOURLY) return false;
+    await putJson(key, { n: n + 1 });
+  } catch { /* the store being down doesn't block a real request */ }
+  return true;
+}
 
 /**
  * An agent asks its wallet's approvers for a payment: signed by the agent's key, checked on X Layer (the signer is an
@@ -21,6 +33,8 @@ export async function POST(req: Request) {
   const wallet = getAddress(b.wallet.toLowerCase()), to = getAddress(b.to.toLowerCase()), amount = b.amount!, memo = (b.memo ?? "").slice(0, 200);
   const signer = await recoverMessageAddress({ message: requestMessage(wallet, to, amount, memo, b.issued), signature: b.signature as Hex }).catch(() => null);
   if (!signer) return Response.json({ error: "Bad signature." }, { status: 401 });
+  // one spelling per amount ("5", "5.0" and "05" are the same request), so the once-per-hour dedupe holds
+  const canonical = formatUnits(parseUnits(amount, 6), 6);
   const W = { address: wallet, abi: fuseboxWalletAbi } as const;
   try {
     const [genuine, agent] = await Promise.all([isFuseboxWallet(wallet), client.readContract({ ...W, functionName: "isAgent", args: [signer] })]);
@@ -33,10 +47,11 @@ export async function POST(req: Request) {
     const sockets = await Promise.all(Array.from({ length: Number(n) }, (_, i) => client.readContract({ ...W, functionName: "slotAt", args: [BigInt(i)] }).then((s) => Number(s.socket))));
     const held = sockets.some((s, i) => s === APPROVAL_SOCKET && status[i] === BLEW);
     if (!held) return Response.json({ error: "No approval fuse is holding that payment, so there's nothing to approve." }, { status: 409 });
+    if (!(await takeWalletSlot(wallet))) return Response.json({ error: `That wallet already asked ${PER_WALLET_HOURLY} times this hour; its approvers have been told.` }, { status: 429 });
     const origin = new URL(req.url).origin;
-    const alert = alertFor({ wallet, isAtlas: wallet.toLowerCase() === DEPLOYMENT.atlas.toLowerCase(), to, amount, memo }, origin);
+    const alert = alertFor({ wallet, isAtlas: wallet.toLowerCase() === DEPLOYMENT.atlas.toLowerCase(), to, amount: canonical, memo }, origin);
     const live = (seats as readonly Address[]).filter((s) => !/^0x0{40}$/i.test(s));
-    const out = await Promise.all(live.map((s) => sendOnce(s, `req|${wallet}|${to}|${amount}|${Math.floor(b.issued! / 600)}`, alert)));
+    const out = await Promise.all(live.map((s) => sendOnce(s, `req|${wallet}|${to}|${canonical}|${Math.floor(b.issued! / 3600)}`, alert)));
     return Response.json({ seats: live.length, sent: out.reduce((t, r) => t + r.sent, 0), url: alert.url });
   } catch (e) {
     console.error("notify", (e as Error).message);

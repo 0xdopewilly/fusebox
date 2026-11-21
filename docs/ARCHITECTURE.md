@@ -219,7 +219,9 @@ flowchart LR
 | Quantisation lets more through | Amount and spent round up; saturation at 255 with parameters capped at 254. Fuzz test: a random day of payments never moves more than the cap. |
 | Cap window | The cap is per UTC calendar day, so up to 2× the cap can leave across midnight. A rolling-window cap would be a new socket. |
 | Time | Hours and UTC days only; X Layer's sequencer timestamps are far more precise than that. |
-| Registry admin | Can change trust settings and the protocol share (≤ 20%); cannot touch fee balances or earnings. Should be a multisig before launch. |
+| Registry admin | Can change trust settings and the protocol share (≤ 20%); cannot touch fee balances or earnings. `contracts/script/registry-to-safe.sh` hands both registries to a Safe multisig (rehearsed on a fork). |
+| x402 payment taken by someone watching the chain | The proof carries the paying agent's signature over the offer's nonce and the transaction; sellers check it recovers to the Decision's `agent`. |
+| A wallet with no amount limit | The wizard refuses a line without the Daily Cap or Two of Three; the owner console warns about one, and before removing the last. |
 
 Trust assumptions that remain: TapeOut's factory owner can upgrade code (mitigated by fail-closed
 attestation), USDT0's issuer can freeze addresses, and the wallet owner is fully trusted.

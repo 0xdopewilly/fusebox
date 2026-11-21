@@ -12,4 +12,7 @@ jobs:
     timeout-minutes: 3
     steps:
       - name: Announce new decisions
-        run: curl -s --max-time 90 -w "\n%{http_code}\n" "https://fusebox-xlayer.vercel.app/api/telegram/sweep" || true
+        run: |
+          curl -s --max-time 90 -w "\n%{http_code}\n" -H "Authorization: Bearer $CRON_SECRET" "https://fusebox-xlayer.vercel.app/api/telegram/sweep" || true
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}

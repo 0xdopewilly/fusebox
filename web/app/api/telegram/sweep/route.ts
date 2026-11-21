@@ -1,4 +1,5 @@
 import { client } from "@/lib/chain";
+import { cronAuthorized, cronDenied } from "@/lib/cron";
 import { announce, decisionsBetween, followedWallets, sweepState, TG_READY } from "@/lib/telegram";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +10,8 @@ const LOOKBACK = 3600; // blocks (about an hour on X Layer): the most a sweep re
  * Catches decisions nobody announced through notify (an agent paying with its own code): reads the followed wallets'
  * Decision events since the last sweep and announces each once. Run every 10 minutes by a GitHub workflow; safe any time.
  */
-export async function GET() {
+export async function GET(req: Request) {
+  if (!cronAuthorized(req)) return cronDenied();
   if (!TG_READY) return Response.json({ ready: false });
   try {
     const head = Number(await client.getBlockNumber());

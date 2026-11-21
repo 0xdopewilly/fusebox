@@ -14,6 +14,11 @@ jobs:
     steps:
       - name: Visit the data endpoints
         run: |
-          for p in /api/atlas /api/market /api/push/sweep; do
+          for p in /api/atlas /api/market; do
             curl -s -o /dev/null -w "$p %{http_code} %{time_total}s\n" --max-time 150 "https://fusebox-xlayer.vercel.app$p" || true
           done
+          # the sweep only runs for this workflow: it sends the shared CRON_SECRET
+          curl -s -o /dev/null -w "/api/push/sweep %{http_code} %{time_total}s\n" --max-time 150 \
+            -H "Authorization: Bearer $CRON_SECRET" "https://fusebox-xlayer.vercel.app/api/push/sweep" || true
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}

@@ -1,3 +1,4 @@
+import { ipKey } from "@/lib/clientIp";
 import { preflight, PreflightError, type PreflightRequest } from "@/lib/preflight";
 import { CURRENT } from "@/lib/chain";
 
@@ -30,7 +31,7 @@ export function GET() {
 export const OPTIONS = () => new Response(null, { status: 204, headers: CORS });
 
 export async function POST(req: Request) {
-  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "local";
+  const ip = ipKey(req);
   if (!allow(ip)) return Response.json({ error: "Sixty pre-flights a minute is the limit. Try again shortly." }, { status: 429, headers: CORS });
   let body: PreflightRequest;
   try { body = await req.json(); } catch { return Response.json({ error: "Send JSON: { line, payment, context }. GET this URL for an example." }, { status: 400, headers: CORS }); }

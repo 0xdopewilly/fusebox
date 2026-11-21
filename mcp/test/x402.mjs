@@ -1,5 +1,6 @@
 // fusebox_fetch over a real MCP client, on a fork: pays the honest demo seller, refuses the scam, honours max_price and dry_run.
 //   FUSEBOX_RPC=http://127.0.0.1:8547 FUSEBOX_AGENT_KEY=0x… APP=http://localhost:3120 node test/x402.mjs
+//   (the local app is a private host, so the server runs with FUSEBOX_ALLOW_PRIVATE_URLS=1)
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { fileURLToPath } from "node:url";
@@ -8,7 +9,7 @@ let fails = 0; const check = (n, ok, d = "") => { if (!ok) fails++; console.log(
 const start = async (env) => { const c = new Client({ name: "x402-test", version: "0.0.0" }); await c.connect(new StdioClientTransport({ command: process.execPath, args: [fileURLToPath(new URL("../index.mjs", import.meta.url))], env })); return c; };
 const call = async (c, args) => { const r = await c.callTool({ name: "fusebox_fetch", arguments: args }); return { err: !!r.isError, text: r.content[0].text, s: r.structuredContent ?? {} }; };
 
-const payer = await start({ ...process.env });
+const payer = await start({ ...process.env, FUSEBOX_ALLOW_PRIVATE_URLS: "1" });
 const { tools } = await payer.listTools();
 check("fusebox_fetch is listed", tools.some((t) => t.name === "fusebox_fetch"));
 const paid = await call(payer, { url: APP + "/api/x402/prices" });
@@ -24,7 +25,7 @@ check("a free URL comes straight back", free.s.status === 200 && free.s.paid ===
 await payer.close();
 
 const { FUSEBOX_AGENT_KEY: _k, ...noKey } = process.env;
-const reader = await start(noKey);
+const reader = await start({ ...noKey, FUSEBOX_ALLOW_PRIVATE_URLS: "1" });
 const ro = await call(reader, { url: APP + "/api/x402/prices" });
 check("without a key it's a dry run", ro.s.dry_run === true && /Read-only/.test(ro.text));
 await reader.close();

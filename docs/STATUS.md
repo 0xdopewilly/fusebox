@@ -58,7 +58,8 @@ The app always shows the live figures.
 |---|---|
 | `circuits`: `npm test` | 36/36 pass (five fuses). These include TAP-02's official vectors, all 2^24 Daily Cap inputs, all 2^19 Two of Three inputs, all 2^33 Payee Guard inputs by BDD proof (plus block-exhaustive and 4M random as a cross-check), every Breaker state and input pair, and stuck-at fault coverage. |
 | `contracts`: `forge test` | 99 pass offline. They include 12 invariants, each over 256 runs of 256 random calls from every role (agent, owner, approvers, designer, TapeOut upgrading its processor, an attacker) against all five real fuses, with a separate model predicting every decision and fee. Long walks must reach every path, and fuzz tests cover the daily cap, quantisation and registry solvency. The X Layer fork suite passes 5/5 against mainnet state (re-run 2026-11-19). |
-| Mutation check (`contracts/test/invariant/mutation.py`) | 10 realistic bugs planted one at a time (a breaker that forgets, approvals not used up, a fee above what the owner accepted, a missing access check, and so on); all 10 are caught. See [ASSURANCE.md](ASSURANCE.md). |
+| Mutation check (`contracts/test/invariant/mutation.py`) | 14 realistic bugs planted one at a time (a breaker that forgets, approvals not used up, a fee above what the owner accepted, a missing access check, a remeasured cap that keeps its count, a one-step ownership change, and so on); all 14 are caught. See [ASSURANCE.md](ASSURANCE.md). |
+| Off-chain review | Every API route, the SDK and the MCP server: 4 medium and 5 low findings, all fixed and tested on a mainnet fork (x402 proofs signed by the paying agent, push alerts locked to push services and approvers, sweeps behind a secret, shared AI budgets, a rate-limited RPC proxy, bounded metadata reads, a Content Security Policy). See [ASSURANCE.md](ASSURANCE.md). |
 | Static analysis | `forge lint`: no findings in `src/`. Slither 0.11.6: 37 results, none a defect, each triaged in [ASSURANCE.md](ASSURANCE.md). |
 | v2 deploy (2026-11-20) | Rehearsed on a fresh mainnet fork minutes before the broadcast, then 11/11 transactions landed. Live checks after: 5 fuses listed, sockets 1–5 defined, circuit #21 answers `eval` correctly for first, repeat and cleared payments. |
 | End to end, on a mainnet fork | 19 desktop flows and 11 phone flows pass, driven by a test wallet: the wizard, agent payments, the Breaker blowing and being reset, payees, fee withdrawal, freeze, My wallets, 2-of-3 approve and revoke, the playground, no-wallet, wrong-network and declined-signature paths. |
@@ -89,7 +90,7 @@ What was verified against the real TapeOut contracts on a fork before launch:
 | Protocol share | 10% of every fee; the contract caps it at 20%. |
 | Fees for our fuses | Daily Cap and Payee Guard 0.001 USDT0 per check, Breaker 0.0005, Two of Three 0.002, Repeat Guard 0.0005. |
 | Who can freeze | The owner, agents and approvers can freeze; only the owner can reset. |
-| Registry admin | The deployer for now; a multisig before any real value. |
+| Registry admin | The deployer for now. `contracts/script/registry-to-safe.sh` moves both registries to a Safe multisig, rehearsed on a mainnet fork; it waits on the owners' addresses. |
 
 ## Known gaps
 

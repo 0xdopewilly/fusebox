@@ -185,20 +185,38 @@ server.registerTool("fusebox_status", {
   } catch (e) { return fail(e); }
 });
 
+/** What a paid fetch may cost when the caller sets no max_price (USDT0); FUSEBOX_MAX_PRICE changes it. */
+const DEFAULT_MAX_PRICE = process.env.FUSEBOX_MAX_PRICE || "0.10";
+
+/** Paid fetches go to public hosts only: a prompt can't point the agent at localhost or the LAN (set FUSEBOX_ALLOW_PRIVATE_URLS=1 for local tests). */
+function assertPublicUrl(raw) {
+  const u = new URL(raw);
+  if (u.protocol !== "https:" && u.protocol !== "http:") throw new Error(`${raw}: only http(s) URLs can be fetched.`);
+  if (process.env.FUSEBOX_ALLOW_PRIVATE_URLS === "1") return;
+  const h = u.hostname.toLowerCase().replace(/^\[|\]$/g, "");
+  const v4 = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)?.slice(1).map(Number);
+  const privateV4 = v4 && (v4[0] === 10 || v4[0] === 127 || v4[0] === 0 || (v4[0] === 169 && v4[1] === 254) || (v4[0] === 172 && v4[1] >= 16 && v4[1] <= 31) || (v4[0] === 192 && v4[1] === 168) || (v4[0] === 100 && v4[1] >= 64 && v4[1] <= 127));
+  const privateV6 = h.includes(":") && (h === "::1" || h === "::" || /^f[cd]/.test(h) || /^fe[89ab]/.test(h) || h.startsWith("::ffff:"));
+  const localName = h === "localhost" || /\.(localhost|local|internal|lan|home\.arpa)$/.test(h) || !h.includes(".") && !h.includes(":");
+  if (privateV4 || privateV6 || localName) throw new Error(`${raw} is a private or local address; paid fetches go to public hosts only.`);
+}
+
 server.registerTool("fusebox_fetch", {
   title: "Fetch a URL, paying for it through the fuses if it asks (x402)",
-  description: `Fetch a URL. If it answers 402 with an x402 offer that takes Fusebox payments (scheme "fusebox" on X Layer, in USDT0), the price is paid from the Fusebox wallet ${WALLET} only if every fuse allows it, then the request is retried with the proof and the response comes back. A refused price moves nothing. Use max_price to cap what you'll pay, and dry_run to see the price and the fuses' answer without paying. Without FUSEBOX_AGENT_KEY it behaves as a dry run.`,
+  description: `Fetch a URL. If it answers 402 with an x402 offer that takes Fusebox payments (scheme "fusebox" on X Layer, in USDT0), the price is paid from the Fusebox wallet ${WALLET} only if every fuse allows it, then the request is retried with the proof and the response comes back. A refused price moves nothing. It pays at most max_price (default ${DEFAULT_MAX_PRICE} USDT0 when you don't set one), only to public hosts. Use dry_run to see the price and the fuses' answer without paying. Without FUSEBOX_AGENT_KEY it behaves as a dry run.`,
   inputSchema: {
     url: z.string().url().describe("The URL to fetch"),
     method: z.enum(["GET", "POST"]).optional().describe("Default GET"),
     body: z.string().max(20000).optional().describe("Request body for POST (sent as-is)"),
     content_type: z.string().optional().describe("Content-Type for the body, default application/json"),
-    max_price: z.string().optional().describe("Most you'll pay for this call, in USDT0, e.g. \"0.05\""),
+    max_price: z.string().optional().describe(`Most you'll pay for this call, in USDT0, e.g. "0.05". Default ${DEFAULT_MAX_PRICE}`),
     dry_run: z.boolean().optional().describe("Only report the price and what the fuses would say"),
   },
 }, async ({ url, method = "GET", body, content_type, max_price, dry_run }) => {
   try {
-    const init = { method, ...(body !== undefined ? { body, headers: { "content-type": content_type || "application/json" } } : {}) };
+    assertPublicUrl(url);
+    const cap = max_price ?? DEFAULT_MAX_PRICE;
+    const init = { method, redirect: "error", ...(body !== undefined ? { body, headers: { "content-type": content_type || "application/json" } } : {}) };
     const first = await fetch(url, init);
     if (first.status !== 402) return text({ url, status: first.status, paid: false, body: await excerpt(first) }, `${url} answered ${first.status} without asking for payment.`);
     const offer = await offerOf(first);
@@ -207,17 +225,20 @@ server.registerTool("fusebox_fetch", {
     if (!req) throw new Error(`${url} doesn't take Fusebox payments; it offers ${offer.accepts.map((a) => `${a.scheme} on ${a.network}`).join(", ") || "nothing"}.`);
     const price = usd(BigInt(req.amount)), payTo = parseTo(req.payTo);
     const base = { url, price, pay_to: payTo, resource: offer.resource?.url ?? url };
-    if (max_price !== undefined && Number(price) > Number(max_price)) return text({ ...base, paid: false }, `Not paid: ${url} costs ${price} USDT0, over your ${max_price} USDT0 limit.`);
     if (dry_run || !signer) {
       const c = await checkPayment(payTo, price);
       return text({ ...base, paid: false, dry_run: true, check: c.out }, `${dry_run ? "Dry run" : "Read-only"}: ${url} costs ${price} USDT0 to ${payTo}. ${c.allowed ? "Every fuse would allow it." : c.summary}`);
     }
     const c = await checkPayment(payTo, price);
     if (!c.allowed) return text({ ...base, paid: false, check: c.out }, `Not paid for ${url}: ${c.summary}`);
+    // the fuses would allow it; the caller's own price limit still applies
+    if (Number(price) > Number(cap)) return text({ ...base, paid: false, max_price: cap }, `Not paid: ${url} costs ${price} USDT0, over your ${cap} USDT0 limit${max_price === undefined ? " (the default; pass max_price to pay more)" : ""}.`);
     let where = base.resource; try { const u = new URL(base.resource); where = u.host + u.pathname; } catch {}
     const p = await payThrough(payTo, price, `x402 ${String(req.extra?.nonce ?? "")} ${where}`.slice(0, 200));
     if (!p.paid) return text({ ...base, paid: false, payment: p.out }, `Not paid for ${url}: ${p.summary}`);
-    const proof = b64json({ x402Version: 2, resource: offer.resource, accepted: req, payload: { wallet: WALLET, transaction: p.hash, decisionId: p.decision } });
+    // signed by the agent that paid, so nobody watching the chain can redeem the payment first
+    const signature = await signer.signMessage({ message: `Fusebox x402 payment\nnonce: ${String(req.extra?.nonce ?? "")}\ntransaction: ${String(p.hash).toLowerCase()}` });
+    const proof = b64json({ x402Version: 2, resource: offer.resource, accepted: req, payload: { wallet: WALLET, transaction: p.hash, decisionId: p.decision, signature } });
     const second = await fetch(url, { ...init, headers: { ...(init.headers ?? {}), "PAYMENT-SIGNATURE": proof, ...(offer.x402Version < 2 ? { "X-PAYMENT": proof } : {}) } });
     let settlement; try { const h = second.headers.get("payment-response") ?? second.headers.get("x-payment-response"); settlement = h ? unb64json(h) : undefined; } catch {}
     const out = { ...base, paid: second.ok, status: second.status, decision: p.decision, tx: p.out.tx, fuses: p.out.fuses, settlement, body: await excerpt(second) };

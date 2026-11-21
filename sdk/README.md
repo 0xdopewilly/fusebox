@@ -95,9 +95,10 @@ export async function GET(req: Request) {
 ```
 
 The `fusebox` scheme: the offer carries a nonce the seller signed; the buyer pays through its fuses with
-`x402 <nonce>` in the memo and retries with `PAYMENT-SIGNATURE` (wallet + transaction); the seller checks on X Layer
-that the Fusebox factory made the wallet, that its Decision allowed this payee and price with that nonce, and that
-USDT0 moved. `x402.verifyFuseboxPayment()` does that check on its own, for your own stack. x402's `exact` scheme
+`x402 <nonce>` in the memo and retries with `PAYMENT-SIGNATURE`: the wallet, the transaction, and the paying agent's
+signature over the nonce and transaction (`x402.proofMessage`). The seller checks on X Layer that the Fusebox factory
+made the wallet, that its Decision allowed this payee and price with that nonce, that USDT0 moved, and that the
+signature comes from the agent that paid, so nobody watching the chain can redeem the payment first. `x402.verifyFuseboxPayment()` does that check on its own, for your own stack. x402's `exact` scheme
 doesn't fit a Fusebox wallet: it's a contract that only pays through its fuses, so the on-chain Decision is the proof.
 
 ## Pre-flight, for any wallet

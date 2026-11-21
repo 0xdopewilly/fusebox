@@ -160,12 +160,16 @@ export default function NewWalletView() {
   const floatUnits = (() => { try { return parseUnits(float || "0", 6); } catch { return -1n; } })();
   const goodPayees = payees.filter((p) => p.trim());
   const gasWei = (() => { try { return parseEther(gas || "0"); } catch { return -1n; } })();
+  // only the Daily Cap and Two of Three read how much is paid for every payee: without one, a saved payee can be sent everything
+  const noLimit = Object.values(on).some(Boolean) && !on["daily-cap"] && !on["approval-2of3"];
+  const NO_LIMIT = "Turn on the Daily Cap or Two of Three. Without one, nothing limits how much the agent can send to a saved payee.";
   const problems = useMemo(() => {
     const p: string[] = [];
     if (!account) p.push("Connect a wallet: it becomes the owner.");
     if (!isAddress(agent.trim(), { strict: false })) p.push("Enter your agent's address.");
     else if (account && agent.trim().toLowerCase() === account.toLowerCase()) p.push("Use a separate key for the agent, not your own.");
     if (!Object.values(on).some(Boolean)) p.push("Pick at least one fuse.");
+    else if (noLimit) p.push(NO_LIMIT);
     if (on["approval-2of3"] && approvers.some((a) => !isAddress(a.trim(), { strict: false }))) p.push("Two of Three needs three approver addresses.");
     if (goodPayees.some((x) => !isAddress(x.trim(), { strict: false }))) p.push("A saved payee isn't a valid address.");
     if (depositUnits < 0n || floatUnits < 0n) p.push("Amounts must be numbers, up to 6 decimals.");
@@ -174,7 +178,7 @@ export default function NewWalletView() {
     else if (bal && gasWei > 0n && bal.okb <= gasWei) p.push(`The agent's gas (${gas} OKB) is more than the OKB you have; lower it or top up.`);
     if (gasWei < 0n) p.push("Agent gas must be a number of OKB.");
     return p;
-  }, [account, agent, on, approvers, goodPayees, depositUnits, floatUnits, bal, gas, gasWei]);
+  }, [account, agent, on, approvers, goodPayees, depositUnits, floatUnits, bal, gas, gasWei, noLimit]);
 
   const ZERO = "0x0000000000000000000000000000000000000000" as Address;
   const paramsOf = (f: (typeof FUSES)[number]) => f.key === "breaker" ? { token: ZERO, unit: 0n, a: 0, b: 0 }
@@ -380,6 +384,7 @@ export default function NewWalletView() {
               {!on[f.key] && <p className="mnote">{f.say}</p>}
             </div>
           ))}
+          {noLimit && <p className="mnote" role="alert" style={{ color: "var(--red)" }}>{NO_LIMIT}</p>}
           <Link className="m lime" href={simLink}>Test this line on sample payments →</Link>
         </>}
         {step === 4 && <>
@@ -536,6 +541,7 @@ export default function NewWalletView() {
                   );
                 })}
               </div>
+              {noLimit && <div className="wz-nolimit" role="alert">{NO_LIMIT}</div>}
               {FUSES.map((f) => (
                 <div className="fopt" key={f.key}>
                   <Toggle on={on[f.key]} flip={() => toggle(f.key)} name={f.name} />

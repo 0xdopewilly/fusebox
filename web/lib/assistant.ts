@@ -1,4 +1,5 @@
 import "server-only";
+import { takeDailyCall } from "./aiBudget";
 import { getAddress, isAddress, type Address } from "viem";
 
 /**
@@ -18,6 +19,7 @@ export interface AssistantReply { mode: "llm" | "scripted"; model?: string; repl
 const KEY = process.env.NEARAI_API_KEY;
 const MODEL = process.env.FUSEBOX_ASSISTANT_MODEL || "anthropic/claude-haiku-5-5";
 const HOURLY = Number(process.env.FUSEBOX_ASSISTANT_HOURLY_CAP || 120);
+const DAILY = Number(process.env.FUSEBOX_ASSISTANT_DAILY_CAP || 800);
 let calls: number[] = [];
 let downUntil = 0;
 
@@ -100,8 +102,8 @@ class Down extends Error { constructor(readonly ms: number, why: string) { super
 
 export function assistantMode() {
   if (!KEY || Date.now() < downUntil) return { mode: "scripted" as const, label: "a simple reader (the model is off)" };
-  calls = calls.filter((t) => Date.now() - t < 3_600_000);
-  if (calls.length >= HOURLY) return { mode: "scripted" as const, label: "a simple reader (busy hour)" };
+  calls = calls.filter((t) => Date.now() - t < 86_400_000);
+  if (calls.filter((t) => Date.now() - t < 3_600_000).length >= HOURLY || calls.length >= DAILY) return { mode: "scripted" as const, label: "a simple reader (busy hour)" };
   return { mode: "llm" as const, label: `${MODEL.replace(/^.*\//, "").replace(/^claude-haiku-5-5$/, "Claude Haiku 5.5")} on NEAR AI Cloud` };
 }
 
@@ -141,7 +143,7 @@ Fuses: ${ctx.fuses.map((f) => (f.limit ? `${f.name} (${f.limit})` : f.name)).joi
 }
 
 export async function runAssistant(message: string, history: Turn[], ctx: AssistantContext): Promise<AssistantReply> {
-  if (assistantMode().mode === "scripted") return scripted(message, ctx);
+  if (assistantMode().mode === "scripted" || !(await takeDailyCall("assistant"))) return scripted(message, ctx);
   calls.push(Date.now());
   try { return await nearai(message, history, ctx); }
   catch (e) {

@@ -21,6 +21,8 @@ const same = (a?: string, b?: string) => !!a && !!b && a.toLowerCase() === b.toL
 type Tab = "safety" | "fuses" | "payees" | "people" | "money" | "owner";
 type One = (label: string, run: () => Promise<Hash | null>) => void;
 interface P { data: Atlas; busy: boolean; one: One; many: (list: TxStep<object>[]) => void; account: Address }
+/** Fuses on the Daily Cap or Two of Three socket read how much is paid for every payee; without one, nothing limits amounts. */
+const limitsAmounts = (f: { socket: number }) => f.socket === 1 || f.socket === 4;
 
 /** A button that asks again before it acts; it disarms itself after a few seconds. */
 function Confirm({ label, sure, disabled, onConfirm, className = "btn" }: { label: string; sure: string; disabled?: boolean; onConfirm: () => void; className?: string }) {
@@ -158,13 +160,14 @@ function FuseRow({ f, i, data, busy, one }: P & { f: FuseSlot; i: number }) {
   const raised = parseUnits(f.fee, 6) > parseUnits(f.maxFee, 6);
   const parsed = spec ? parse(fields, vals) : "Unknown socket";
   const changed = typeof parsed !== "string" && (parsed.a !== f.a || (parsed.b ?? 0) !== f.b);
+  const lastLimit = limitsAmounts(f) && !data.fuses.some((x, j) => j !== i && limitsAmounts(x));
   return (
     <li className="oc-fuse">
       <div className="of-top">
         <div className="grow"><b>{f.name}</b><span className="m mute">Slot {i + 1} · circuit #{f.circuitId} · {describe(f.socket, f.a, f.b, f.unit, f.paramLabels)}</span></div>
         <div className="of-btns">
           {fields.length ? <button className="btn" disabled={busy} onClick={() => setOpen(!open)} aria-expanded={open}>{open ? "Close" : "Edit"}</button> : null}
-          <Confirm label="Remove" sure="Remove it?" className="btn danger" disabled={busy} onConfirm={() => one(`Remove ${f.name}`, () => write({ ...W, functionName: "removeFuse", args: [BigInt(i)] }))} />
+          <Confirm label="Remove" sure={lastLimit ? "Then nothing limits how much the agent sends. Remove it?" : "Remove it?"} className="btn danger" disabled={busy} onConfirm={() => one(`Remove ${f.name}`, () => write({ ...W, functionName: "removeFuse", args: [BigInt(i)] }))} />
         </div>
       </div>
       <div className="m mute of-fee">Fee {f.fee} USD₮0 a check · you accept up to {f.maxFee}{f.latched ? <span className="red"> · blown</span> : null}</div>
@@ -237,6 +240,7 @@ function Fuses(p: P) {
     <>
       <Row title={`On the line · ${data.fuses.length} of 8`} say="Every payment runs through these in order, in one call. Removing a fuse keeps the others' order; editing keeps its install and resets nothing but the setting.">
         {data.fuses.length ? null : <span className="oc-err">No fuses: the wallet refuses every payment until you install one.</span>}
+        {data.fuses.length && !data.fuses.some(limitsAmounts) ? <span className="oc-err">Nothing on this line limits how much the agent can send to a saved payee. Install a Daily Cap or Two of Three.</span> : null}
       </Row>
       <ul className="oc-fuses">{data.fuses.map((f, i) => <FuseRow key={`${f.fuseId}-${i}`} {...p} f={f} i={i} />)}</ul>
       <Row title="Install a fuse" say="Any fuse listed in the registry, from any designer. Its fee is charged per check from your fee balance, and you only ever pay the fee you accept here.">

@@ -58,6 +58,43 @@ async function getLogsBatch(url: string, ranges: [number, number][], signal: Abo
   });
 }
 
+/**
+ * Logs read from a third-party RPC are checked against their transactions' receipts on another RPC (the official one
+ * first) before they're kept, and then cached for good: a source can't invent a decision or a payee. (It could still
+ * leave one out; the app's own reads of wallet state come from contract calls, not from logs.)
+ */
+const VERIFY_WITH = IS_FORK || LOGS_RPC ? [] : [RPC, "https://xlayer.drpc.org"];
+const sameLog = (a: RawLog, b: LogJson) => (b.address as string)?.toLowerCase() === a.address && parseInt(b.logIndex as string, 16) === a.logIndex
+  && parseInt(b.blockNumber as string, 16) === a.blockNumber && (b.data as string)?.toLowerCase() === a.data.toLowerCase()
+  && Array.isArray(b.topics) && b.topics.length === a.topics.length && b.topics.every((t, i) => t.toLowerCase() === a.topics[i].toLowerCase());
+async function verifyLogs(source: string, logs: RawLog[], signal: AbortSignal) {
+  const others = VERIFY_WITH.filter((u) => u !== source);
+  if (source === RPC || !others.length || !logs.length) return;
+  const byTx = new Map<string, RawLog[]>();
+  for (const l of logs) byTx.set(l.transactionHash.toLowerCase(), [...(byTx.get(l.transactionHash.toLowerCase()) ?? []), l]);
+  const txs = [...byTx.keys()];
+  for (let i = 0; i < txs.length; i += 10) {
+    const chunk = txs.slice(i, i + 10);
+    const body = JSON.stringify(chunk.map((h, id) => ({ jsonrpc: "2.0", id, method: "eth_getTransactionReceipt", params: [h] })));
+    let receipts: ({ logs?: LogJson[] } | null)[] | null = null;
+    for (const url of others) {
+      try {
+        const r = await fetch(url, { method: "POST", headers: { "content-type": "application/json" }, body, cache: "no-store", signal: AbortSignal.any([signal, AbortSignal.timeout(CALL_MS)]) });
+        const j = (await r.json()) as { id: number; result?: { logs?: LogJson[] } | null }[];
+        if (!Array.isArray(j) || j.length !== chunk.length) continue;
+        const byId = new Map(j.map((x) => [x.id, x.result ?? null]));
+        receipts = chunk.map((_, id) => byId.get(id) ?? null);
+        break;
+      } catch { /* the next verifier */ }
+    }
+    if (!receipts) throw new Error(`${source}: couldn't check its logs against another RPC`);
+    chunk.forEach((h, k) => {
+      const rl = receipts![k]?.logs ?? [];
+      for (const l of byTx.get(h)!) if (!rl.some((x) => sameLog(l, x))) throw new Error(`${source}: a log in ${h} isn't in that transaction's receipt`);
+    });
+  }
+}
+
 /** One source's logs for [a, b], cut to its range cap, `per` ranges per request. */
 async function scanFrom(url: string, step: number, per: number, a: number, b: number, signal: AbortSignal): Promise<RawLog[]> {
   const parts: [number, number][] = [];
@@ -69,6 +106,7 @@ async function scanFrom(url: string, step: number, per: number, a: number, b: nu
       blockNumber: parseInt(l.blockNumber as string, 16), transactionHash: l.transactionHash as Hex, logIndex: parseInt(l.logIndex as string, 16),
     }));
   }
+  await verifyLogs(url, out, signal);
   return out;
 }
 
@@ -94,7 +132,8 @@ async function scan(a: number, b: number): Promise<RawLog[]> {
 
 // Finished ranges are immutable: keep them in the shared data cache. The key includes the log source, so a fork
 // rehearsal never reuses mainnet results.
-const cachedScan = unstable_cache(async (a: number, b: number) => scan(a, b), ["fusebox-logs-v2", SOURCES[0][0]], { revalidate: false });
+// v3: windows are kept only after their logs were checked against receipts (verifyLogs)
+const cachedScan = unstable_cache(async (a: number, b: number) => scan(a, b), ["fusebox-logs-v3", SOURCES[0][0]], { revalidate: false });
 
 const state = { ready: false, scannedTo: IDX.scannedTo, logs: [] as RawLog[], seen: new Set<string>() };
 const keep = (l: RawLog) => { const k = `${l.transactionHash}:${l.logIndex}`; if (state.seen.has(k)) return; state.seen.add(k); state.logs.push(l); };

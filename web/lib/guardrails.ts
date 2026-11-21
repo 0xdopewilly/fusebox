@@ -1,4 +1,5 @@
 import "server-only";
+import { takeDailyCall } from "./aiBudget";
 import { getAddress, isAddress } from "viem";
 import { agentMode } from "./robAgent";
 
@@ -127,9 +128,17 @@ const TOOL = {
   },
 };
 
+// its own caps, per instance (hourly, daily) and shared (aiBudget): the page is public and every call costs credit
+const G_HOURLY = Number(process.env.FUSEBOX_GUARDRAILS_HOURLY_CAP || 60);
+const G_DAILY = Number(process.env.FUSEBOX_GUARDRAILS_DAILY_CAP || 300);
+let gCalls: number[] = [];
+
 export async function propose(description: string): Promise<Proposal & { fellBack?: boolean }> {
   const key = process.env.NEARAI_API_KEY;
   if (!key || agentMode().mode !== "llm") return readRules(description);
+  gCalls = gCalls.filter((t) => Date.now() - t < 86_400_000);
+  if (gCalls.filter((t) => Date.now() - t < 3_600_000).length >= G_HOURLY || gCalls.length >= G_DAILY || !(await takeDailyCall("guardrails"))) return readRules(description);
+  gCalls.push(Date.now());
   const model = process.env.FUSEBOX_GUARDRAILS_MODEL || "anthropic/claude-haiku-5-5";
   try {
     const r = await fetch(`${process.env.NEARAI_BASE_URL || "https://cloud-api.near.ai/v1"}/chat/completions`, {

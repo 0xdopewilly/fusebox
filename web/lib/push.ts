@@ -18,6 +18,14 @@ const PRIVATE = process.env.VAPID_PRIVATE_KEY ?? "";
 export const PUSH_READY = !!(PUBLIC && PRIVATE);
 if (PUSH_READY) setVapidDetails(process.env.VAPID_SUBJECT || "https://fusebox-xlayer.vercel.app", PUBLIC, PRIVATE);
 
+/** The browsers' own push services: a subscription can point only at one of them, never at an arbitrary URL. */
+const PUSH_HOSTS = [/^fcm\.googleapis\.com$/, /^updates\.push\.services\.mozilla\.com$/, /(^|\.)notify\.windows\.com$/, /(^|\.)push\.apple\.com$/];
+export function isPushEndpoint(endpoint: string): boolean {
+  try { const u = new URL(endpoint); return u.protocol === "https:" && !u.port && endpoint.length < 1000 && PUSH_HOSTS.some((h) => h.test(u.hostname)); } catch { return false; }
+}
+/** Devices one approver can register. */
+export const MAX_DEVICES = 5;
+
 export const deviceId = (endpoint: string) => createHash("sha256").update(endpoint).digest("hex").slice(0, 16);
 const lc = (a: string) => getAddress(a).toLowerCase();
 
@@ -42,9 +50,9 @@ export async function subscribedApprovers(): Promise<Address[]> {
 export async function sendTo(approver: Address, alert: Alert, only?: string): Promise<{ sent: number; dropped: number }> {
   if (!PUSH_READY) return { sent: 0, dropped: 0 };
   let sent = 0, dropped = 0;
-  const subs = (await subsOf(approver)).filter((s) => !only || s.endpoint === only);
+  const subs = (await subsOf(approver)).filter((s) => (!only || s.endpoint === only) && isPushEndpoint(s.endpoint));
   await Promise.all(subs.map(async (s) => {
-    try { await sendNotification({ endpoint: s.endpoint, keys: s.keys }, JSON.stringify(alert), { TTL: 6 * 3600, urgency: "high", topic: alert.tag.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32) }); sent++; }
+    try { await sendNotification({ endpoint: s.endpoint, keys: s.keys }, JSON.stringify(alert), { TTL: 6 * 3600, timeout: 10_000, urgency: "high", topic: alert.tag.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 32) }); sent++; }
     catch (e) {
       const code = (e as { statusCode?: number }).statusCode;
       if (code === 404 || code === 410) { await dropSub(approver, s.endpoint); dropped++; }

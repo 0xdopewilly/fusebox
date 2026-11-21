@@ -20,14 +20,26 @@ export interface Inbox { approver: Address; block: number; wallets: number; seat
 const APPROVAL_SOCKET = 4;
 const cache = new Map<string, { at: number; data: Inbox }>();
 
-export async function inboxFor(approverIn: Address, opts: { fresh?: boolean } = {}): Promise<Inbox> {
-  const approver = getAddress(approverIn);
-  const hit = cache.get(approver);
-  if (!opts.fresh && hit && Date.now() - hit.at < 8000) return hit.data;
+export interface SeatMap { head: number; wallets: number; seated: { w: Address; seats: Address[] }[] }
+
+/** Every factory wallet's approver seats, read once (a sweep reuses it for every approver). */
+export async function seatMap(): Promise<SeatMap> {
   const head = Number(await client.getBlockNumber());
   const wallets = await factoryWallets(head);
   const seatsOf = await Promise.all(wallets.map((w) => client.readContract({ address: w, abi: fuseboxWalletAbi, functionName: "approvers" }).then((s) => [...s] as Address[]).catch(() => null)));
-  const mine = wallets.map((w, i) => ({ w: getAddress(w), seats: seatsOf[i] })).filter((x) => x.seats?.some((s) => s.toLowerCase() === approver.toLowerCase()));
+  return { head, wallets: wallets.length, seated: wallets.map((w, i) => ({ w: getAddress(w), seats: seatsOf[i] ?? [] })).filter((x) => x.seats.some((s) => s !== "0x0000000000000000000000000000000000000000")) };
+}
+
+/** Whether the address holds a seat on any Fusebox wallet. */
+export const holdsSeat = (m: SeatMap, a: Address) => m.seated.some((x) => x.seats.some((s) => s.toLowerCase() === a.toLowerCase()));
+
+export async function inboxFor(approverIn: Address, opts: { fresh?: boolean; seats?: SeatMap } = {}): Promise<Inbox> {
+  const approver = getAddress(approverIn);
+  const hit = cache.get(approver);
+  if (!opts.fresh && hit && Date.now() - hit.at < 8000) return hit.data;
+  const map = opts.seats ?? (await seatMap());
+  const head = map.head, wallets = { length: map.wallets };
+  const mine = map.seated.filter((x) => x.seats.some((s) => s.toLowerCase() === approver.toLowerCase()));
 
   const open: Request[] = [], recent: Request[] = [];
   await Promise.all(mine.map(async ({ w, seats }) => {

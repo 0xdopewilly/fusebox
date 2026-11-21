@@ -13,7 +13,7 @@
  *
  * This file depends only on viem so the hosted app can carry a copy (web/lib/x402core.ts, synced from here).
  */
-import { decodeEventLog, formatUnits, getAddress, isAddress, parseAbi, type Address, type Hash, type PublicClient } from "viem";
+import { decodeEventLog, formatUnits, getAddress, isAddress, parseAbi, recoverMessageAddress, type Address, type Hash, type Hex, type PublicClient } from "viem";
 
 export const X402_VERSION = 2;
 export const FUSEBOX_SCHEME = "fusebox";
@@ -31,7 +31,12 @@ export interface PaymentRequirements {
   extra: Record<string, unknown>;
 }
 export interface PaymentRequired { x402Version: number; error?: string; resource: ResourceInfo; accepts: PaymentRequirements[] }
-export interface FuseboxPayload { wallet: Address; transaction: Hash; decisionId?: number }
+/**
+ * The proof a buyer sends back: the wallet, the payment's transaction, and the paying agent's signature over
+ * {@link proofMessage}. The transaction and nonce are public once the payment lands; the signature is what stops
+ * someone watching the chain from redeeming the payment before the buyer does.
+ */
+export interface FuseboxPayload { wallet: Address; transaction: Hash; decisionId?: number; signature?: Hex }
 export interface PaymentPayload { x402Version: number; resource?: ResourceInfo; accepted: PaymentRequirements; payload: FuseboxPayload & Record<string, unknown> }
 export interface SettleResponse { success: boolean; transaction: string; network: string; payer?: string; errorReason?: string; errorMessage?: string }
 export interface VerifyResponse { isValid: boolean; invalidReason?: string; invalidMessage?: string; payer?: string; decisionId?: number; amount?: string }
@@ -98,6 +103,11 @@ export async function checkNonce(secret: string, bind: string, nonce: string): P
 
 // ---------------------------------------------------------------- verifying a payment on X Layer
 
+/** What the paying agent signs (EIP-191) to claim its payment: the offer's nonce and the transaction. */
+export function proofMessage(nonce: string, transaction: string): string {
+  return `Fusebox x402 payment\nnonce: ${nonce}\ntransaction: ${transaction.toLowerCase()}`;
+}
+
 const decisionAbi = parseAbi([
   "event Decision(uint256 indexed decisionId, address indexed agent, address indexed to, address token, uint256 amount, bool allowed, uint256[] fuseIds, uint8[] status, bytes[] inputs, bytes[] outputs, uint256 feePaid, bytes32 intent, string memo)",
   "event Transfer(address indexed from, address indexed to, uint256 value)",
@@ -129,7 +139,7 @@ export async function verifyFuseboxPayment(client: PublicClient, payload: Paymen
   if (!receipt) return bad("transaction_not_found", "The transaction isn't on X Layer (yet).");
   if (receipt.status !== "success") return bad("transaction_failed", "The transaction reverted.");
 
-  let decision: { decisionId: bigint; to: Address; token: Address; amount: bigint; allowed: boolean; memo: string } | undefined;
+  let decision: { decisionId: bigint; agent: Address; to: Address; token: Address; amount: bigint; allowed: boolean; memo: string } | undefined;
   let moved = 0n;
   for (const l of receipt.logs) {
     try {
@@ -143,6 +153,12 @@ export async function verifyFuseboxPayment(client: PublicClient, payload: Paymen
   if (decision.to.toLowerCase() !== payTo.toLowerCase() || decision.token.toLowerCase() !== asset.toLowerCase()) return bad("wrong_payee", "The Decision paid someone else, or in another token.");
   if (decision.amount < need || moved < need) return bad("insufficient_amount", `Paid ${formatUnits(moved, 6)}, asked ${formatUnits(need, 6)}.`);
   if (nonce && !decision.memo.includes(nonce)) return bad("nonce_missing", "The payment's memo doesn't carry this offer's nonce.");
+  // only the agent that paid can claim it: anyone can read the transaction and nonce off the chain
+  const sig = String(p.signature ?? "");
+  if (!/^0x[0-9a-fA-F]{130}$/.test(sig)) return bad("unsigned", "The proof needs the paying agent's signature over the nonce and transaction.");
+  let signer: Address | null = null;
+  try { signer = await recoverMessageAddress({ message: proofMessage(nonce, p.transaction), signature: sig as Hex }); } catch { /* malformed */ }
+  if (!signer || signer.toLowerCase() !== decision.agent.toLowerCase()) return bad("not_the_payer", "The proof isn't signed by the agent that made this payment.");
   return { isValid: true, payer: wallet, decisionId: Number(decision.decisionId), amount: formatUnits(decision.amount, 6) };
 }
 

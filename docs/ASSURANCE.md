@@ -1,9 +1,13 @@
 # How the contracts are checked
 
 Fusebox makes a handful of promises about money. The circuits are proved on every input
-([ARCHITECTURE.md §4](ARCHITECTURE.md)); this page covers the contracts around them: `FuseboxWallet`,
-`FuseRegistry` and `FuseboxSetup`. There has been no third-party audit yet. What follows is what stands in
-for one today, and how to rerun every part of it.
+([ARCHITECTURE.md §4](ARCHITECTURE.md)). This page covers everything around them:
+- the contracts: `FuseboxWallet`, `FuseRegistry` and `FuseboxSetup`;
+- the off-chain parts: the web app, the SDK and the MCP server;
+- the admin key and the keys on the build machine.
+
+There has been no third-party audit yet. What follows is what stands in for one today, and how to rerun every
+part of it.
 
 ## The promises
 
@@ -12,36 +16,40 @@ It must hold after every call of every random sequence.
 
 | The wallet promises | Invariant |
 |---|---|
-| It decides every payment exactly as the fuses' rules say, charges exactly the right fee, and reverts exactly when it should | `wallet_matches_the_spec` |
-| No more than the daily cap leaves in a UTC day | `daily_cap_is_never_exceeded` |
+| It decides every payment exactly as the fuses' rules say, charges exactly the right fee, and reverts exactly when it should. Its stored state (each slot's fuse, settings and accepted fee, each cap's spend, each breaker's latch, the owner, the agents, the pause) always matches the model | `wallet_matches_the_spec` |
+| No more than its cap leaves through any cap in a UTC day (the highest the cap was set to since its count last reset) | `daily_cap_is_never_exceeded` |
 | Only saved payees are paid, and one still cooling off gets no more than the trial amount | `only_saved_payees_get_paid` |
 | A blown breaker, or any freeze, stops every payment until the owner unfreezes or unpauses | `breaker_and_freeze_stop_everything` |
 | Above the threshold, two of the three seated approvers signed this exact payment, and their approvals were still valid | `big_payments_need_two_approvals` |
 | The same payment (token, payee, amount) inside the window goes out again only when the owner clears it, once | `no_repeat_without_clearance` |
 | If TapeOut runs an implementation nobody attested, nothing is paid and nothing is charged | `untrusted_processor_fails_closed` |
-| The agent can only pay. Only seated approvers approve, only the owner changes settings or moves funds, only the circuit owner claims or reprices, and nobody withdraws another account's fees | `nobody_exceeds_their_role` |
-| Every token that left went through an allowed payment or the owner's own transfer, and native OKB never leaves when the fuses measure USD₮0 | `money_is_conserved` |
+| Only an agent that is switched on can pay. Only seated approvers approve. Only the current owner changes settings or moves funds (not the former owner, not the pending one). Only the circuit owner claims or reprices. Nobody withdraws another account's fees or takes the wallet without a handover | `nobody_exceeds_their_role` |
+| Every token that left, USD₮0 or native OKB, went through an allowed payment or the owner's own transfer | `money_is_conserved` |
 | A decision never costs more than the fees the owner accepted, whatever the designer sets | `fees_never_exceed_what_was_accepted` |
 | The registry holds every token it owes, and its books add up | `registry_is_solvent` |
 | Every recorded decision is either allowed or blocked, and none is lost | `decisions_add_up` |
 
 ## How they are tested
 
-**One wallet, every role.** A handler drives a `FuseboxWallet` with all five shipped fuses. Their real
-netlists run on a Solidity TAP-02 processor, so the circuits in the test are the circuits on mainnet. The
-handler plays:
-- the agent paying saved payees, fresh payees, strangers and a scammer, sometimes in native OKB;
-- the owner changing every setting, saving and removing payees, pausing, unfreezing, clearing repeats,
-  reseating approvers, moving funds, and draining or topping up fees;
+**One wallet, every role.** A handler drives a `FuseboxWallet` that starts with all five shipped fuses.
+Their real netlists run on a Solidity TAP-02 processor, so the circuits in the test are the circuits on
+mainnet. The handler plays:
+- two agents (the owner switches them on and off) paying saved payees, fresh payees, strangers and a scammer,
+  sometimes in native OKB;
+- the owner. They change every setting and remove or reinstall fuses, duplicates included, up to the limit of
+  8. They switch what a fuse measures (unit, or native OKB instead of USD₮0), save and remove payees, pause,
+  unfreeze, clear repeats, reseat approvers, move funds, drain or top up fees, and hand the wallet to a second
+  owner and back;
 - three approver seats and a former approver, approving and revoking;
 - the designer repricing and claiming;
 - TapeOut upgrading its processor to code nobody attested, and back;
 - an attacker, a hijacked agent and the approvers trying 19 things they must not be able to do;
 - the clock.
 
-**A separate model.** Alongside the wallet, the handler keeps its own model of what each fuse means,
-written from the socket definitions rather than copied from the wallet's code. Before every payment the model
-predicts allowed, blocked or reverted, and the exact fee. The real wallet must agree every time.
+**A separate model.** Alongside the wallet, the handler keeps its own model, one entry per installed slot.
+It's written from the socket definitions rather than copied from the wallet's code. Before every payment the
+model predicts allowed, blocked or reverted, and the exact fee. The real wallet must agree every time, and
+after every call its stored state must match the model's.
 
 **Two kinds of run.**
 - *Random campaign:* Foundry calls the handler in random order, 256 runs × 256 calls for each of the 12
@@ -49,11 +57,17 @@ predicts allowed, blocked or reverted, and the exact fee. The real wallet must a
   then the payment; the same approved payment again after the repeat window; the same invoice twice; a
   repeat the owner cleared.
 - *Long walks:* 8 fixed seeds × 600 steps, with every promise checked after every step. The test also fails
-  if any path was never exercised, so a green run can't mean "never got there". The latest run made 874
-  decisions: 87 allowed, 787 blocked, and 1,759 attempts that reverted as predicted (paused 436, decision
-  budget 456, blocked budget 699, fee balance 129, wallet balance 39). It included 23 approved big payments,
-  8 cleared repeats, 134 decisions blocked by an untrusted processor and 21 freezes. Each fuse was the only
-  one to say no at least once: daily cap 29 times, payee guard 7, breaker 62, two of three 41, repeat guard 19.
+  if any path was never exercised, so a green run can't mean "never got there". The latest run made 725
+  decisions:
+  - 116 allowed and 609 blocked;
+  - 1,443 attempts that reverted as predicted (paused 477, decision budget 216, blocked budget 229, fee balance
+    147, wallet balance 43, agent switched off 270, no fuses 61);
+  - 27 approved big payments, 4 cleared repeats and 191 decisions blocked by an untrusted processor;
+  - 25 freezes, 103 fuses removed, 92 installed and 96 caps re-measured;
+  - 6 native OKB payments, 6 payments by the second agent and 14 ownership handovers.
+
+  Each fuse was the only one to say no at least once: daily cap 78 times, payee guard 16, breaker 55, two of
+  three 69, repeat guard 8.
 
 ## Does it catch real bugs?
 
@@ -72,11 +86,63 @@ long walks:
 | A repeat clearance is not used up | the wallet allowed a payment the spec blocks |
 | Anyone can clear a repeat | an attack succeeded |
 | A payee's age is counted in minutes, not hours | the wallet allowed a payment the spec blocks |
+| A remeasured cap keeps its old count | a slot counts a different spend today |
+| Removing a fuse swaps the last one into its place | a slot holds another fuse |
+| A switched-off agent can still pay | the agents differ from the model |
+| Ownership changes hands in one step | the owner differs from the model |
 | A fee withdrawal skips the balance check | an attack succeeded |
 
-All 10 are caught. The first version of the suite missed the third one. A reused approval only shows up when
+All 14 are caught. The first version of the suite missed the third one. A reused approval only shows up when
 the same payment comes again after the Repeat Guard's window but before the approval expires, so in random
 runs the Repeat Guard hid it. The suite now plays that exact scenario.
+
+## Off-chain: the web app, the SDK and the MCP server
+
+A separate review read every API route, the server code behind them, the SDK and the MCP server. No server
+holds a private key: "Try to scam it" and "Rob the agent" only run a read-only `check()`, and the assistant
+only proposes payments, which the browser signs. What it found, and what changed:
+
+| Finding | Fix |
+|---|---|
+| Medium: anyone watching the chain could redeem a buyer's x402 payment first. The proof was only the transaction and nonce, and both are public | The proof now carries the paying agent's signature over the nonce and transaction (`x402.proofMessage`). Sellers, the SDK's `requirePayment` and the hosted facilitator check that it recovers to the Decision's `agent`. The facilitator keeps its own used-payment record per payee. Tested on a fork: an unsigned proof, one signed by another key and a facilitator settle are all refused; the real buyer redeems once |
+| Medium: anyone could register push alerts to any https URL, and the sweeps were open | Subscriptions go only to the browsers' own push services (Google, Mozilla, Microsoft, Apple). Only an address that holds an approver seat can subscribe, on up to 5 devices. Sends time out. Both sweeps need the workflows' `CRON_SECRET` and refuse without one in production. The push sweep reads the seats once and stops within its time budget |
+| Medium: AI cost caps were per instance only, and guardrails had none | Each feature (Rob, the assistant, guardrails) has a daily budget shared by every instance through the store, on top of its own hourly and daily caps. Per-visitor limits count an IPv6 /64 as one visitor |
+| Medium: `fusebox_fetch` paid whatever a remote server asked | It pays at most 0.10 USD₮0 per call unless the model sets `max_price`. It fetches public hosts only (no localhost, private or link-local addresses) and refuses redirects. The fuses decide first, then the price limit |
+| Low: the RPC proxy was open to anyone | 240 requests a minute per visitor; `eth_getLogs` limited to 5,000 blocks or a block hash; refused when a browser marks the request as coming from another site |
+| Low: listing metadata reads weren't bounded | A hard 16 KB streamed read, https to public hosts only (every live listing uses an on-chain `data:` URI anyway) |
+| Low: no security headers | Every page has a Content Security Policy (scripts and styles from the site only; no framing, plugins or outside forms), plus `nosniff`, `X-Frame-Options`, a referrer policy, HSTS and a permissions policy. 40 page loads, desktop and phone: 0 violations |
+| Low: approval alerts could be repeated by respelling the amount | Amounts are normalised, a request is announced at most once an hour, and a wallet can ask 10 times an hour |
+| Low: the approve page accepted any payee and amount from a link | It warns when no agent of that wallet has tried that exact payment |
+| Note: event history read from a third-party RPC was cached for good | Logs from a third-party RPC are checked against their transaction receipts on another RPC before they're kept, so a source can't invent a decision. It could still leave one out; balances and settings come from contract calls, not logs |
+
+Two suggestions weren't taken:
+- *`fusebox_pay` should check before sending.* It sends on purpose. When an AI agent has been tricked, a refused
+  attempt recorded on-chain trips the Breaker and alerts the owner; a quiet check would hide it. The daily
+  decision budget bounds what refused attempts cost.
+- *An approval alert should require a refused on-chain decision.* The SDK checks before paying, so a payment
+  held for approval never reaches the chain. Requiring one would break the approval flow.
+
+The dependency audits (`pnpm audit --prod` in `web/`, `npm audit --omit=dev` in `sdk/` and `mcp/`) find no
+known vulnerabilities.
+
+The setup wizard also stops a wallet with no amount limit. Only the Daily Cap and Two of Three measure how
+much goes to every payee, so with neither on, a saved payee could be sent the whole balance. The wizard now
+refuses that, and the owner console warns about any wallet in that state and before removing its last
+amount limit.
+
+## The admin key and the keys here
+
+**Registry admin.** One key, the deployer, can change the registries' trust settings and protocol fee. It
+can't touch anyone's funds or fee balances, but it could approve a fake processor for new listings.
+[`contracts/script/registry-to-safe.sh`](../contracts/script/registry-to-safe.sh) moves both registries to a
+Safe multisig (Safe 1.4.1, already on X Layer). It creates the Safe at threshold 1 with the deployer as an owner,
+hands over both registries, accepts them from the Safe, then raises the threshold. A rehearsal on a mainnet fork
+moved both registries to a 2-of-3 Safe. Afterwards the deployer's direct call was refused, and a single
+signature through the Safe was refused (`GS020`). The mainnet move waits on the owners' addresses.
+
+**Keys on the build machine.** No key, mnemonic or `.env` file has ever been committed (the whole git history
+was scanned), and the key files are readable by their owner only. The plain-text backups of the hackathon
+wallets were made on request; encrypting them is the owner's call.
 
 ## Static analysis
 
@@ -103,6 +169,6 @@ runs the Repeat Guard hid it. The suite now plays that exact scenario.
 cd contracts
 forge test --match-contract WalletInvariants        # the 12 invariants and the long walks (~3 min)
 forge test --match-test test_long_walks -vv         # the walks, with their coverage numbers
-python3 test/invariant/mutation.py                  # the 10 planted bugs (~4 min)
+python3 test/invariant/mutation.py                  # the 14 planted bugs (~6 min)
 slither . --filter-paths lib/ --exclude-dependencies
 ```

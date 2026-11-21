@@ -111,7 +111,7 @@ X Layer's public RPCs cap `eth_getLogs` ranges (1,000 blocks on tapeout.net, abo
 
 ## Status
 
-The contracts are deployed and working on X Layer mainnet. They have no third-party audit yet. What stands in for one is in [docs/ASSURANCE.md](docs/ASSURANCE.md): 12 invariants checked over 786,432 random calls from every role, long walks that must reach every path, a mutation check that catches all 10 planted bugs, and a Slither triage. Atlas is a public demo wallet with small balances.
+The contracts are deployed and working on X Layer mainnet. They have no third-party audit yet. What stands in for one is in [docs/ASSURANCE.md](docs/ASSURANCE.md): 12 invariants checked over 786,432 random calls from every role, long walks that must reach every path, a mutation check that catches all 14 planted bugs, a review of the web app, SDK and MCP server with every finding fixed, and a Slither triage. Atlas is a public demo wallet with small balances.
 
 ## License
 

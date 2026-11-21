@@ -21,17 +21,41 @@ export interface Market { source: "fork" | "mainnet"; fuses: MarketFuse[]; proto
 
 // ---- listing metadata: on-chain data URIs decode here; an https link is fetched once in a while, small and bounded
 const metaCache = new Map<string, { at: number; meta: FuseMeta | null }>();
+const META_MAX = 16_384;
+/** A listing's link must name a public host: no localhost, no private or link-local address. */
+function publicHttps(uri: string): boolean {
+  let h: string;
+  try { const u = new URL(uri); if (u.protocol !== "https:") return false; h = u.hostname.toLowerCase().replace(/^\[|\]$/g, ""); } catch { return false; }
+  const v4 = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/)?.slice(1).map(Number);
+  if (v4) return !(v4[0] === 10 || v4[0] === 127 || v4[0] === 0 || (v4[0] === 169 && v4[1] === 254) || (v4[0] === 172 && v4[1] >= 16 && v4[1] <= 31) || (v4[0] === 192 && v4[1] === 168) || (v4[0] === 100 && v4[1] >= 64 && v4[1] <= 127));
+  if (h.includes(":")) return false; // IPv6 literals: no listing needs one
+  return h.includes(".") && !/(^|\.)(localhost|local|internal|lan)$/.test(h);
+}
+/** The body, read only up to `max` bytes however the server sends it; null past that. */
+async function readCapped(r: Response, max: number): Promise<string | null> {
+  if (!r.body) return null;
+  const reader = r.body.getReader(), chunks: Uint8Array[] = [];
+  let n = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    n += value.byteLength;
+    if (n > max) { await reader.cancel().catch(() => {}); return null; }
+    chunks.push(value);
+  }
+  return new TextDecoder().decode(Buffer.concat(chunks));
+}
 async function resolveMeta(uri: string): Promise<FuseMeta | null> {
   if (!uri) return null;
   if (uri.startsWith("data:")) return decodeDataUri(uri);
-  if (!/^https:\/\//.test(uri)) return null;
+  if (!publicHttps(uri)) return null;
   const hit = metaCache.get(uri);
   if (hit && Date.now() - hit.at < 10 * 60_000) return hit.meta;
   let meta: FuseMeta | null = null;
   try {
     const r = await fetch(uri, { signal: AbortSignal.timeout(3000), redirect: "error", headers: { accept: "application/json" }, cache: "no-store" });
-    const len = Number(r.headers.get("content-length") || 0);
-    if (r.ok && len <= 16_384) { const t = (await r.text()).slice(0, 16_384); meta = sanitize(JSON.parse(t)); }
+    const t = r.ok ? await readCapped(r, META_MAX) : null;
+    if (t) meta = sanitize(JSON.parse(t));
   } catch { /* unreachable or not JSON: the listing shows without it */ }
   metaCache.set(uri, { at: Date.now(), meta });
   return meta;

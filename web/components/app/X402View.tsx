@@ -12,7 +12,7 @@ const STEPS: [string, string][] = [
   ["GET /api/x402/prices", "The seller answers 402 with an offer in the PAYMENT-REQUIRED header: price, payee, and a nonce it signed."],
   ["check() on X Layer", "Before anything moves, the price goes through the wallet's TapeOut circuits like any payment. A no stops here, for free."],
   ["pay() through the fuses", "Every fuse decides in the same transaction; the memo carries the nonce, which ties the payment to this one offer."],
-  ["Retry with the proof", "PAYMENT-SIGNATURE carries the transaction. The seller checks it on X Layer, serves the response and sends a receipt."],
+  ["Retry with the proof", "PAYMENT-SIGNATURE carries the transaction, signed by the agent that paid. The seller checks it on X Layer, serves the response and sends a receipt."],
 ];
 
 const CODE: Record<string, [string, string]> = {

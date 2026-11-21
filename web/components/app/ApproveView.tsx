@@ -50,6 +50,9 @@ export default function ApproveView() {
   const two = data?.fuses.findIndex((f) => f.key === "approval-2of3") ?? -1;
   const threshold = two >= 0 ? data!.fuses[two].a : null;
   const waiting = two >= 0 ? (data?.decisions ?? []).filter((d) => !d.allowed && d.status[two] === "blew") : [];
+  // a link can prefill any payee and amount: say so when no agent of this wallet has tried exactly this payment
+  const unasked = !!data && two >= 0 && !!payee && !!amt && threshold !== null && Number(amount) > threshold && !waiting.some((d) => d.to.toLowerCase() === payee.toLowerCase() && Number(d.amount) === Number(amount));
+  const UNASKED = "No agent of this wallet has tried this exact payment yet. Approve only a payment you expect; if a link sent you here, check with the wallet's owner first.";
   const mySeat = account && seats ? seats.findIndex((s) => s.toLowerCase() === account.toLowerCase()) : -1;
   const approvedByMe = mySeat >= 0 && ((mask >> mySeat) & 1) === 1;
   const count = [0, 1, 2].filter((b) => (mask >> b) & 1).length;
@@ -76,6 +79,7 @@ export default function ApproveView() {
         <label className="mfield"><span className="m">Amount · USD₮0</span><input aria-label="Amount, USD₮0" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" /></label>
         <details className="mdetails"><summary className="m">Wallet · {valid ? short(wallet) : "—"}</summary><label className="mfield"><span className="sr">Wallet</span><input aria-label="Wallet" value={wallet} onChange={(e) => setWallet(e.target.value)} spellCheck={false} /></label></details>
         {threshold !== null && amt && Number(amount) <= threshold && <p className="mnote">{amount} USD₮0 is under the {threshold} USD₮0 threshold, so Two of Three already lets it through.</p>}
+        {unasked && <p className="mnote red" role="note">{UNASKED}</p>}
         {two < 0 && data && <p className="mnote">This wallet has no Two of Three fuse.</p>}
       </div>
       <MLabel right={<span className={count >= 2 ? "lime" : ""}>{count} of 2 needed</span>}>Approvers</MLabel>
@@ -125,6 +129,7 @@ export default function ApproveView() {
                   <div className="field"><label>Amount, USD₮0</label><input aria-label="Amount, USD₮0" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" /></div>
                 </div>
                 {threshold !== null && amt && Number(amount) <= threshold && <div className="hint2">{amount} USD₮0 is under this wallet&apos;s {threshold} USD₮0 threshold, so Two of Three already lets it through.</div>}
+                {unasked && <div className="hint2 red" role="note">{UNASKED}</div>}
                 {two < 0 && data && <div className="hint2">This wallet has no Two of Three fuse.</div>}
               </div>
             </div>

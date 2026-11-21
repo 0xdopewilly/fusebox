@@ -1,3 +1,4 @@
+import { ipKey } from "@/lib/clientIp";
 import { getAddress, isAddress } from "viem";
 import { assistantMode, runAssistant, type AssistantContext, type Turn } from "@/lib/assistant";
 
@@ -20,7 +21,7 @@ export function GET() {
 
 /** One chat turn for the Fusebox assistant: a reply, or a proposed payment the browser checks and the owner confirms. */
 export async function POST(req: Request) {
-  const ip = (req.headers.get("x-forwarded-for") ?? "").split(",")[0].trim() || "local";
+  const ip = ipKey(req);
   if (!allow(ip)) return Response.json({ error: "That's a lot of messages in a minute. Give it a moment." }, { status: 429 });
   let body: { message?: unknown; history?: unknown; context?: Record<string, unknown> } = {};
   try { body = await req.json(); } catch { /* empty */ }

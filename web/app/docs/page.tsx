@@ -295,7 +295,7 @@ const stop = fb.watch((d) => { if (!d.paid) notify(d); });  // decisions as they
               <ol>
                 <li>The seller answers <code>402</code> with <code>PAYMENT-REQUIRED</code> (x402 v2): a <code>fusebox</code> option on <code>eip155:196</code> in USD₮0, the payee, the price, and a nonce it signed.</li>
                 <li>The agent&apos;s wallet runs the free <code>check()</code>, then <code>pay()</code> through the fuses with <code>x402 &lt;nonce&gt;</code> in the memo.</li>
-                <li>It retries with <code>PAYMENT-SIGNATURE</code>: the wallet and the transaction. The seller checks that the factory made the wallet, that its Decision allowed this payee and price with that nonce, that USD₮0 moved, and that the transaction hasn&apos;t bought anything before. Then it serves the response with a <code>PAYMENT-RESPONSE</code> receipt.</li>
+                <li>It retries with <code>PAYMENT-SIGNATURE</code>: the wallet, the transaction, and the paying agent&apos;s signature over the nonce and transaction. The seller checks that the factory made the wallet, that its Decision allowed this payee and price with that nonce, that USD₮0 moved, that the signature comes from the agent that paid (so nobody watching the chain can redeem it first), and that the transaction hasn&apos;t bought anything before. Then it serves the response with a <code>PAYMENT-RESPONSE</code> receipt.</li>
               </ol>
               <Code label="Agent · fusebox-sdk">{`const { response, payment } = await fb.fetch("https://fusebox-xlayer.vercel.app/api/x402/prices", {}, { maxPrice: "0.05" });
 console.log(payment?.summary);   // "Paid 0.01 USD₮0 to 0x69dB… for …/prices (decision #7)."`}</Code>

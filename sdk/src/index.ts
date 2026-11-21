@@ -9,7 +9,7 @@ import {
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { fuseboxWalletAbi, fuseRegistryAbi, tapeoutProcessorAbi } from "./abi.js";
-import { encodeHeader, decodeHeader, readPaymentRequired, pickFusebox, memoFor, HEADER, X402_VERSION, type PaymentRequirements, type PaymentRequired, type PaymentPayload, type SettleResponse } from "./x402.js";
+import { encodeHeader, decodeHeader, readPaymentRequired, pickFusebox, memoFor, proofMessage, HEADER, X402_VERSION, type PaymentRequirements, type PaymentRequired, type PaymentPayload, type SettleResponse } from "./x402.js";
 
 export { fuseboxWalletAbi, fuseRegistryAbi, fuseboxFactoryAbi, tapeoutProcessorAbi } from "./abi.js";
 export * as x402 from "./x402.js";
@@ -350,7 +350,9 @@ export class Fusebox {
     const memo = opts.memo ? `${memoFor(req, resource).split(" ").slice(0, 2).join(" ")} ${opts.memo}`.slice(0, 200) : memoFor(req, resource);
     const p = await this.pay(payTo, price, memo);
     if (!p.paid || !p.tx) return { response: first, payment: { ...base, paid: false, fuses: p.fuses, summary: `Not paid for ${url}: ${p.summary}`, needsApproval: p.needsApproval, tx: p.tx, txUrl: p.txUrl, decisionId: p.decisionId } };
-    const payload: PaymentPayload = { x402Version: X402_VERSION, resource: offer.resource, accepted: req, payload: { wallet: this.wallet, transaction: p.tx, decisionId: p.decisionId } };
+    // the proof is signed by the agent that paid, so nobody watching the chain can redeem it first
+    const signature = await this.walletClient!.signMessage({ account: this.account!, message: proofMessage(String(req.extra?.nonce ?? ""), p.tx) });
+    const payload: PaymentPayload = { x402Version: X402_VERSION, resource: offer.resource, accepted: req, payload: { wallet: this.wallet, transaction: p.tx, decisionId: p.decisionId, signature } };
     const headers = new Headers(init.headers);
     headers.set(HEADER.signature, encodeHeader(payload));
     if (offer.x402Version < 2) headers.set(HEADER.v1Payment, encodeHeader(payload));

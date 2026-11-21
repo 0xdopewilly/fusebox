@@ -1,4 +1,5 @@
 import "server-only";
+import { takeDailyCall } from "./aiBudget";
 import Anthropic from "@anthropic-ai/sdk";
 import { getAddress, isAddress, type Address } from "viem";
 import { DEPLOYMENT } from "./chain";
@@ -146,7 +147,7 @@ async function claude(msg: string): Promise<AgentTurn> {
 
 /** Run the agent on a message. The model when configured and able; otherwise the scripted agent, which says so. */
 export async function runAgent(msg: string): Promise<AgentTurn & { fellBack?: boolean }> {
-  if (agentMode().mode === "scripted") return scripted(msg);
+  if (agentMode().mode === "scripted" || !(await takeDailyCall("rob"))) return scripted(msg);
   calls.push(Date.now());
   try { return await (PROVIDER === "nearai" ? nearai(msg) : claude(msg)); }
   catch (e) {

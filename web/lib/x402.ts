@@ -42,6 +42,8 @@ export async function facilitate(op: "verify" | "settle", paymentPayload: Paymen
   if (op === "verify") return v;
   const tx = paymentPayload.payload.transaction;
   if (!v.isValid) return { success: false, transaction: tx ?? "", network: XLAYER_NETWORK, errorReason: v.invalidReason, errorMessage: v.invalidMessage };
-  if (!(await markUsed(tx))) return { success: false, transaction: tx, network: XLAYER_NETWORK, payer: v.payer, errorReason: "already_settled", errorMessage: "That payment already bought a response." };
+  // its own record per payee: settling for one seller never touches what the demo sellers (or another seller) saw
+  const key = `x402/fac/${paymentRequirements.payTo.toLowerCase()}/${tx.toLowerCase()}`;
+  if (!(await putOnce(key, { at: Math.floor(Date.now() / 1000) }))) return { success: false, transaction: tx, network: XLAYER_NETWORK, payer: v.payer, errorReason: "already_settled", errorMessage: "That payment already settled." };
   return { success: true, transaction: tx, network: XLAYER_NETWORK, payer: v.payer };
 }
