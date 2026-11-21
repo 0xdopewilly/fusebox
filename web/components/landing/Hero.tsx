@@ -26,7 +26,10 @@ export default function Hero() {
     let scene: FuseScene | null = null;
     let io: IntersectionObserver | null = null, ro: ResizeObserver | null = null;
     let dead = false, shown = false;
-    import("./FuseScene").then(({ FuseScene }) => {
+    // the 3D scene waits for an idle moment, so its parse and set-up never compete with the first paint or the
+    // entrance (it dithers in whenever it arrives)
+    const idle = (fn: () => void) => { if (typeof window.requestIdleCallback === "function") window.requestIdleCallback(fn, { timeout: 2500 }); else setTimeout(fn, 1200); };
+    new Promise<void>((r) => idle(r)).then(() => import("./FuseScene")).then(({ FuseScene }) => {
       if (dead) return;
       const s = new FuseScene(cv, {
         onFrame: (a) => {
@@ -68,17 +71,35 @@ export default function Hero() {
 
     // ---- entrance ----
     const h1 = el.querySelector("h1")!;
-    const lines = SplitText.create(h1, { type: "lines,chars", linesClass: "line-mask", charsClass: "char", mask: "lines" });
-    const sub = SplitText.create(el.querySelector(".sub p")!, { type: "lines", linesClass: "line-mask", mask: "lines", aria: "none" }); // lines keep whole words, so it reads as written
-    const circuits = Array.from(h1.querySelectorAll(".lime .char"));
-    const brackets = circuits.filter((c) => c.textContent === "[" || c.textContent === "]");
     const facts = Array.from(el.querySelectorAll<HTMLElement>(".facts b"));
     gsap.set([...Array.from(el.querySelectorAll("[data-in]")), el.querySelector(".bigword")], { autoAlpha: 1 });
+    // phones: the hero is visible from the first paint (globals.css) and slides into place instead of being revealed
+    // letter by letter from behind masks, so a slow phone shows the words at once rather than after its scripts run
+    const narrow = window.matchMedia("(max-width: 700px)").matches;
 
     const tl = gsap.timeline({ paused: true });
     if (reduced()) {
       reveal.v = 1.01;
+    } else if (narrow) {
+      tl.from(document.querySelectorAll(".grid i"), { scaleY: 0, duration: 1.4, stagger: 0.06, ease: "wire" }, 0)
+        .from(el.querySelector(".eyebrow"), { scrambleText: { text: "[01] Guardrails that run on X Layer, not on trust", chars: "01", speed: 0.5 }, duration: 1.2 }, 0.1)
+        .from(h1, { y: 18, duration: 0.9, ease: "snap" }, 0.1)
+        .to(h1.querySelector(".lime"), { opacity: 0.25, duration: 0.05, repeat: 5, yoyo: true, ease: "none" }, 0.6)
+        .from(el.querySelector(".sub p"), { y: 14, duration: 0.9 }, 0.25)
+        .from(el.querySelectorAll(".ctas > *"), { y: 16, duration: 0.8, stagger: 0.08 }, 0.4)
+        .to(reveal, { v: 1.01, duration: 1.8, ease: "power2.inOut" }, 0.35)
+        .from(tagEls, { autoAlpha: 0, duration: 0.5, stagger: 0.12 }, 1.4)
+        .from(lead, { autoAlpha: 0, duration: 0.5 }, 1.4)
+        .from(el.querySelectorAll(".facts > div"), { y: 20, duration: 0.9, stagger: 0.08 }, 0.7);
+      facts.forEach((b, i) => {
+        const end = Number(b.dataset.v), dec = Number(b.dataset.dec || 0), o = { v: 0 };
+        tl.to(o, { v: end, duration: 1.4, ease: "power3.out", onUpdate: () => { b.textContent = o.v.toFixed(dec); } }, 0.8 + i * 0.08);
+      });
     } else {
+      const lines = SplitText.create(h1, { type: "lines,chars", linesClass: "line-mask", charsClass: "char", mask: "lines" });
+      const sub = SplitText.create(el.querySelector(".sub p")!, { type: "lines", linesClass: "line-mask", mask: "lines", aria: "none" }); // lines keep whole words, so it reads as written
+      const circuits = Array.from(h1.querySelectorAll(".lime .char"));
+      const brackets = circuits.filter((c) => c.textContent === "[" || c.textContent === "]");
       tl.from(document.querySelectorAll(".grid i"), { scaleY: 0, duration: 1.4, stagger: 0.06, ease: "wire" }, 0)
         .from(el.querySelector(".eyebrow"), { scrambleText: { text: "[01] Guardrails that run on X Layer, not on trust", chars: "01", speed: 0.5 }, duration: 1.2 }, 0.1)
         .from(lines.chars, { yPercent: 115, duration: 1.1, stagger: 0.016, ease: "snap" }, 0.15)

@@ -147,6 +147,8 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .flash { position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: var(--red); transform: scaleX(0); transform-origin: left; z-index: 8; }
 
 html.js .hero [data-in], html.js .hero .bigword { opacity: 0; animation: fx-fallback 0s 3s forwards; }
+/* phones: the hero shows at first paint; its entrance only slides it into place (Hero.tsx) */
+@media (max-width: 700px) { html.js .hero [data-in], html.js .hero .bigword { opacity: 1; animation: none; } }
 @keyframes fx-fallback { to { opacity: 1; } }
 
 /* ---------- section header row ---------- */
@@ -370,6 +372,9 @@ html.js .hero [data-in], html.js .hero .bigword { opacity: 0; animation: fx-fall
   .hero .sub { display: block; margin-top: 24px; }
   .hero .sub p { font-size: 15.5px; }
   .hero .ctas { margin-top: 22px; gap: 14px; }
+  /* side by side, the labels were clipped by the one-line roll effect: stack them full width */
+  .hero .ctas { flex-direction: column; align-items: stretch; }
+  .hero .ctas .btn { justify-content: space-between; }
   .hero canvas.fuse { position: relative; left: auto; top: auto; width: calc(100% + 32px); height: 300px; margin: 6px -16px 0; display: block; }
   .fusewrap { display: contents; }
   .tag, .leaders, .hint { display: none; }

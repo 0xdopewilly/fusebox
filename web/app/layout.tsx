@@ -5,9 +5,10 @@ import "./globals.css";
 import SmoothScroll from "@/components/fx/SmoothScroll";
 import Cursor from "@/components/fx/Cursor";
 
-const display = Archivo({ subsets: ["latin", "latin-ext"], axes: ["wdth"], variable: "--f-display", display: "swap" });
-const sans = Geist({ subsets: ["latin", "latin-ext"], variable: "--f-sans", display: "swap" });
-const mono = Geist_Mono({ subsets: ["latin", "latin-ext"], variable: "--f-mono", display: "swap" });
+// Latin only is preloaded: the page is English and ₮ has its own tiny font (globals.css); latin-ext still loads on demand
+const display = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--f-display", display: "swap" });
+const sans = Geist({ subsets: ["latin"], variable: "--f-sans", display: "swap" });
+const mono = Geist_Mono({ subsets: ["latin"], variable: "--f-mono", display: "swap" });
 
 const DESC = "Built on TapeOut and X Layer: Fusebox wires an AI agent's wallet through small logic circuits taped out on TapeOut. A payment reaches the payee only if every fuse holds, and each fuse that checks it pays its designer.";
 export const metadata: Metadata = {
@@ -23,7 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning className={`${display.variable} ${sans.variable} ${mono.variable}`}>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js');try{if(sessionStorage.getItem('fx-intro'))document.documentElement.dataset.intro='skip'}catch(e){}" }} />
+        <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js');try{if(sessionStorage.getItem('fx-intro')||matchMedia('(max-width: 700px)').matches)document.documentElement.dataset.intro='skip'}catch(e){}" }} />
       </head>
       <body>
         <a className="skip" href="#main">Skip to content</a>
