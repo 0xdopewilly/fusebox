@@ -224,6 +224,9 @@ flowchart LR
 Trust assumptions that remain: TapeOut's factory owner can upgrade code (mitigated by fail-closed
 attestation), USDT0's issuer can freeze addresses, and the wallet owner is fully trusted.
 
+How these mitigations are tested is in [ASSURANCE.md](ASSURANCE.md): 12 invariants over random sequences of
+calls from every role, a mutation check, and a Slither triage.
+
 ## 8. Gas (X Layer mainnet fork, real OrderGuard processor)
 
 Measured on a fork of X Layer at block ~75.82M (2026-11-13) with `vm.cool`, so every account and slot
@@ -257,8 +260,9 @@ least about 2.05M gas of headroom for the last fuse call (`eth_estimateGas` find
 # circuits: typecheck, tests, build netlists + Solidity fixtures
 cd circuits && npm install && npm run typecheck && npm test && npm run build
 
-# contracts: unit tests (offline)
+# contracts: unit, fuzz and invariant tests (offline), then the mutation check
 cd contracts && forge build && forge test
+python3 test/invariant/mutation.py
 
 # fork tests against X Layer mainnet (read-only fork, nothing is broadcast)
 forge test --match-path test/fork/XLayerFork.t.sol --fork-url xlayer -vv

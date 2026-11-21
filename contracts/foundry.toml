@@ -19,8 +19,8 @@ remappings = [
 runs = 512
 
 [profile.default.invariant]
-runs = 128
-depth = 64
+runs = 256
+depth = 256
 
 [rpc_endpoints]
 xlayer = "https://rpc.xlayer.tech"

@@ -92,8 +92,9 @@ git clone --recursive https://github.com/0xdopewilly/fusebox.git && cd fusebox
 # circuits: build the netlists and run the exhaustive tests
 (cd circuits && npm ci && npm test)
 
-# contracts: unit, fuzz and X Layer mainnet-fork tests
+# contracts: unit, fuzz, invariant and X Layer mainnet-fork tests, then the mutation check
 (cd contracts && forge test && forge test --match-path test/fork/XLayerFork.t.sol --fork-url https://rpc.xlayer.tech)
+(cd contracts && python3 test/invariant/mutation.py)
 
 # rehearse the whole launch on a local fork of X Layer mainnet (no keys or funds: it makes throwaway keys)
 anvil --fork-url https://rpc.xlayer.tech --port 8547 --chain-id 196 --auto-impersonate &
@@ -110,7 +111,7 @@ X Layer's public RPCs cap `eth_getLogs` ranges (1,000 blocks on tapeout.net, abo
 
 ## Status
 
-The contracts are deployed and working on X Layer mainnet, but they are unaudited. Atlas is a public demo wallet with small balances.
+The contracts are deployed and working on X Layer mainnet. They have no third-party audit yet. What stands in for one is in [docs/ASSURANCE.md](docs/ASSURANCE.md): 12 invariants checked over 786,432 random calls from every role, long walks that must reach every path, a mutation check that catches all 10 planted bugs, and a Slither triage. Atlas is a public demo wallet with small balances.
 
 ## License
 

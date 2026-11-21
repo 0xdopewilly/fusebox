@@ -57,7 +57,9 @@ The app always shows the live figures.
 | Check | Result |
 |---|---|
 | `circuits`: `npm test` | 36/36 pass (five fuses). These include TAP-02's official vectors, all 2^24 Daily Cap inputs, all 2^19 Two of Three inputs, all 2^33 Payee Guard inputs by BDD proof (plus block-exhaustive and 4M random as a cross-check), every Breaker state and input pair, and stuck-at fault coverage. |
-| `contracts`: `forge test` | 75 pass offline, including fuzz tests for the daily cap, quantisation and registry solvency, and 14 for the Repeat Guard and socket definitions. The X Layer fork suite passes 5/5 against mainnet state (re-run 2026-11-19). |
+| `contracts`: `forge test` | 99 pass offline. They include 12 invariants, each over 256 runs of 256 random calls from every role (agent, owner, approvers, designer, TapeOut upgrading its processor, an attacker) against all five real fuses, with a separate model predicting every decision and fee. Long walks must reach every path, and fuzz tests cover the daily cap, quantisation and registry solvency. The X Layer fork suite passes 5/5 against mainnet state (re-run 2026-11-19). |
+| Mutation check (`contracts/test/invariant/mutation.py`) | 10 realistic bugs planted one at a time (a breaker that forgets, approvals not used up, a fee above what the owner accepted, a missing access check, and so on); all 10 are caught. See [ASSURANCE.md](ASSURANCE.md). |
+| Static analysis | `forge lint`: no findings in `src/`. Slither 0.11.6: 37 results, none a defect, each triaged in [ASSURANCE.md](ASSURANCE.md). |
 | v2 deploy (2026-11-20) | Rehearsed on a fresh mainnet fork minutes before the broadcast, then 11/11 transactions landed. Live checks after: 5 fuses listed, sockets 1–5 defined, circuit #21 answers `eval` correctly for first, repeat and cleared payments. |
 | End to end, on a mainnet fork | 19 desktop flows and 11 phone flows pass, driven by a test wallet: the wizard, agent payments, the Breaker blowing and being reset, payees, fee withdrawal, freeze, My wallets, 2-of-3 approve and revoke, the playground, no-wallet, wrong-network and declined-signature paths. |
 | Owner console, market install, designer tools (fork) | 35 flows: every console action checked on-chain, install from a market card, set fee, delist/relist, the on-chain description. |
@@ -91,10 +93,9 @@ What was verified against the real TapeOut contracts on a fork before launch:
 
 ## Known gaps
 
-- The contracts are unaudited. Atlas is a public demo wallet with small balances.
+- The contracts have no third-party audit yet; [ASSURANCE.md](ASSURANCE.md) lists what stands in for one. Atlas is a public demo wallet with small balances.
 - The DeWEB edition's mainnet publish waits on TapeOut's one-time 0.08 OKB container fee.
 - Atlas is a v1 wallet, so it can't run the Repeat Guard: *Try to scam it* still shows the duplicate-invoice gap on Atlas. Wallets made since 2026-11-20 are v2 and can. See [V2-REPEAT-GUARD.md](V2-REPEAT-GUARD.md).
-- The Repeat Guard has no live mainnet decision yet: no v2 wallet has been made.
 - An OKX Agentic Wallet has not been tested as the agent key. It needs to send `pay` on X Layer with a ~3M gas limit.
 - A release-after-delivery fuse isn't built: it needs a delivery attestation source and a new socket.
 - Delisting a fuse stops new installs only; there is no designer-side kill switch, by design.
