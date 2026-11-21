@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { ATLAS_PATH } from "../HomeView";
 import { useState } from "react";
 import { LAYERS } from "@/lib/fuses";
 import { SOCKETS } from "@/lib/sockets";
@@ -78,7 +79,7 @@ export function FuseMobile({ data, f }: { data: Market; f: Fuse }) {
         {f.listed && <MRow href={`/app/simulate?f=${f.fuseId}`} icon={<Glyph name="sim" size={16} />} title="Try it on payments" sub="In the line simulator" />}
         <MRow onClick={() => setSheet("pins")} icon={<Glyph name="docs" size={16} />} title="Pinout" sub="What the wallet tells the circuit" />
         <MRow onClick={() => setSheet("chain")} icon={<Glyph name="ext" size={16} />} title="On X Layer" sub="Processor, designer, netlist hash" />
-        {f.onAtlas && <MRow href="/app" icon={<Glyph name="mine" size={16} />} title="Running on Atlas" sub="See it decide live" />}
+        {f.onAtlas && <MRow href={ATLAS_PATH} icon={<Glyph name="mine" size={16} />} title="Running on Atlas" sub="See it decide live" />}
       </div>
       <MSheet open={sheet === "pins"} onClose={() => setSheet(null)} title="Pinout">
         <div className="mrows">{(spec?.pins ?? []).map(([p, n, d]) => <MRow key={p} title={<span className="m lime" style={{ fontSize: 13 }}>{p}</span>} sub={d} value={n} valueSub="bits" chev={false} />)}</div>

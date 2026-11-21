@@ -117,6 +117,9 @@ export default function NewWalletView() {
   const [on, setOn] = useState<Record<Key, boolean>>({ "daily-cap": true, "payee-guard": true, breaker: true, "approval-2of3": true, "repeat-guard": true });
   const [cap, setCap] = useState("50"); const [cool, setCool] = useState("24"); const [trial, setTrial] = useState("2"); const [thr, setThr] = useState("20"); const [win, setWin] = useState("24");
   const [approvers, setApprovers] = useState(["", "", ""]);
+  // quick setup (the default): what the agent does, who it pays, a daily limit and the money; the rest are defaults
+  const [quick, setQuick] = useState(true);
+  const [starterId, setStarterId] = useState("invoice");
   const [payees, setPayees] = useState<string[]>([""]);
   const [deposit, setDeposit] = useState("0.1"); const [float, setFloat] = useState("0");
   // an agent with no OKB can't send its payments: the wizard can hand it some gas
@@ -276,6 +279,28 @@ export default function NewWalletView() {
   useEffect(() => { if (made?.wallet) setTimeout(() => document.querySelector(".done-card")?.scrollIntoView({ behavior: "smooth", block: "center" }), 150); }, [made?.wallet]);
 
   const toggle = (k: Key) => setOn({ ...on, [k]: !on[k] });
+  const approversReady = [1, 2].every((i) => isAddress(approvers[i].trim(), { strict: false }));
+  // in quick setup a starter never turns on Two of Three by itself: it waits for two named approvers
+  const applyStarter = (x: (typeof STARTERS)[number]) => { setStarterId(x.id); setOn(quick ? { ...x.on, "approval-2of3": x.on["approval-2of3"] && approversReady } : x.on); setWin(x.win); setCap(x.cap); setCool(x.cool); setTrial(x.trial); setThr(x.thr); };
+  const starter = STARTERS.find((x) => x.id === starterId) ?? STARTERS[0];
+  // quick setup never blocks on approvers: Two of Three switches on once two more people are named
+  useEffect(() => {
+    if (!quick) return;
+    const want = starter.on["approval-2of3"] && approversReady;
+    setOn((o) => (o["approval-2of3"] === want ? o : { ...o, "approval-2of3": want }));
+  }, [quick, starter, approversReady, on]);
+  const modeSwitch = (
+    <div className="wz-mode m" role="radiogroup" aria-label="Setup mode">
+      <button role="radio" aria-checked={quick} className={`dt-btn${quick ? " on" : ""}`} onClick={() => setQuick(true)}>Quick setup</button>
+      <button role="radio" aria-checked={!quick} className={`dt-btn${!quick ? " on" : ""}`} onClick={() => setQuick(false)}>Every setting</button>
+      <span className="mute">{quick ? "Four answers; sensible defaults for the rest" : "Every fuse, limit and amount"}</span>
+    </div>
+  );
+  const quickApprovers = (
+    <div className="addr-list m">
+      {[1, 2].map((i) => <div className="ar field" key={i}><input aria-label={`Approver ${i + 1} address`} value={approvers[i]} onChange={(e) => setApprovers(approvers.map((x, k) => (k === i ? e.target.value : x)))} placeholder={`Approver ${i + 1} · 0x… (optional)`} spellCheck={false} /></div>)}
+    </div>
+  );
 
   // ---- phones: one step per screen, Back / Next under the thumb
   const [step, setStep] = useState(0);
@@ -326,7 +351,16 @@ export default function NewWalletView() {
           {agent.trim() && agentErr && <p className="mnote" style={{ color: "var(--red)" }}>{agentErr}</p>}
           {keyLive && <button className="linkbtn m" onClick={() => { setGenKey(null); savePendingKey(null); setAgent(""); }}>Use my own agent address instead</button>}
         </>}
-        {step === 3 && <>
+        {step === 3 && quick && <>
+          {modeSwitch}
+          <div><div className="mtitle">What does your agent do?</div><p className="mcap" style={{ marginTop: 8 }}>Pick the closest; each comes with fuses and limits that fit.</p></div>
+          <MChips label="What your agent does" items={STARTERS.map((x) => [x.id, x.name] as const)} value={starterId} onChange={(id) => applyStarter(STARTERS.find((s) => s.id === id)!)} />
+          <p className="mnote">{starter.why}</p>
+          <div className="mcard" style={{ padding: 14 }}><div className="mkv"><span>Fuses</span><span>{FUSES.filter((f) => on[f.key]).map((f) => f.name).join(" · ")}</span></div></div>
+          {on["daily-cap"] && <label className="mfield"><span className="m">At most a day · USD₮0</span><input aria-label="Cap per day (USD₮0)" value={cap} onChange={(e) => setCap(e.target.value)} inputMode="decimal" /></label>}
+        </>}
+        {step === 3 && !quick && <>
+          {modeSwitch}
           <div><div className="mtitle">Pick the fuses</div><p className="mcap" style={{ marginTop: 8 }}>Every payment must pass all of them.</p></div>
           <MChips label="Start from a line" items={STARTERS.map((x) => [x.id, x.name] as const)} value={activeStarter?.id ?? null} onChange={(id) => { const x = STARTERS.find((s) => s.id === id)!; setOn(x.on); setWin(x.win); setCap(x.cap); setCool(x.cool); setTrial(x.trial); setThr(x.thr); }} />
           {activeStarter && <p className="mnote">{activeStarter.why}</p>}
@@ -352,7 +386,12 @@ export default function NewWalletView() {
           <div className="mlabel m"><span>Saved payees</span><span>{goodPayees.length}</span></div>
           {payees.map((p, i) => <div className="mfield-row" key={i}><label className="mfield"><span className="sr">Saved payee {i + 1} address</span><input aria-label={`Saved payee ${i + 1} address`} value={p} onChange={(e) => setPayees(payees.map((x, k) => (k === i ? e.target.value : x)))} placeholder="0x…" spellCheck={false} /></label><button className="mfield-x" onClick={() => setPayees(payees.filter((_, k) => k !== i))} aria-label={`Remove saved payee ${i + 1}`}>✕</button></div>)}
           <button className="btn" style={{ justifyContent: "center" }} onClick={() => setPayees([...payees, ""])}>+ Add a payee</button>
-          {on["approval-2of3"] && <>
+          {quick && starter.on["approval-2of3"] && <>
+            <div className="mlabel m"><span>Two people for big payments · optional</span></div>
+            <p className="mnote">Name two more approvers and anything over {clamp(thr)} USD₮0 needs two of the three of you. Leave empty to skip.</p>
+            {[1, 2].map((i) => <label className="mfield" key={i}><span className="sr">Approver {i + 1} address</span><input aria-label={`Approver ${i + 1} address`} value={approvers[i]} onChange={(e) => setApprovers(approvers.map((x, k) => (k === i ? e.target.value : x)))} placeholder={`Approver ${i + 1} · 0x… (optional)`} spellCheck={false} /></label>)}
+          </>}
+          {!quick && on["approval-2of3"] && <>
             <div className="mlabel m"><span>Approvers · two of three sign over {clamp(thr)} USD₮0</span></div>
             {approvers.map((a, i) => <label className="mfield" key={i}><span className="sr">Approver {i + 1} address</span><input aria-label={`Approver ${i + 1} address`} value={a} onChange={(e) => setApprovers(approvers.map((x, k) => (k === i ? e.target.value : x)))} placeholder={`Approver ${i + 1} · 0x…`} spellCheck={false} /></label>)}
           </>}
@@ -360,11 +399,16 @@ export default function NewWalletView() {
         {step === 5 && <>
           <div><div className="mtitle">Fund it</div><p className="mcap" style={{ marginTop: 8 }}>Fees come from a prepaid balance; payments come from the wallet.</p></div>
           {bal && <div className="mstats" style={{ gridTemplateColumns: "1fr 1fr" }}><div><span className="m">You have</span><b>{(Number(bal.usdt) / 1e6).toFixed(2)}<small>USD₮0</small></b></div><div><span className="m">Gas</span><b>{(Number(bal.okb) / 1e18).toFixed(4)}<small>OKB</small></b></div></div>}
+          {quick ? <>
+            <label className="mfield"><span className="m">Money to spend · USD₮0</span><input aria-label="Money to spend (USD₮0)" value={float} onChange={(e) => setFloat(e.target.value)} inputMode="decimal" /></label>
+            <p className="mnote">Also set aside: {deposit} USD₮0 of prepaid checks and {gas} OKB of gas for your agent. <button className="linkbtn" onClick={() => setQuick(false)}>Change these</button></p>
+          </> : <>
           <div className="mopt-2">
             <label className="mfield"><span className="m">Fee balance · USD₮0</span><input aria-label="Fee balance (USD₮0)" value={deposit} onChange={(e) => setDeposit(e.target.value)} inputMode="decimal" /></label>
             <label className="mfield"><span className="m">Wallet float · USD₮0</span><input aria-label="Wallet float (USD₮0)" value={float} onChange={(e) => setFloat(e.target.value)} inputMode="decimal" /></label>
           </div>
           <label className="mfield"><span className="m">Agent gas · OKB · ≈ {Math.max(0, Math.floor(Number(gas || 0) / GAS_PER_PAY))} payments</span><input aria-label="Agent gas (OKB)" value={gas} onChange={(e) => setGas(e.target.value)} inputMode="decimal" /></label>
+          </>}
           <div className="mcard" style={{ padding: 14 }}><div className="mkv">
             <span>Fuses</span><span>{Object.values(on).filter(Boolean).length} · {(Number(perDecision) / 1e6).toFixed(4)} USD₮0 a payment</span>
             <span>Fees cover</span><span>{perDecision && depositUnits > 0n ? `${Number(depositUnits / perDecision)} decisions` : "—"}</span>
@@ -414,6 +458,7 @@ export default function NewWalletView() {
       <h2 className="sr">Set up your wallet</h2>
       <section className="wz">
         <div className="wz-main" data-a>
+          {modeSwitch}
           <div className={`wz-sec${account ? "" : " off"}`}>
             <div className="ix">01</div>
             <div>
@@ -441,6 +486,31 @@ export default function NewWalletView() {
           <div className="wz-sec">
             <div className="ix">03</div>
             <div>
+              {quick ? <>
+              <h3>What does your agent do?</h3>
+              <p className="lead">Pick the closest. Each one is a set of fuses with limits that fit; you can change any of it under Every setting.</p>
+              <div className="starters" role="group" aria-label="What your agent does">
+                {STARTERS.map((x) => (
+                  <div key={x.id} className={`starter${starterId === x.id ? " on" : ""}`}>
+                    <button onClick={() => applyStarter(x)} aria-pressed={starterId === x.id}>
+                      <b>{x.name}</b>
+                      <span className="m mute">{FUSES.filter((y) => x.on[y.key]).map((y) => y.name).join(" · ")}</span>
+                      <span className="starter-why">{x.why}</span>
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <div className="fopt"><span /><div>
+                <h4>Who does it pay?</h4>
+                <p>Addresses your agent pays without a second look. You can add more later.</p>
+                <div className="addr-list m">
+                  {payees.map((p, i) => <div className="ar field" key={i}><input aria-label={`Saved payee ${i + 1} address`} value={p} onChange={(e) => setPayees(payees.map((x, k) => (k === i ? e.target.value : x)))} placeholder="0x…" spellCheck={false} /></div>)}
+                  <button className="linkbtn" onClick={() => setPayees([...payees, ""])}>+ Add a payee</button>
+                </div>
+              </div></div>
+              {on["daily-cap"] && <div className="fopt"><span /><div><h4>How much a day, at most?</h4><p>The Daily Cap stops anything past this in one UTC day, however the agent is asked.</p><div className="prow"><Field label="Cap per day" suffix="USD₮0" v={cap} set={setCap} /></div></div></div>}
+              {starter.on["approval-2of3"] && <div className="fopt"><span /><div><h4>Two people for big payments <small>optional</small></h4><p>Name two more approvers and anything over {clamp(thr)} USD₮0 needs two of the three of you to sign. Leave it empty to skip; you can add them later.</p>{quickApprovers}</div></div>}
+              </> : <>
               <h3>Pick the fuses</h3>
               <p className="lead">Each fuse is a TapeOut circuit on X Layer. A payment needs a yes from every fuse you splice in, and each check pays the fuse&apos;s designer.</p>
               <GuardrailsCard onApply={(g) => {
@@ -496,12 +566,18 @@ export default function NewWalletView() {
                   </div>
                 </div>
               </div>
+              </>}
             </div>
           </div>
           <div className="wz-sec">
             <div className="ix">04</div>
             <div>
               <h3>Fund it</h3>
+              {quick ? <>
+              <p className="lead">The money your agent can spend goes into the wallet. {bal ? <>You have <span className="m lime">{(Number(bal.usdt) / 1e6).toFixed(4)} USD₮0</span>.</> : null}</p>
+              <div className="prow"><Field label="Money to spend" suffix="USD₮0" v={float} set={setFloat} /></div>
+              <p className="m mute" style={{ marginTop: 8, lineHeight: 1.6 }}>Also set aside: {deposit} USD₮0 of prepaid checks (about {perDecision && depositUnits > 0n ? Number(depositUnits / perDecision) : 0} payments) and {gas} OKB of gas for your agent. <button className="linkbtn" onClick={() => setQuick(false)}>Change these</button></p>
+              </> : <>
               <p className="lead">Fees come from a prepaid USD₮0 balance in the registry; the payments themselves come from the wallet. {bal ? <>You have <span className="m lime">{(Number(bal.usdt) / 1e6).toFixed(4)} USD₮0</span> and <span className="m lime">{(Number(bal.okb) / 1e18).toFixed(5)} OKB</span>.</> : null}</p>
               <div className="prow">
                 <Field label="Fee balance" suffix="USD₮0" v={deposit} set={setDeposit} />
@@ -509,6 +585,7 @@ export default function NewWalletView() {
                 <Field label="Agent gas" suffix="OKB" v={gas} set={setGas} />
               </div>
               <p className="m mute" style={{ marginTop: 8 }}>Agent gas ≈ {Math.max(0, Math.floor(Number(gas || 0) / GAS_PER_PAY))} payments. Your agent needs a little OKB to send its payments; set 0 if you fund it yourself.</p>
+              </>}
             </div>
           </div>
         </div>

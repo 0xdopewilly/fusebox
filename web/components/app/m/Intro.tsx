@@ -24,7 +24,8 @@ export default function Intro() {
   useEffect(() => {
     const force = new URLSearchParams(window.location.search).get("intro") === "1";
     let seen = false; try { seen = !!localStorage.getItem(KEY); } catch {}
-    if (force || (!seen && !navigator.webdriver && !path.startsWith("/app/approve"))) setOpen(true);
+    // the front door (/app) already says what Fusebox is and where to go
+    if (force || (!seen && !navigator.webdriver && path !== "/app" && !path.startsWith("/app/approve"))) setOpen(true);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const done = useCallback((to?: string) => {

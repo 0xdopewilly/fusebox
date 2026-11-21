@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { ATLAS_PATH } from "./HomeView";
 import { useMarket } from "@/lib/useMarket";
 import { LAYERS } from "@/lib/fuses";
 import { SOCKETS } from "@/lib/sockets";
@@ -93,7 +94,7 @@ export default function FuseView({ id }: { id: number }) {
           </div>
         </div>
       </section>
-      <div className="fv-back m"><Link className="lime" href="/app/market">← Every fuse</Link>{f.onAtlas ? <> · <Link className="lime" href="/app">Running on Atlas →</Link></> : null}</div>
+      <div className="fv-back m"><Link className="lime" href="/app/market">← Every fuse</Link>{f.onAtlas ? <> · <Link className="lime" href={ATLAS_PATH}>Running on Atlas →</Link></> : null}</div>
     </div>
   } />;
 }

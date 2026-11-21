@@ -5,7 +5,7 @@ import { decodeEventLog, formatEther, parseUnits, type Address, type Hex } from 
 import { fuseRegistryAbi, tapeoutProcessorAbi } from "@/lib/abi";
 import { CURRENT, DEP, pub } from "@/lib/client-chain";
 import { SOCKETS } from "@/lib/sockets";
-import { CONDS, compile, condOf, decodeDraft, encodeDraft, paramLabels, ruleProblem, ruleText, type Cond, type Rule } from "@/lib/studio";
+import { CONDS, compile, condOf, decodeDraft, encodeDraft, opOf, paramLabels, ruleProblem, ruleText, type Cond, type GroupMode, type GroupOp, type Join, type Rule } from "@/lib/studio";
 import { prove, type Proof } from "@/lib/studioProof";
 import { optimizeAsync, type Optimized } from "@/lib/circuits/optimize";
 import records from "@/lib/circuits/optimize-records.json";
@@ -28,6 +28,11 @@ const transistorsAbi = [
 const PROCESSOR = DEP.processor as Address;
 const START: Record<number, Cond[][]> = { 1: [[{ kind: "each", k: 0 }]], 2: [[{ kind: "listed", k: 0 }, { kind: "cooled", k: 0 }]], 3: [], 4: [[{ kind: "small", k: 0 }], [{ kind: "seat", k: 1 }, { kind: "kof3", k: 2 }]], 5: [[{ kind: "fresh", k: 0 }]] };
 const SOCKET_ORDER = [1, 2, 3, 4, 5];
+/** one group of the rule: its conditions and how they combine */
+interface Line { conds: Cond[]; op: GroupOp }
+const toLines = (gs: Cond[][]): Line[] => gs.map((conds) => ({ conds, op: { m: "all", k: 0 } }));
+const MODE_LABEL: Record<GroupMode, string> = { all: "All of", any: "Any of", atleast: "At least", none: "None of" };
+const MODE_WORD: Record<GroupMode, string> = { all: "and", any: "or", atleast: "·", none: "·" };
 interface Ctx { circuitId?: bigint; fuseId?: number }
 // the shared write() is typed for any ABI, where viem can't see that these calls are payable; it passes value through
 type WriteArg = Parameters<ReturnType<typeof useWallet>["write"]>[0];
@@ -37,9 +42,11 @@ const payable = (a: { address: Address; abi: readonly unknown[]; functionName: s
 export default function StudioView() {
   const { account, write } = useWallet();
   const [socket, setSocket] = useState(1);
-  const [groups, setGroups] = useState<Cond[][]>(START[1]);
+  const [lines, setLines] = useState<Line[]>(toLines(START[1]));
+  const [join, setJoin] = useState<Join>("any");
   const [strikes, setStrikes] = useState(2);
-  const rule: Rule = { socket, groups, strikes };
+  const groups = lines.map((l) => l.conds);
+  const rule: Rule = { socket, groups, strikes, ops: lines.map((l) => l.op), join };
   const problem = ruleProblem(rule);
   const key = JSON.stringify(rule);
   const compiled = useMemo(() => { if (problem) return null; try { return compile(rule); } catch { return null; } }, [key]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -112,7 +119,7 @@ export default function StudioView() {
   // a shared draft (?draft=…) opens as it was designed
   useEffect(() => {
     const d = decodeDraft(new URLSearchParams(window.location.search).get("draft") ?? ""); if (!d) return;
-    setSocket(d.rule.socket); setGroups(d.rule.groups); setStrikes(d.rule.strikes); setName(d.name);
+    setSocket(d.rule.socket); setLines(d.rule.groups.map((conds, i) => ({ conds, op: opOf(d.rule, i) }))); setJoin(d.rule.join ?? "any"); setStrikes(d.rule.strikes); setName(d.name);
   }, []);
   const draftCode = problem ? "" : encodeDraft(rule, name);
   const [copied, setCopied] = useState(false);
@@ -137,18 +144,22 @@ export default function StudioView() {
     if (ok) setMade({ ...(q.ctx() ?? {}) });
   };
 
-  const pick = (s: number) => { setSocket(s); setGroups(START[s]); setProof(null); setMade(null); };
-  const setCond = (g: number, i: number, c: Cond | null) => setGroups(groups.map((x, j) => (j !== g ? x : c ? x.map((y, k) => (k === i ? c : y)) : x.filter((_, k) => k !== i))).filter((x, j) => x.length || j !== g || x.length));
-  const addCond = (g: number, kind: string) => { const d = condOf(socket, kind)!; setGroups(groups.map((x, j) => (j === g ? [...x, { kind, k: d.param?.def ?? 0 }] : x))); };
+  const pick = (s: number) => { setSocket(s); setLines(toLines(START[s])); setJoin("any"); setProof(null); setMade(null); };
+  // "at least k" can't ask for more conditions than the group has
+  const fit = (l: Line): Line => (l.op.m === "atleast" ? { ...l, op: { m: "atleast", k: Math.max(1, Math.min(l.op.k || 1, l.conds.length)) } } : l);
+  const editLines = (f: (ls: Line[]) => Line[]) => { setLines(f(lines).filter((l) => l.conds.length).map(fit)); setProof(null); };
+  const setCond = (g: number, i: number, c: Cond | null) => editLines((ls) => ls.map((l, j) => (j !== g ? l : { ...l, conds: c ? l.conds.map((y, k) => (k === i ? c : y)) : l.conds.filter((_, k) => k !== i) })));
+  const addCond = (g: number, kind: string) => { const d = condOf(socket, kind)!; editLines((ls) => ls.map((l, j) => (j === g ? { ...l, conds: [...l.conds, { kind, k: d.param?.def ?? 0 }] } : l))); };
+  const setOp = (g: number, op: GroupOp) => editLines((ls) => ls.map((l, j) => (j === g ? { ...l, op } : l)));
   const grid = <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>;
 
   return (
     <div className="page">
       {grid}
-      <PageChrome title="Fuse Studio" sub="Build, prove, tape out" info={<p>Build a fuse from rules, prove it against every input, and tape it out on TapeOut from your own wallet. It lists in the market with its description on-chain, and earns you its fee on every check, the no&apos;s included.</p>} />
+      <PageChrome title="Fuse Studio" sub="Any rule, no code" info={<p>Build any payment rule without code. Combine conditions with all, any, at least or none; Fusebox turns it into TapeOut gates, trims every gate it doesn&apos;t need and checks it against your rule, input by input. Tape it out from your own wallet: it lists in the market and earns you its fee on every check, the no&apos;s included.</p>} />
       <section className="try-head m-hide">
         <h1 className="disp" data-a>Fuse <span className="lime">[studio]</span>.</h1>
-        <p data-a>Build a fuse from rules, prove it against every input, and tape it out on TapeOut from your own wallet. It lists in the market with its description on-chain, and earns you its fee on every check, the no&apos;s included.</p>
+        <p data-a><b>Build any payment rule. No code.</b> Combine conditions with all, any, at least or none. Fusebox turns it into TapeOut gates, trims every gate it doesn&apos;t need and checks it against your rule, input by input. Tape it out from your own wallet: it guards real payments in Fusebox wallets, lists in the market, and earns you its fee on every check.</p>
       </section>
 
       <h2 className="sr">1. Pick a socket</h2>
@@ -170,30 +181,44 @@ export default function StudioView() {
             </div>
           ) : (
             <>
-              {groups.map((g, gi) => (
+              <p className="m mute st-hint">No code: pick conditions, then choose how each group combines them. Before anything is taped out, the circuit is checked against your rule input by input: every possible input for most sockets (all 16.7 million for a daily-cap rule).</p>
+              {lines.length > 1 && (
+                <div className="st-join m" role="radiogroup" aria-label="How the groups combine">
+                  <span>Let a payment through when</span>
+                  {(["any", "all"] as Join[]).map((j) => <button key={j} role="radio" aria-checked={join === j} className={`dt-btn${join === j ? " on" : ""}`} onClick={() => { setJoin(j); setProof(null); }}>{j === "any" ? "any group holds" : "every group holds"}</button>)}
+                </div>
+              )}
+              {lines.map((l, gi) => (
                 <div key={gi}>
-                  {gi > 0 && <div className="st-or m">or</div>}
+                  {gi > 0 && <div className="st-or m">{join === "all" ? "and" : "or"}</div>}
                   <div className="st-group">
-                    {g.map((c, ci) => {
+                    <div className="st-mode m" role="radiogroup" aria-label={`Group ${gi + 1}: how its conditions combine`}>
+                      {(["all", "any", "atleast", "none"] as GroupMode[]).map((m) => (
+                        <button key={m} role="radio" aria-checked={l.op.m === m} className={`dt-btn${l.op.m === m ? " on" : ""}`} disabled={m === "atleast" && l.conds.length < 2}
+                          onClick={() => setOp(gi, { m, k: m === "atleast" ? Math.min(2, l.conds.length) : 0 })}>{MODE_LABEL[m]}</button>
+                      ))}
+                      {l.op.m === "atleast" && <label className="st-k m"><span className="sr">How many</span><input aria-label={`Group ${gi + 1}: at least how many`} value={l.op.k} onChange={(e) => setOp(gi, { m: "atleast", k: Number(e.target.value.replace(/\D/g, "")) || 1 })} inputMode="numeric" /><span className="mute">of {l.conds.length}</span></label>}
+                    </div>
+                    {l.conds.map((c, ci) => {
                       const d = condOf(socket, c.kind)!;
                       return (
                         <div key={ci} className="st-cond">
-                          {ci > 0 && <span className="m mute st-and">and</span>}
+                          {ci > 0 && <span className="m mute st-and">{MODE_WORD[l.op.m]}</span>}
                           <span className="st-text">{d.label(c.k)}</span>
-                          {d.param && <label className="st-k m"><span className="sr">{d.param.label}</span><input aria-label={d.param.label} value={c.k} onChange={(e) => { setCond(gi, ci, { kind: c.kind, k: Number(e.target.value.replace(/\D/g, "")) || 0 }); setProof(null); }} inputMode="numeric" /></label>}
-                          <button className="sim-x" aria-label={`Remove: ${d.label(c.k)}`} onClick={() => { setGroups(groups.map((x, j) => (j === gi ? x.filter((_, k) => k !== ci) : x)).filter((x) => x.length)); setProof(null); }}>×</button>
+                          {d.param && <label className="st-k m"><span className="sr">{d.param.label}</span><input aria-label={d.param.label} value={c.k} onChange={(e) => setCond(gi, ci, { kind: c.kind, k: Number(e.target.value.replace(/\D/g, "")) || 0 })} inputMode="numeric" /></label>}
+                          <button className="sim-x" aria-label={`Remove: ${d.label(c.k)}`} onClick={() => setCond(gi, ci, null)}>×</button>
                         </div>
                       );
                     })}
-                    <select className="st-add m" aria-label={`Add a condition to group ${gi + 1}`} value="" onChange={(e) => { if (e.target.value) { addCond(gi, e.target.value); setProof(null); } }}>
-                      <option value="">+ and…</option>
+                    <select className="st-add m" aria-label={`Add a condition to group ${gi + 1}`} value="" onChange={(e) => { if (e.target.value) addCond(gi, e.target.value); }}>
+                      <option value="">+ add a condition…</option>
                       {CONDS[socket].map((d) => <option key={d.kind} value={d.kind}>{d.label(d.param?.def ?? 0)}</option>)}
                     </select>
                   </div>
                 </div>
               ))}
-              <select className="st-add m st-or-add" aria-label="Add another group" value="" onChange={(e) => { if (e.target.value) { const d = condOf(socket, e.target.value)!; setGroups([...groups, [{ kind: e.target.value, k: d.param?.def ?? 0 }]]); setProof(null); } }}>
-                <option value="">+ or another way through…</option>
+              <select className="st-add m st-or-add" aria-label="Add another group" value="" onChange={(e) => { if (e.target.value) { const d = condOf(socket, e.target.value)!; editLines((ls) => [...ls, { conds: [{ kind: e.target.value, k: d.param?.def ?? 0 }], op: { m: "all", k: 0 } }]); } }}>
+                <option value="">+ add another group…</option>
                 {CONDS[socket].map((d) => <option key={d.kind} value={d.kind}>{d.label(d.param?.def ?? 0)}</option>)}
               </select>
             </>
@@ -266,7 +291,7 @@ export default function StudioView() {
       <section className="st-prove" data-a>
         <div className="sim-h m"><span className="lime">04</span> Prove it · {active && active !== compiled ? "the optimized bytes" : "the bytes"} against the rule</div>
         <div className="st-prove-row">
-          <button className="btn lime" disabled={!active || progress !== null || !settled} onClick={runProof}><span>{!settled && active ? "Optimizing first…" : progress !== null ? `Checking… ${Math.round(progress * 100)}%` : proven ? "Proven · run again" : "Prove it on every input"}</span> <span className="k">→</span></button>
+          <button className="btn lime" disabled={!active || progress !== null || !settled} onClick={runProof}><span>{!settled && active ? "Optimizing first…" : progress !== null ? `Checking… ${Math.round(progress * 100)}%` : proven ? "Proven · run again" : "Prove it against the rule"}</span> <span className="k">→</span></button>
           {progress !== null && <div className="st-bar" role="progressbar" aria-valuenow={Math.round(progress * 100)} aria-valuemin={0} aria-valuemax={100}><i style={{ transform: `scaleX(${progress})` }} /></div>}
           {proof && active && proof.hash === active.net.keccak && (
             <p className={`m ${proof.p.mismatches ? "red" : "lime"}`} role="status">

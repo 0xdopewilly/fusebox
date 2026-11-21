@@ -4,9 +4,9 @@ import { gsap, SplitText, useGSAP, reduced, whenNear } from "@/lib/gsap";
 import Reg from "./Reg";
 
 const WHO = [
-  { k: "A", h: "Teams with payment agents", p: "Invoice and AP agents, procurement bots, payout runs. The agent keeps its speed, and the fuses keep it inside the owner's rules.", b: "0.0045", s: "USD₮0 for a payment checked by all four fuses" },
+  { k: "A", h: "Teams with payment agents", p: "Invoice and AP agents, procurement bots, payout runs. The agent keeps its speed, and the fuses keep it inside the owner's rules. Set up in three taps.", b: "0.005", s: "USD₮0 for a payment checked by all five fuses" },
   { k: "B", h: "Agent platforms and wallets", p: "Give every user's agent a wallet with fuses: one factory call on X Layer, or one line of MCP for Claude, Cursor and any MCP client.", b: "1 line", s: "npx -y fusebox-mcp" },
-  { k: "C", h: "Circuit designers", p: "Write a rule as a NAND circuit, tape it out on TapeOut and list it. Every wallet that installs it pays you on every decision.", b: "90%", s: "of each fee, paid to the circuit NFT" },
+  { k: "C", h: "Circuit designers", p: "Build a rule without code in Fuse Studio, checked against your rule before it ships, or bring your own NAND circuit. Tape it out on TapeOut and list it: every wallet that installs it pays you on every decision.", b: "90%", s: "of each fee, paid to the circuit NFT" },
 ];
 
 export default function Users() {

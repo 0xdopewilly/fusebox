@@ -11,13 +11,13 @@ import { Glyph, type GlyphName } from "./Pixel";
 
 /** Phones only: a fuse strip in the thumb zone. Each section is a cartridge whose filament lights when you're on it;
  *  the fifth key opens the panel (wallet, every other page, network). Desktop keeps the top bar. */
-const TABS = [["/app", "Wallet"], ["/app/try", "Try"], ["/app/market", "Market"], ["/app/designers", "Sell"]] as const;
+const TABS = [["/app", "Start"], ["/app/try", "Try"], ["/app/studio", "Build"], ["/app/market", "Market"]] as const;
 const GO: readonly [string, string, GlyphName][] = [
   ["/app/assistant", "Assistant", "rob"],
   ["/app/mine", "My wallets", "mine"],
   ["/app/new", "Wire up a wallet", "new"],
   ["/app/approve", "Approvals", "approve"],
-  ["/app/studio", "Fuse Studio", "studio"],
+  ["/app/designers", "Sell a fuse", "coin"],
   ["/app/simulate", "Line simulator", "sim"],
   ["/app/rob", "Rob the agent", "rob"],
   ["/app/x402", "Pay per call", "x402"],
@@ -44,7 +44,7 @@ export default function Dock() {
   const [open, setOpen] = useState(false);
   const sheet = useRef<HTMLDivElement>(null);
   const shade = useRef<HTMLDivElement>(null);
-  const active = (h: string) => (h === "/app" ? path === "/app" || path.startsWith("/app/w/") : path.startsWith(h) || (h === "/app/market" && path.startsWith("/app/fuse/")) || (h === "/app/try" && (path.startsWith("/app/simulate") || path.startsWith("/app/rob"))) || (h === "/app/designers" && path.startsWith("/app/studio")));
+  const active = (h: string) => (h === "/app" ? path === "/app" : path.startsWith(h) || (h === "/app/market" && path.startsWith("/app/fuse/")) || (h === "/app/try" && (path.startsWith("/app/simulate") || path.startsWith("/app/rob"))) || (h === "/app/studio" && path.startsWith("/app/designers")));
 
   const close = useCallback(() => {
     if (!sheet.current || reduced()) { setOpen(false); return; }

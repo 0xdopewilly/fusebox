@@ -2,8 +2,11 @@
  * Fuse Studio: rules for one socket, compiled to a TAP-02 NAND netlist with the same toolchain as the shipped fuses
  * (lib/circuits = circuits/src), plus the plain-JS spec the proof checks the netlist against.
  *
- * A rule is OR over groups, AND within a group: "allow if (A and B) or (C)". The Breaker socket is sequential, so
- * it takes a strikes count instead: a stranger payment is refused and counted; the Nth blows it until the owner resets.
+ * A rule is groups of conditions. Each group is ALL of its conditions (the default), ANY of them, AT LEAST k of them,
+ * or NONE of them; the groups join with OR ("any group lets it through", the default) or AND ("every group must
+ * hold"). So "allow if (A and B) or (at least 2 of C, D, E)" and "allow if (any of A, B) and (none of C)" both compile.
+ * The Breaker socket is sequential, so it takes a strikes count instead: a stranger payment is refused and counted;
+ * the Nth blows it until the owner resets.
  */
 import { Builder, add, lessOrEqual, majority3, ONE, ZERO, type Netlist, type Sig } from "./circuits/builder";
 import { SOCKETS } from "./sockets";
@@ -21,11 +24,33 @@ export interface CondDef {
   spec: (f: Fields, k: number) => boolean;
 }
 export interface Cond { kind: string; k: number }
-export interface Rule { socket: number; groups: Cond[][]; strikes: number }
+export type GroupMode = "all" | "any" | "atleast" | "none";
+/** how a group combines its conditions; k is the count for "atleast" */
+export interface GroupOp { m: GroupMode; k: number }
+export type Join = "any" | "all";
+export interface Rule { socket: number; groups: Cond[][]; strikes: number; /** one per group; missing = "all" */ ops?: GroupOp[]; /** how groups combine; missing = "any" */ join?: Join }
+export const GROUP_MODES: GroupMode[] = ["all", "any", "atleast", "none"];
+export const opOf = (r: Rule, i: number): GroupOp => r.ops?.[i] ?? { m: "all", k: 0 };
+const joinOf = (r: Rule): Join => r.join ?? "any";
 
 const konst = (k: number): Sig[] => Array.from({ length: 8 }, (_, i) => ((k >> i) & 1 ? ONE : ZERO));
 const anyOf = (b: Builder, xs: Sig[]) => xs.reduce((acc, x) => b.or(acc, x));
 const allOf = (b: Builder, xs: Sig[]) => xs.reduce((acc, x) => b.and(acc, x));
+/** at least k of xs are 1: a running count kept as "at least j so far" lines, O(n·k) gates (constants fold away) */
+function atLeast(b: Builder, xs: Sig[], k: number): Sig {
+  if (k <= 0) return ONE;
+  if (k > xs.length) return ZERO;
+  const t: Sig[] = [ONE, ...Array.from({ length: k }, () => ZERO)];
+  for (const x of xs) for (let j = k; j >= 1; j--) t[j] = b.or(t[j], b.and(x, t[j - 1]));
+  return t[k];
+}
+function groupSig(b: Builder, op: GroupOp, xs: Sig[]): Sig {
+  return op.m === "any" ? anyOf(b, xs) : op.m === "none" ? b.not(anyOf(b, xs)) : op.m === "atleast" ? atLeast(b, xs, op.k) : allOf(b, xs);
+}
+function groupSpec(op: GroupOp, v: boolean[]): boolean {
+  const n = v.filter(Boolean).length;
+  return op.m === "any" ? n > 0 : op.m === "none" ? n === 0 : op.m === "atleast" ? n >= op.k : n === v.length;
+}
 
 export const CONDS: Record<number, CondDef[]> = {
   1: [
@@ -75,7 +100,15 @@ export function pinsOf(socket: number) {
 
 export function ruleText(r: Rule): string {
   if (r.socket === 3) return r.strikes === 1 ? "a payment to a stranger blows it; it stays blown until the owner resets it" : `the first ${r.strikes - 1} payment${r.strikes > 2 ? "s" : ""} to strangers ${r.strikes > 2 ? "are" : "is"} refused and counted; stranger number ${r.strikes} blows it until the owner resets it`;
-  return r.groups.map((g) => g.map((c) => condOf(r.socket, c.kind)?.label(c.k) ?? c.kind).join(" and ")).map((s) => (r.groups.length > 1 ? `(${s})` : s)).join(" or ");
+  const phrase = (g: Cond[], op: GroupOp) => {
+    const ls = g.map((c) => condOf(r.socket, c.kind)?.label(c.k) ?? c.kind);
+    const list = (w: string) => (ls.length > 1 ? `${ls.slice(0, -1).join(", ")} ${w} ${ls[ls.length - 1]}` : ls[0]);
+    if (op.m === "any") return ls.length === 1 ? ls[0] : ls.length === 2 ? `${ls[0]} or ${ls[1]}` : `any of: ${list("or")}`;
+    if (op.m === "none") return ls.length === 1 ? `not: ${ls[0]}` : `none of: ${list("or")}`;
+    if (op.m === "atleast") return `at least ${op.k} of: ${list("and")}`;
+    return ls.join(" and ");
+  };
+  return r.groups.map((g, i) => phrase(g, opOf(r, i))).map((s) => (r.groups.length > 1 ? `(${s})` : s)).join(joinOf(r) === "all" ? " and " : " or ");
 }
 
 /** The owner settings a rule reads, labelled for the install form (left out = unused, hidden there). */
@@ -90,6 +123,12 @@ export function ruleProblem(r: Rule): string | null {
   if (r.socket === 3) return r.strikes >= 1 && r.strikes <= 3 ? null : "Pick 1, 2 or 3 strikes";
   if (!r.groups.length) return "Add a condition";
   if (r.groups.some((g) => !g.length)) return "Every group needs at least one condition";
+  if (r.ops && r.ops.length !== r.groups.length) return "Every group needs its own setting";
+  for (let i = 0; i < r.groups.length; i++) {
+    const op = opOf(r, i);
+    if (!GROUP_MODES.includes(op.m)) return "Unknown group setting";
+    if (op.m === "atleast" && (!Number.isInteger(op.k) || op.k < 1 || op.k > r.groups[i].length)) return `"At least" needs a number from 1 to ${r.groups[i].length}`;
+  }
   for (const g of r.groups) for (const c of g) {
     const d = condOf(r.socket, c.kind); if (!d) return "Unknown condition";
     if (d.param && (!Number.isInteger(c.k) || c.k < d.param.min || c.k > d.param.max)) return `${d.param.label}: ${d.param.min} to ${d.param.max}`;
@@ -128,11 +167,17 @@ export function compile(r: Rule): Compiled {
   const p = (name: string) => { const x = pins.find((q) => q.name === name); if (!x) throw new Error(`no pin ${name}`); return b.bus(x.offset, x.width); };
   let out: Sig;
   if (r.socket === 3) out = strikesBuild(b, p, r.strikes);
-  else out = anyOf(b, r.groups.map((g) => allOf(b, g.map((c) => condOf(r.socket, c.kind)!.build(b, p, c.k)))));
+  else {
+    const gs = r.groups.map((g, i) => groupSig(b, opOf(r, i), g.map((c) => condOf(r.socket, c.kind)!.build(b, p, c.k))));
+    out = joinOf(r) === "all" ? allOf(b, gs) : anyOf(b, gs);
+  }
   const net = b.build("studio", [out]);
   const spec = r.socket === 3
     ? (f: Fields, s: number[]) => strikesSpec(r.strikes, f, s)
-    : (f: Fields) => ({ out: r.groups.some((g) => g.every((c) => condOf(r.socket, c.kind)!.spec(f, c.k))) ? 1 : 0, newState: [] as number[] });
+    : (f: Fields) => {
+      const gs = r.groups.map((g, i) => groupSpec(opOf(r, i), g.map((c) => condOf(r.socket, c.kind)!.spec(f, c.k))));
+      return { out: (joinOf(r) === "all" ? gs.every(Boolean) : gs.some(Boolean)) ? 1 : 0, newState: [] as number[] };
+    };
   return { net, spec, nIn, nState: net.nState };
 }
 
@@ -149,7 +194,8 @@ export function bitsFromFields(socket: number, f: Fields): number[] {
 
 /** A draft as a URL-safe string: the rule and its name, so a design can be shared or tested before it's taped out. */
 export function encodeDraft(r: Rule, name = ""): string {
-  const json = JSON.stringify({ s: r.socket, g: r.groups.map((g) => g.map((c) => [c.kind, c.k])), n: r.strikes, name: name.slice(0, 40) });
+  const plain = !r.ops?.some((o) => o.m !== "all") && joinOf(r) === "any"; // older drafts stay byte-identical
+  const json = JSON.stringify({ s: r.socket, g: r.groups.map((g) => g.map((c) => [c.kind, c.k])), n: r.strikes, name: name.slice(0, 40), ...(plain ? {} : { o: r.groups.map((_, i) => [opOf(r, i).m, opOf(r, i).k]), j: joinOf(r) }) });
   const b64 = typeof btoa === "function" ? btoa(unescape(encodeURIComponent(json))) : Buffer.from(json, "utf8").toString("base64");
   return b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
@@ -157,8 +203,10 @@ export function decodeDraft(s: string): { rule: Rule; name: string } | null {
   try {
     const b64 = s.replace(/-/g, "+").replace(/_/g, "/");
     const json = typeof atob === "function" ? decodeURIComponent(escape(atob(b64))) : Buffer.from(b64, "base64").toString("utf8");
-    const j = JSON.parse(json) as { s: number; g: [string, number][][]; n: number; name?: string };
+    const j = JSON.parse(json) as { s: number; g: [string, number][][]; n: number; name?: string; o?: [string, number][]; j?: string };
     const rule: Rule = { socket: Number(j.s), groups: (j.g ?? []).map((g) => g.map(([kind, k]) => ({ kind: String(kind), k: Number(k) }))), strikes: Number(j.n) || 1 };
+    if (Array.isArray(j.o)) rule.ops = j.o.map(([m, k]) => ({ m: String(m) as GroupMode, k: Number(k) || 0 }));
+    if (j.j === "all" || j.j === "any") rule.join = j.j;
     if (![1, 2, 3, 4, 5].includes(rule.socket) || ruleProblem(rule)) return null;
     return { rule, name: typeof j.name === "string" ? j.name.slice(0, 40) : "" };
   } catch { return null; }

@@ -13,7 +13,9 @@ import { short } from "@/lib/hooks";
 import { useChrome } from "./m/chrome";
 import { MSheet } from "./m/ui";
 
-const TABS = [["/app", "Wallet", "Wallet"], ["/app/try", "Try to scam it", "Try"], ["/app/market", "Fuse market", "Market"], ["/app/designers", "Designers", "Sell"]] as const;
+const TABS = [["/app", "Start", "Start"], ["/app/try", "Try to scam it", "Try"], ["/app/studio", "Build a rule", "Build"], ["/app/market", "Fuse market", "Market"]] as const;
+/** everything else, one click away without crowding the bar */
+const MORE = [["/app/mine", "My wallets"], ["/app/new", "Wire up a wallet"], ["/app/assistant", "Pay by chatting"], ["/app/approve", "Approvals"], ["/app/designers", "Sell a fuse"], ["/app/simulate", "Line simulator"], ["/app/rob", "Rob the agent"], ["/app/x402", "Pay per call (x402)"], ["/app/status", "Status"]] as const;
 
 export default function AppBar() {
   const path = usePathname();
@@ -26,13 +28,19 @@ export default function AppBar() {
     if (on) gsap.to(ink, { left: on.offsetLeft + 16, width: on.offsetWidth - 32, duration: 0.6, ease: "snap", autoAlpha: 1 });
     else gsap.to(ink, { autoAlpha: 0, duration: 0.2 });
   }, [path]);
-  const active = (h: string) => (h === "/app" ? path === "/app" : path?.startsWith(h) || (h === "/app/market" && !!path?.startsWith("/app/fuse/")) || (h === "/app/try" && (!!path?.startsWith("/app/simulate") || !!path?.startsWith("/app/rob"))) || (h === "/app/designers" && !!path?.startsWith("/app/studio")));
+  const active = (h: string) => (h === "/app" ? path === "/app" : path?.startsWith(h) || (h === "/app/market" && !!path?.startsWith("/app/fuse/")) || (h === "/app/try" && (!!path?.startsWith("/app/simulate") || !!path?.startsWith("/app/rob"))) || (h === "/app/studio" && !!path?.startsWith("/app/designers")));
   const { account } = useWallet();
   const chrome = useChrome();
   const [info, setInfo] = useState(false);
   useEffect(() => { setInfo(false); }, [path]);
+  // "More" closes on a click anywhere else or on Escape
+  useEffect(() => {
+    const close = (e: Event) => { const d = document.querySelector<HTMLDetailsElement>(".more-l[open]"); if (d && !(e instanceof KeyboardEvent ? e.key !== "Escape" : d.contains(e.target as Node))) d.open = false; };
+    document.addEventListener("click", close); document.addEventListener("keydown", close);
+    return () => { document.removeEventListener("click", close); document.removeEventListener("keydown", close); };
+  }, []);
   // phones show the page's name in the bar; the sections live in the dock at the bottom
-  const title = path === "/app" ? "Atlas" : path?.startsWith("/app/w/") ? "Wallet" : path?.startsWith("/app/try") ? "Try to scam it" : path?.startsWith("/app/market") ? "Fuse market" : path?.startsWith("/app/fuse/") ? "Fuse" : path?.startsWith("/app/simulate") ? "Line simulator" : path?.startsWith("/app/rob") ? "Rob the agent" : path?.startsWith("/app/x402") ? "Pay per call" : path?.startsWith("/app/status") ? "Status" : path?.startsWith("/app/studio") ? "Fuse Studio"
+  const title = path === "/app" ? "Fusebox" : path?.startsWith("/app/w/") ? "Wallet" : path?.startsWith("/app/try") ? "Try to scam it" : path?.startsWith("/app/market") ? "Fuse market" : path?.startsWith("/app/fuse/") ? "Fuse" : path?.startsWith("/app/simulate") ? "Line simulator" : path?.startsWith("/app/rob") ? "Rob the agent" : path?.startsWith("/app/x402") ? "Pay per call" : path?.startsWith("/app/status") ? "Status" : path?.startsWith("/app/studio") ? "Fuse Studio"
     : path?.startsWith("/app/designers") ? "Sell a fuse" : path?.startsWith("/app/approve") ? "Approvals" : path?.startsWith("/app/new") ? "Wire up a wallet" : path?.startsWith("/app/mine") ? "My wallets" : "App";
   return (
     <header className={`appbar${chrome?.back ? " has-back" : ""}`}>
@@ -43,8 +51,10 @@ export default function AppBar() {
         <span className="ink" style={{ left: 0, width: 0 }} />
       </nav>
       <div className="right m">
-        <Link className="docs-l" href="/app/assistant">Assistant</Link>
-        <Link className="docs-l x4" href="/app/x402">x402</Link>
+        <details className="more-l" key={path}>
+          <summary className="docs-l">More</summary>
+          <div className="more-menu">{MORE.map(([h, t]) => <Link key={h} href={h}>{t}</Link>)}</div>
+        </details>
         <Link className="docs-l" href="/docs">Docs ↗</Link>
         <a className="badge tape" href="https://tapeout.net" target="_blank" rel="noreferrer" title="Every fuse is a circuit taped out on TapeOut">Built on TapeOut ↗</a>
         {source && <span className={`badge ${source === "mainnet" ? "main" : "warn"}`}>{source === "mainnet" ? "X Layer mainnet" : source === "fork" ? "Mainnet fork · rehearsal" : "Rehearsal snapshot"}</span>}

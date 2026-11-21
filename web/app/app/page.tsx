@@ -1,5 +1,5 @@
-import WalletView from "@/components/app/WalletView";
+import HomeView from "@/components/app/HomeView";
 
-export default function WalletPage() {
-  return <WalletView />;
+export default function AppHome() {
+  return <HomeView />;
 }

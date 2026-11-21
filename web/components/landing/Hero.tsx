@@ -131,7 +131,7 @@ export default function Hero() {
         </div>
         <div className="ctas">
           <a className="btn lime" href="/app/new" data-cursor="Enter"><span className="roll"><span>Wire up a wallet</span><span aria-hidden="true">Wire up a wallet</span></span> <span className="k">→</span></a>
-          <a className="btn line" href="#designers" data-cursor="Earn"><span className="roll"><span>Sell a fuse</span><span aria-hidden="true">Sell a fuse</span></span> <span className="k">→</span></a>
+          <a className="btn line" href="/app/studio" data-cursor="Build"><span className="roll"><span>Build a rule, no code</span><span aria-hidden="true">Build a rule, no code</span></span> <span className="k">→</span></a>
         </div>
         <div className="lockup m"><span className="mute">Built on</span><a href="https://tapeout.net" target="_blank" rel="noreferrer"><i aria-hidden="true" />TapeOut</a><span className="x" aria-hidden="true">×</span><a href="https://www.okx.com/xlayer" target="_blank" rel="noreferrer"><i aria-hidden="true" />X Layer</a></div>
       </div>

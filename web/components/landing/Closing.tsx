@@ -88,7 +88,7 @@ export default function Closing() {
       <canvas className="rain" aria-hidden="true" />
       <div className="foot m mute">
         <div>Built on<a href="https://tapeout.net" target="_blank" rel="noreferrer">TapeOut ↗</a><a href="https://x.com/TapeOutWorld" target="_blank" rel="noreferrer">@TapeOutWorld ↗</a><a href="https://www.okx.com/xlayer" target="_blank" rel="noreferrer">X Layer ↗</a></div>
-        <div>Product<a href="/app">Wallet</a><a href="/app/market">Fuse market</a><a href="#designers">Designers</a></div>
+        <div>Product<a href="/app">Open the app</a><a href="/app/market">Fuse market</a><a href="#designers">Designers</a></div>
         <div>Developers<a href="/docs">Docs</a><a href="https://github.com/0xdopewilly/fusebox" target="_blank" rel="noreferrer">GitHub</a><a href="/onchain">DeWEB edition</a><a href="/docs#contracts">Contracts</a><a href="/app/status">Status</a></div>
         <div>Proof<a href="https://www.oklink.com/xlayer/address/0x0Db0457715a6445D8a65F820d717a6B39Be66800" target="_blank" rel="noreferrer">Atlas wallet ↗</a><a href="https://www.oklink.com/xlayer/address/0x852a278322667BB86A2665a38CbC5Bfd551B20d7" target="_blank" rel="noreferrer">Fuse registry ↗</a><a href="https://www.oklink.com/xlayer/address/0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355" target="_blank" rel="noreferrer">Circuits #15–18 ↗</a></div>
       </div>
