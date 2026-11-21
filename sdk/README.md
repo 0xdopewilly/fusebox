@@ -37,6 +37,19 @@ else console.log(r.summary); // "Not sent. Stopped: Daily Cap (…)" — ask the
 on-chain and its checks are still paid for. Pass `{ checkFirst: false }` to record the attempt anyway. The memo
 is stored with the decision; no fuse ever reads it, so a convincing story can't talk a payment through.
 
+## Five fuses
+
+Wallets made since Nov 20 (v2, `ADDRESSES.factory`) can install five fuses: Daily Cap, Payee Guard, Breaker,
+Two of Three and the **Repeat Guard**, which stops the same amount to the same payee inside the owner's window, so an
+invoice sent twice is paid once. `check` and `pay` explain it like any other fuse:
+
+```
+Stopped: Repeat Guard (the same amount to this payee already went out in the last 24 h; the owner can clear one
+repeat). Nothing would move.
+```
+
+Older wallets, Atlas included, keep their four fuses and keep working: a wallet always reads its own registry.
+
 ## Follow the wallet
 
 ```ts

@@ -1,6 +1,6 @@
 {
   "name": "fusebox-sdk",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "TypeScript client for Fusebox wallets on X Layer: AI-agent payments that must pass logic-circuit fuses taped out on TapeOut. Check for free, pay (checked first), pay for APIs over x402, approve, freeze, watch decisions.",
   "type": "module",
   "main": "./dist/index.js",

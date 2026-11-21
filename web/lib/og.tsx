@@ -21,9 +21,9 @@ const loadFonts = () => (fonts ??= Promise.all([
 const short = (a: string) => `${a.slice(0, 6)}…${a.slice(-4)}`;
 const num = (v: string) => { const n = Number(v); return n >= 1000 ? n.toLocaleString("en-US", { maximumFractionDigits: 0 }) : n.toFixed(4).replace(/0{1,2}$/, ""); };
 
-function Fuse({ blown }: { blown: boolean }) {
+function Fuse({ blown, width = 236 }: { blown: boolean; width?: number }) {
   return (
-    <svg width="236" height="40" viewBox="0 0 236 40">
+    <svg width={width} height={Math.round((40 * width) / 236)} viewBox="0 0 236 40">
       <rect x="0" y="4" width="20" height="32" fill={C.ink} />
       <rect x="216" y="4" width="20" height="32" fill={C.ink} />
       <rect x="20.5" y="10.5" width="195" height="19" fill="none" stroke="rgba(255,255,255,0.22)" />
@@ -44,6 +44,11 @@ function Card({ addr, w }: { addr: string; w: Atlas | null }) {
   const fuses = w?.fuses ?? [];
   const blownNames = fuses.filter((f) => f.latched).map((f) => f.name);
   const blown = blownNames.length;
+  // a v2 wallet has five fuses (Repeat Guard): show up to five in one row, past that four and a "+N more" cell
+  const shown = fuses.length > 5 ? fuses.slice(0, 4) : fuses;
+  const more = fuses.length - shown.length;
+  const cols = Math.max(4, shown.length + (more ? 1 : 0));
+  const colW = Math.floor((1120 - (cols - 1) * 20) / cols);
   const eyebrow = w?.isAtlas ? "[Atlas] public demo wallet" : "[Wallet] on X Layer";
   const state = !w ? "" : w.paused ? "Paused by its owner · nothing can be paid" : blown ? `${blownNames.join(" and ")} blown · nothing can be paid until the owner resets it` : "Line closed · every fuse is holding";
   const stats: [string, string, string][] = w ? [
@@ -90,13 +95,14 @@ function Card({ addr, w }: { addr: string; w: Atlas | null }) {
         <div style={{ position: "absolute", left: 40, right: 40, top: 398, display: "flex", flexDirection: "column" }}>
           <div style={{ ...MONO, fontSize: 13, color: w.paused || blown ? C.red : C.lime, display: "flex", marginBottom: 14 }}>{state}</div>
           <div style={{ display: "flex", gap: 20 }}>
-            {fuses.slice(0, 4).map((f) => (
-              <div key={f.slot} style={{ display: "flex", flexDirection: "column", width: 265 }}>
-                <Fuse blown={f.latched} />
-                <div style={{ fontFamily: "Archivo", fontSize: 22, textTransform: "uppercase", marginTop: 12, letterSpacing: "-0.01em" }}>{f.name}</div>
+            {shown.map((f) => (
+              <div key={f.slot} style={{ display: "flex", flexDirection: "column", width: colW }}>
+                <Fuse blown={f.latched} width={Math.min(236, colW)} />
+                <div style={{ fontFamily: "Archivo", fontSize: cols > 4 ? 21 : 22, textTransform: "uppercase", marginTop: 12, letterSpacing: "-0.01em" }}>{f.name}</div>
                 <div style={{ ...MONO, fontSize: 12, color: f.latched ? C.red : C.mute, marginTop: 4 }}>{`${f.latched ? "Blown · " : ""}TapeOut #${f.circuitId} · ${f.gates} gates`}</div>
               </div>
             ))}
+            {more > 0 && <div style={{ ...MONO, fontSize: 13, color: C.mute, display: "flex", alignItems: "center", width: colW }}>{`+${more} more fuses`}</div>}
             {fuses.length === 0 && <div style={{ ...MONO, color: C.mute }}>No fuses installed yet</div>}
           </div>
         </div>

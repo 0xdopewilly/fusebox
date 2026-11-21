@@ -84,6 +84,19 @@ rather than 0.02.
 - The SDK's `ADDRESSES.registry`/`factory` are now v2 (`registryV1`/`factoryV1` for v1), and x402 sellers accept
   wallets from either factory.
 
+## First v2 wallet on mainnet
+
+On Nov 20, 2026 the first v2 wallet was wired up through the live app's wizard, with all five fuses:
+[`0x6292Ea57a1d50c74A5E918CfDC4Dc1Dbf87a577c`](https://fusebox-xlayer.vercel.app/app/w/0x6292Ea57a1d50c74A5E918CfDC4Dc1Dbf87a577c)
+(12 owner transactions). Its agent then sent the same invoice twice, 0.002 USDT0 to the same saved payee:
+
+| # | Result | Transaction |
+|---|---|---|
+| 1 | Paid: all five fuses passed | [`0xa158b8cc…d1cf`](https://www.oklink.com/xlayer/tx/0xa158b8cce251e548ef0e87d95fda8dcbf7d40c953aabd69af261c8223ad9d1cf) |
+| 2 | Stopped by the Repeat Guard; the other four passed, and nothing moved | [`0x502bd9f3…22ad`](https://www.oklink.com/xlayer/tx/0x502bd9f3fe577c7a74f0c43696003559f95d2cff3929f45a5e88ec678baf22ad) |
+
+The second transaction records the decision and a `FuseBlew(2, 5)` event: TapeOut circuit #21 answered 0.
+
 ## Limits
 
 The repeat key is (token, payee, amount), not the memo. Two different invoices for the same amount to the same

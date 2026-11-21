@@ -10,6 +10,8 @@ MCP tools for an AI agent that pays through a [Fusebox](https://fusebox-xlayer.v
 | `fusebox_preflight` | Checks a payment against any line of TapeOut circuits for any wallet (not just a Fusebox one): you pass the context, each circuit answers, and the latch state comes back for next time. Free and read-only. |
 | `fusebox_fetch` | Fetches a URL. If it asks for payment over x402 (a `fusebox` offer on X Layer), the price is paid through the fuses only if they all allow it, then the response comes back. `max_price` caps what it pays; `dry_run` only reports the price and the fuses' answer. |
 
+Every tool explains all five fuses, including the **Repeat Guard** on v2 wallets (the same invoice sent twice is paid once).
+
 Without a key the server is read-only, and by default it points at **Atlas**, the public demo wallet, so you can try `fusebox_check` right away.
 
 ## Setup

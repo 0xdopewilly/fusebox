@@ -40,7 +40,7 @@ AI agents now hold wallets and send real money, and one convincing message can m
 | Atlas (demo wallet) | [`0x0Db0457715a6445D8a65F820d717a6B39Be66800`](https://www.oklink.com/xlayer/address/0x0Db0457715a6445D8a65F820d717a6B39Be66800) |
 | Fees | USDT0 [`0x779Ded0c9e1022225f8E0630b35a9b54bE713736`](https://www.oklink.com/xlayer/address/0x779Ded0c9e1022225f8E0630b35a9b54bE713736) |
 
-Every address is in [`deployments/xlayer-mainnet.json`](deployments/xlayer-mainnet.json). v2 (Nov 20) stores socket pinouts as data and adds the Repeat Guard; v1 (Nov 15) keeps running Atlas unchanged. See [docs/V2-REPEAT-GUARD.md](docs/V2-REPEAT-GUARD.md).
+Every address is in [`deployments/xlayer-mainnet.json`](deployments/xlayer-mainnet.json). v2 (Nov 20) stores socket pinouts as data and adds the Repeat Guard; v1 (Nov 15) keeps running Atlas unchanged. See [docs/V2-REPEAT-GUARD.md](docs/V2-REPEAT-GUARD.md). The first v2 wallet, [`0x6292…577c`](https://fusebox-xlayer.vercel.app/app/w/0x6292Ea57a1d50c74A5E918CfDC4Dc1Dbf87a577c), had its agent send the same invoice twice on mainnet: the first payment went through and the Repeat Guard [stopped the second](https://www.oklink.com/xlayer/tx/0x502bd9f3fe577c7a74f0c43696003559f95d2cff3929f45a5e88ec678baf22ad).
 
 ## The five fuses
 
