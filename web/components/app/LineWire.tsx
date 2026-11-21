@@ -12,11 +12,15 @@ const FW = 126; // cartridge length along the wire
 
 /** Geometry for one orientation: where each fuse sits along the wire axis, and how the SVG is framed. */
 interface Geom { vertical: boolean; vb: string; start: number; end: number; pos: number[]; cross: number }
-const H: Geom = (() => {
-  const X0 = 8, X1 = 872, NODE = 110, GAP = (X1 - X0 - NODE * 2 - FW * 4) / 5;
-  return { vertical: false, vb: "0 0 880 170", start: X0 + NODE, end: X1 - NODE, pos: [0, 1, 2, 3].map((i) => X0 + NODE + GAP * (i + 1) + FW * i), cross: 70 };
-})();
-const V: Geom = { vertical: true, vb: "0 0 360 760", start: 64, end: 700, pos: [0, 1, 2, 3].map((i) => 96 + i * 150), cross: 48 };
+// laid out for any number of fuses: four fill the original 880-wide frame, and each one more adds a slot
+const H = (n: number): Geom => {
+  const X0 = 8, NODE = 110, GAP = 28, X1 = X0 + NODE * 2 + FW * n + GAP * (n + 1);
+  return { vertical: false, vb: `0 0 ${X1 + 8} 170`, start: X0 + NODE, end: X1 - NODE, pos: Array.from({ length: n }, (_, i) => X0 + NODE + GAP * (i + 1) + FW * i), cross: 70 };
+};
+const V = (n: number): Geom => {
+  const end = 96 + (n - 1) * 150 + FW + 28;
+  return { vertical: true, vb: `0 0 360 ${end + 60}`, start: 64, end, pos: Array.from({ length: n }, (_, i) => 96 + i * 150), cross: 48 };
+};
 
 /** A horizontal cartridge from x to x+FW centred on y; rotated into place for the vertical wire. */
 function Cartridge({ x, y, st, cx }: { x: number; y: number; st: WireStatus; cx: number }) {
@@ -60,7 +64,8 @@ export default function LineWire({
   payee?: string; payeeSub?: string; selected?: number | null; onSelect?: (i: number) => void; onDone?: () => void;
 }) {
   const ref = useRef<SVGSVGElement>(null);
-  const g = useNarrow() ? V : H;
+  const narrow = useNarrow(), n = Math.max(1, fuses.length);
+  const g = narrow ? V(n) : H(n);
   const [shown, setShown] = useState<WireStatus[]>(live ?? fuses.map(() => "idle"));
   const [current, setCurrent] = useState<number>(-1); // position along the wire where current stops; -1 = none
   const reach = (st: WireStatus[]) => { const k = st.findIndex((s) => s === "blew" || s === "latched"); return k < 0 ? g.end : g.pos[k] + FW / 2 - 9; };

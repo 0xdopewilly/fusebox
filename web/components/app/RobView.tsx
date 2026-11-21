@@ -2,6 +2,9 @@
 import { useEffect, useRef, useState } from "react";
 import { gsap, useGSAP, reduced } from "@/lib/gsap";
 import { useAtlas, short } from "@/lib/hooks";
+import { DEP } from "@/lib/client-chain";
+/** Rob checks against Atlas's v2 twin: Atlas's limits plus the Repeat Guard. */
+const DEMO = (DEP.v2 as { demo?: string }).demo ?? DEP.atlas;
 import type { CheckResult } from "@/lib/atlas";
 import LineWire, { type WireStatus } from "./LineWire";
 import { PageChrome } from "./m/chrome";
@@ -31,7 +34,7 @@ const HEADLINE: Record<Result["verdict"], [string, string]> = {
 };
 
 export default function RobView({ mode }: { mode: { mode: "llm" | "scripted"; label: string } }) {
-  const { data } = useAtlas(15000);
+  const { data } = useAtlas(15000, `/api/wallet/${DEMO}`);
   const [msg, setMsg] = useState(PRESETS[0][1]);
   const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
   const [res, setRes] = useState<Result | null>(null);
@@ -57,7 +60,7 @@ export default function RobView({ mode }: { mode: { mode: "llm" | "scripted"; la
     const u = `${location.origin}/app/rob?m=${enc(msg.slice(0, 1500))}`;
     try { await navigator.clipboard.writeText(u); setCopied(true); setTimeout(() => setCopied(false), 1800); } catch { window.prompt("Copy the link", u); }
   };
-  const fuses = (data?.fuses ?? [{ name: "Daily Cap" }, { name: "Payee Guard" }, { name: "Breaker" }, { name: "Two of Three" }]).map((f) => ({ name: f.name, meta: "" }));
+  const fuses = (data?.fuses ?? [{ name: "Daily Cap" }, { name: "Payee Guard" }, { name: "Breaker" }, { name: "Two of Three" }, { name: "Repeat Guard" }]).map((f) => ({ name: f.name, meta: "" }));
   const a = res?.agent, c = res?.check;
   const tried = a?.decided === "pay";
   return (
@@ -99,7 +102,7 @@ export default function RobView({ mode }: { mode: { mode: "llm" | "scripted"; la
           <div className="rob-stage linepanel" data-a>
             <div className="rob-stage-h m"><span className="lime">02</span> The fuses <span className="mute">· {c ? `${tried ? "the agent's payment" : "what the message asked for"}: ${c.amount} USD₮0 → ${short(c.to)}` : "Atlas's TapeOut circuits, via check() on X Layer"}</span></div>
             <div className="wire-wrap"><LineWire fuses={fuses} run={run} payee="PAYEE" payeeSub={c ? short(c.to) : ""} onDone={() => setDone(true)} /></div>
-            <div className="why">
+            <div className="why" style={{ ["--n" as string]: (c?.fuses ?? fuses).length }}>
               {(c?.fuses ?? fuses.map((f) => ({ name: f.name, status: "idle", why: "Waiting for a payment." }))).map((f, i) => (
                 <div key={i}><span className="m mute">{f.name}</span><b className={done && c ? f.status : "idle"}>{done && c ? (f.status === "pass" ? "Passed" : "Stopped") : "—"}</b><p>{done && c ? f.why : "Waiting for a payment."}</p></div>
               ))}

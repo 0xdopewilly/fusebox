@@ -2,7 +2,7 @@ import { ipKey } from "@/lib/clientIp";
 import type { Address } from "viem";
 import { parseUnits } from "viem";
 import { checkPayment } from "@/lib/atlas";
-import { DEPLOYMENT } from "@/lib/chain";
+import { DEPLOYMENT, DEMO_WALLET } from "@/lib/chain";
 import { readRequest, runAgent, agentMode, AGENT_MODE } from "@/lib/robAgent";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +25,7 @@ export function GET() {
 
 /**
  * Rob the agent: a visitor's message goes to the payables agent; whatever payment it asks for (and, if the agent
- * refused, what the message asked for) goes through Atlas's real check() on X Layer. Read-only: nothing is paid.
+ * refused, what the message asked for) goes through the real check() of Atlas's v2 wallet on X Layer. Read-only: nothing is paid.
  */
 export async function POST(req: Request) {
   const ip = ipKey(req);
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     const to = (agent.decided === "pay" ? agent.to : asked.to) as Address | undefined;
     const amount = agent.decided === "pay" ? agent.amount : asked.amount;
     // a cold instance may first have to catch up on X Layer's logs; one retry rides that out
-    const run = () => checkPayment(to!.toLowerCase() as Address, parseUnits(amount!, 6));
+    const run = () => checkPayment(to!.toLowerCase() as Address, parseUnits(amount!, 6), DEMO_WALLET);
     const check = to && amount ? await run().catch(() => run()) : null;
     const supplier = DEPLOYMENT.supplier.toLowerCase();
     const robbed = agent.decided === "pay" && !!check?.allowed && to?.toLowerCase() !== supplier;

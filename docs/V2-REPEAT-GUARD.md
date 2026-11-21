@@ -19,7 +19,11 @@ in TapeOut fees (2 NAND, one mint fee, one tape-out) and 0.000242 in gas. Regist
 ## The gap it closes
 
 Fuses check facts, not memos. So the same invoice sent twice looks exactly like a normal payment, and v1 pays it
-twice. *Try to scam it* shows this on purpose.
+twice. Since 2026-11-21, *Try to scam it* and *Rob the agent* run on Atlas's v2 wallet
+(`0x6292Ea57a1d50c74A5E918CfDC4Dc1Dbf87a577c`: Atlas's limits plus the Repeat Guard, window 254 h). That wallet
+really paid invoice INV-7790 ([`0xa836acd5…a7c8`](https://www.oklink.com/xlayer/tx/0xa836acd5f11dc16485fc3ad9ece43ba515a4c48b87e4b977ae62b235ea45a7c8)),
+so "Same invoice, sent twice" is stopped by the Repeat Guard alone. The trick always replays the wallet's latest
+real payment to the supplier.
 
 ## How it works
 

@@ -7,9 +7,9 @@ import Intro from "@/components/app/m/Intro";
 
 export const metadata = {
   title: "Fusebox app · Atlas, a live agent wallet on X Layer",
-  description: "Try to scam Atlas, a live AI-agent wallet on X Layer: its four TapeOut fuses decide every payment. Wire up your own wallet, approve payments, or sell a fuse.",
-  openGraph: { title: "Try to scam Atlas · Fusebox", description: "A live AI-agent wallet on X Layer. Pick a scam; its four TapeOut fuses decide on mainnet.", url: "/app" },
-  twitter: { title: "Try to scam Atlas · Fusebox", description: "A live AI-agent wallet on X Layer. Pick a scam; its four TapeOut fuses decide on mainnet." },
+  description: "Try to scam Atlas, a live AI-agent wallet on X Layer: its five TapeOut fuses decide every payment. Wire up your own wallet, approve payments, or sell a fuse.",
+  openGraph: { title: "Try to scam Atlas · Fusebox", description: "A live AI-agent wallet on X Layer. Pick a scam; its five TapeOut fuses decide on mainnet.", url: "/app" },
+  twitter: { title: "Try to scam Atlas · Fusebox", description: "A live AI-agent wallet on X Layer. Pick a scam; its five TapeOut fuses decide on mainnet." },
 };
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

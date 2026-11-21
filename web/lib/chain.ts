@@ -9,12 +9,14 @@ export interface Deployment {
   chainId: number; tag: string; fromBlock: number; block: number;
   registry: Address; factory: Address; processor: Address; circuitIds: number[]; fuseIds: number[];
   atlas: Address; owner: Address; agent: Address; supplier: Address; approvers: Address[]; usdt0: Address;
-  v2: { registry: Address; factory: Address; fromBlock: number; block: number; circuitIds: number[]; fuseIds: number[] };
+  v2: { registry: Address; factory: Address; fromBlock: number; block: number; circuitIds: number[]; fuseIds: number[]; demo?: Address };
 }
 
 /** Which Fusebox deployment the app reads: X Layer mainnet, or the local fork rehearsal with FUSEBOX_DEPLOYMENT=fork. */
 export const DEPLOYMENT: Deployment = (process.env.FUSEBOX_DEPLOYMENT === "fork" ? fork : mainnet) as Deployment;
 export const IS_FORK = DEPLOYMENT.tag === "fork";
+/** The wallet the scam demos check against: Atlas's v2 twin (same limits, plus the Repeat Guard), else Atlas. */
+export const DEMO_WALLET: Address = DEPLOYMENT.v2.demo ?? DEPLOYMENT.atlas;
 export const { V1, V2, VERSIONS, CURRENT, versionOf, isBuiltIn } = versionsOf(DEPLOYMENT);
 export const RPC = process.env.FUSEBOX_RPC || (IS_FORK ? "http://127.0.0.1:8547" : "https://rpc.xlayer.tech");
 

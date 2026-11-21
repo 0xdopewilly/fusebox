@@ -134,7 +134,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
       <div className="blockhead" data-b><h2 className="disp">The line</h2><span className="m mute">{a.fuses.length} TapeOut circuits in series · click one to inspect it</span></div>
       <div className="linepanel" data-b>
         <div className="wire-wrap">
-          <LineWire fuses={a.fuses.map((x) => ({ name: x.name, meta: `TapeOut #${x.circuitId} · ${x.gates} gates` }))} live={live} payee="PAYEES" payeeSub={`${a.payees.length} saved`} selected={sel} onSelect={(i) => setSel(sel === i ? null : i)} />
+          <LineWire fuses={a.fuses.map((x) => ({ name: x.name, meta: `#${x.circuitId} · ${x.gates} gates` })) /* the header says they're TapeOut circuits */} live={live} payee="PAYEES" payeeSub={`${a.payees.length} saved`} selected={sel} onSelect={(i) => setSel(sel === i ? null : i)} />
         </div>
         {f && (
           <div className="detail" ref={detailRef} key={f.slot}>

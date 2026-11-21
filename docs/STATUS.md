@@ -12,7 +12,7 @@ the site and app, the docs and an MCP server for agents. Addresses are in the [R
 |---|---|
 | Site | https://fusebox-xlayer.vercel.app |
 | App | https://fusebox-xlayer.vercel.app/app: Atlas, the demo wallet, with its fuses, decisions and owner tools |
-| Try to scam it | https://fusebox-xlayer.vercel.app/app/try: Atlas's real `check()` on mainnet, free, no wallet needed |
+| Try to scam it | https://fusebox-xlayer.vercel.app/app/try: the real `check()` of Atlas's v2 wallet (`0x6292…577c`, five fuses with the Repeat Guard) on mainnet, free, no wallet needed |
 | Wire up a wallet | https://fusebox-xlayer.vercel.app/app/new: factory call, fuses, payees, approvers and fees, in one guided run |
 | Fuse market and designers | https://fusebox-xlayer.vercel.app/app/market and /app/designers: netlists read from TapeOut, earnings, claims, listing |
 | Docs | https://fusebox-xlayer.vercel.app/docs |
@@ -96,7 +96,7 @@ What was verified against the real TapeOut contracts on a fork before launch:
 
 - The contracts have no third-party audit yet; [ASSURANCE.md](ASSURANCE.md) lists what stands in for one. Atlas is a public demo wallet with small balances.
 - The DeWEB edition's mainnet publish waits on TapeOut's one-time 0.08 OKB container fee.
-- Atlas is a v1 wallet, so it can't run the Repeat Guard: *Try to scam it* still shows the duplicate-invoice gap on Atlas. Wallets made since 2026-11-20 are v2 and can. See [V2-REPEAT-GUARD.md](V2-REPEAT-GUARD.md).
+- Atlas itself is a v1 wallet and can't run the Repeat Guard, so *Try to scam it* and *Rob the agent* check against its v2 twin (`0x6292…577c`), which stops the duplicate invoice. The twin's Repeat Guard remembers a payment for 254 h: its last real invoice (2026-11-21 10:26 UTC) is remembered until 2026-12-02 00:26 UTC, so it needs one new payment before then. See [V2-REPEAT-GUARD.md](V2-REPEAT-GUARD.md).
 - An OKX Agentic Wallet has not been tested as the agent key. It needs to send `pay` on X Layer with a ~3M gas limit.
 - A release-after-delivery fuse isn't built: it needs a delivery attestation source and a new socket.
 - Delisting a fuse stops new installs only; there is no designer-side kill switch, by design.

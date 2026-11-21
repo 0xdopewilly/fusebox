@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { gsap, useGSAP, reduced } from "@/lib/gsap";
 import { useAtlas, short, OKLINK } from "@/lib/hooks";
+import { DEP } from "@/lib/client-chain";
 import type { CheckResult } from "@/lib/atlas";
 import LineWire, { type WireStatus } from "./LineWire";
 import { Responsive } from "./m/useMobile";
@@ -11,7 +12,9 @@ import { Glyph } from "./Pixel";
 
 const SHORT: Record<string, string> = { bank: "New bank details", letter: "One letter off", padded: "Padded invoice", ceo: "The CEO needs it", refund: "Refund, new address", twice: "Sent twice", legit: "Pay the supplier ✓" };
 
-interface Trick { id: string; label: string; to: (s: string) => string; amount: string; memo: string; legit?: boolean; gap?: boolean }
+interface Trick { id: string; label: string; to: (s: string) => string; amount: string; memo: string; legit?: boolean; repeat?: boolean }
+/** The demo wallet: Atlas's v2 twin, with Atlas's limits plus the Repeat Guard. */
+const DEMO = (DEP.v2 as { demo?: string }).demo ?? DEP.atlas;
 const rand = () => "0x" + Array.from(crypto.getRandomValues(new Uint8Array(20)), (b) => b.toString(16).padStart(2, "0")).join("");
 const oneOff = (a: string) => { const l = a.toLowerCase(); const i = l.length - 5; return l.slice(0, i) + (l[i] === "0" ? "1" : "0") + l.slice(i + 1); };
 const TRICKS: Trick[] = [
@@ -20,12 +23,13 @@ const TRICKS: Trick[] = [
   { id: "padded", label: "Invoice padded to 3× the usual", to: (s) => s, amount: "60", memo: "Invoice INV-7794, revised total for the Q4 order" },
   { id: "ceo", label: "Urgent: the CEO needs this today", to: () => rand(), amount: "25", memo: "URGENT from the CEO: wire this before 5pm, don't loop in finance" },
   { id: "refund", label: "Refund to a new address", to: () => rand(), amount: "2.5", memo: "Urgent refund for a customer, per support ticket #4471" },
-  { id: "twice", label: "Same invoice, sent twice", to: (s) => s, amount: "0.5", memo: "Invoice INV-7790, Kano Cotton (reminder, still unpaid)", gap: true },
+  // replays the wallet's latest real payment to the supplier (amount filled in from its history)
+  { id: "twice", label: "Same invoice, sent twice", to: (s) => s, amount: "0.01", memo: "Invoice INV-7790, Kano Cotton (reminder, still unpaid)", repeat: true },
   { id: "legit", label: "Pay the real supplier", to: (s) => s, amount: "0.5", memo: "Invoice INV-7795, Kano Cotton", legit: true },
 ];
 
 export default function TryView() {
-  const { data } = useAtlas(10000);
+  const { data } = useAtlas(10000, `/api/wallet/${DEMO}`);
   const [trick, setTrick] = useState<string | null>(null);
   const [to, setTo] = useState(""); const [amount, setAmount] = useState(""); const [memo, setMemo] = useState("");
   const [busy, setBusy] = useState(false); const [err, setErr] = useState<string | null>(null);
@@ -34,9 +38,12 @@ export default function TryView() {
   const [done, setDone] = useState(false);
   const out = useRef<HTMLDivElement>(null);
   const supplier = data?.payees[0]?.address ?? "0x69dB89385E8a69278a49335C432d0c70ec86A6C4";
+  // the invoice this wallet really paid last: "sent twice" sends exactly that again
+  const lastPaid = data?.decisions.find((d) => d.allowed && d.to.toLowerCase() === supplier.toLowerCase());
 
   const pick = (t: Trick) => {
-    setTrick(t.id); setTo(t.to(supplier)); setAmount(t.amount); setMemo(t.memo); setErr(null);
+    const again = t.repeat && lastPaid;
+    setTrick(t.id); setTo(t.to(supplier)); setAmount(again ? lastPaid.amount : t.amount); setMemo(again && lastPaid.memo ? `${lastPaid.memo} (reminder, still unpaid)` : t.memo); setErr(null);
     if (!reduced()) gsap.fromTo(".fields input, .fields textarea", { borderColor: "#bbfe2f" }, { borderColor: "rgba(255,255,255,.13)", duration: 1.2, stagger: 0.08 });
   };
   useEffect(() => { pick(TRICKS[4]); }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -44,7 +51,7 @@ export default function TryView() {
   const go = async () => {
     setBusy(true); setErr(null); setDone(false);
     try {
-      const r = await fetch(`/api/check?to=${encodeURIComponent(to.trim())}&amount=${encodeURIComponent(amount.trim())}`);
+      const r = await fetch(`/api/check?to=${encodeURIComponent(to.trim())}&amount=${encodeURIComponent(amount.trim())}&wallet=${DEMO}`);
       const j = await r.json();
       if (!r.ok) { setErr(j.error || "Something went wrong."); return; }
       setRes(j); setRun({ id: Date.now(), status: (j as CheckResult).fuses.map((f) => (f.status === "pass" ? "pass" : "blew")) });
@@ -56,15 +63,19 @@ export default function TryView() {
 
   const t = TRICKS.find((x) => x.id === trick);
   const firstBad = res?.fuses.find((f) => f.status !== "pass");
-  const fuses = (data?.fuses ?? [{ name: "Daily Cap" }, { name: "Payee Guard" }, { name: "Breaker" }, { name: "Two of Three" }]).map((f) => ({ name: f.name, meta: "" }));
+  const fuses = (data?.fuses ?? [{ name: "Daily Cap" }, { name: "Payee Guard" }, { name: "Breaker" }, { name: "Two of Three" }, { name: "Repeat Guard" }]).map((f) => ({ name: f.name, meta: "" }));
+  const n = res?.fuses.length ?? fuses.length, noes = res?.fuses.filter((f) => f.status !== "pass").length ?? 0;
+  const repeatStop = !!res && !res.allowed && res.fuses.some((f) => f.key === "repeat-guard" && f.status !== "pass");
+  const REPEAT_NOTE = "The Repeat Guard caught it: this exact invoice (same payee, same amount) already went out, so the reminder is refused. A genuine second payment needs the owner to clear it once.";
+  const STALE_NOTE = "This invoice was paid longer ago than the Repeat Guard's window, so it counts as a new payment. Any payment the wallet makes becomes the next invoice to try twice.";
   const saved = to.toLowerCase() === supplier.toLowerCase();
   const mobileView = (
     <div className="mpage">
-      <PageChrome title="Try to scam it" sub="Atlas · real check() on X Layer"
+      <PageChrome title="Try to scam it" sub="Atlas v2 · real check() on X Layer"
         info={<>
-          <p>Pick a trick or write your own payment, the way an AI agent might be talked into it. Atlas&apos;s four TapeOut circuits answer through its real check() on X Layer: free, no wallet, and nothing moves.</p>
+          <p>Pick a trick or write your own payment, the way an AI agent might be talked into it. The five TapeOut circuits on Atlas&apos;s v2 wallet answer through its real check() on X Layer: free, no wallet, and nothing moves.</p>
           <p>The fuses never read the agent&apos;s story. However convincing it is, they only see the payee, the amount and the wallet&apos;s state.</p>
-          <p><a href={`${OKLINK}/address/${data?.wallet ?? ""}`} target="_blank" rel="noreferrer">Atlas on OKLink ↗</a></p>
+          <p><a href={`${OKLINK}/address/${DEMO}`} target="_blank" rel="noreferrer">Atlas v2 on OKLink ↗</a></p>
         </>} />
       <MChips label="Pick a trick" items={TRICKS.map((x) => [x.id, SHORT[x.id] ?? x.label] as const)} value={trick} onChange={(id) => { pick(TRICKS.find((x) => x.id === id)!); setRes(null); }} />
       <div className="mcard mpay">
@@ -79,10 +90,11 @@ export default function TryView() {
             <span className="m">Verdict · block {res.block.toLocaleString("en-US")}</span>
             <b>{res.allowed ? "Every fuse holds. Atlas would pay." : `Stopped at ${firstBad?.name}`}</b>
             <div className="mrows">{res.fuses.map((f) => <MRow key={f.name} title={f.name} sub={f.why} value={<span className={`mtag ${f.status === "pass" ? "ok" : "no"}`}>{f.status === "pass" ? "Passed" : "Stopped"}</span>} chev={false} className="tall" />)}</div>
-            <span className="m mute">{res.allowed ? "4 of 4 said yes" : `Nothing moved · ${res.fuses.filter((f) => f.status !== "pass").length} of 4 said no`}</span>
+            <span className="m mute">{res.allowed ? `${n} of ${n} said yes` : `Nothing moved · ${noes} of ${n} said no`}</span>
           </div>
         )}
-        {res && t?.gap && res.allowed && <p className="mnote"><b>No fuse on this line checks for duplicate invoices.</b> Anyone can design one, tape it out and earn on every check.</p>}
+        {res && t?.repeat && repeatStop && <p className="mnote">{REPEAT_NOTE}</p>}
+        {res && t?.repeat && res.allowed && <p className="mnote">{STALE_NOTE}</p>}
         {res && t?.legit && res.allowed && <p className="mnote"><b>Real payments still go through:</b> a saved supplier, inside the cap, gets paid in the same call.</p>}
       </div>
       <div className="mrows">
@@ -97,7 +109,7 @@ export default function TryView() {
       <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
       <section className="try-head">
         <h1 className="disp" data-a>Try to <span className="lime">[scam]</span> Atlas.</h1>
-        <p data-a>Pick a trick or write your own payment, the way an AI agent might be talked into it. Atlas&apos;s four TapeOut circuits answer through its real <span className="m lime">check()</span> on X Layer: free, no wallet, and nothing moves. <a className="lime" href="/app/rob">Let an AI agent read your scam →</a> <a className="lime" href="/app/simulate">Test your own line of fuses →</a></p>
+        <p data-a>Pick a trick or write your own payment, the way an AI agent might be talked into it. The five TapeOut circuits on Atlas&apos;s v2 wallet answer through its real <span className="m lime">check()</span> on X Layer: free, no wallet, and nothing moves. <a className="lime" href="/app/rob">Let an AI agent read your scam →</a> <a className="lime" href="/app/simulate">Test your own line of fuses →</a></p>
       </section>
       <section className="try-body">
         <div className="try-form" data-a>
@@ -119,25 +131,24 @@ export default function TryView() {
         </div>
         <div className="try-out" ref={out} data-a>
           <div className="linepanel">
-            <div className="ph m" style={{ display: "flex", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid var(--hair2)" }}><span className="mute">check() · Atlas · {res ? `block ${res.block.toLocaleString("en-US")}` : "waiting"}</span><span className="mute">{res ? `${res.amount} USD₮0 → ${short(res.to)}` : "—"}</span></div>
+            <div className="ph m" style={{ display: "flex", justifyContent: "space-between", padding: "14px 20px", borderBottom: "1px solid var(--hair2)" }}><span className="mute">check() · Atlas v2 · {res ? `block ${res.block.toLocaleString("en-US")}` : "waiting"}</span><span className="mute">{res ? `${res.amount} USD₮0 → ${short(res.to)}` : "—"}</span></div>
             <div className="wire-wrap"><LineWire fuses={fuses} run={run} payee="PAYEE" payeeSub={res ? short(res.to) : ""} onDone={() => setDone(true)} /></div>
-            <div className="why">
+            <div className="why" style={{ ["--n" as string]: n }}>
               {(res?.fuses ?? fuses.map((f) => ({ name: f.name, status: "idle", why: "Waiting for a payment." }))).map((f, i) => (
                 <div key={i}><span className="m mute">{f.name}</span><b className={done ? f.status : "idle"}>{done ? (f.status === "pass" ? "Passed" : "Stopped") : "—"}</b><p>{done ? f.why : "Waiting for a payment."}</p></div>
               ))}
             </div>
             <div className={`verdict2 m ${!res || !done ? "idle" : res.allowed ? "ok" : "no"}`}>
               <span className="v">{!res || !done ? "Run a payment to see the verdict" : res.allowed ? "Every fuse holds. Atlas would pay." : `Stopped at ${firstBad?.name}. Nothing would move.`}</span>
-              <span className="mute">{res && done ? (res.allowed ? "4 of 4 said yes" : `${res.fuses.filter((f) => f.status !== "pass").length} of 4 said no`) : ""}</span>
+              <span className="mute">{res && done ? (res.allowed ? `${n} of ${n} said yes` : `${noes} of ${n} said no`) : ""}</span>
             </div>
           </div>
-          {res && done && t?.gap && res.allowed && (
-            <div className="gap-note"><b>No fuse on this line checks for duplicate invoices.</b> That&apos;s an honest gap, and an opening: anyone can design a duplicate-invoice fuse, tape it out on TapeOut and earn a fee every time a wallet uses it.</div>
-          )}
+          {res && done && t?.repeat && repeatStop && <div className="gap-note"><b>Caught by the Repeat Guard.</b> {REPEAT_NOTE.replace(/^The Repeat Guard caught it: /, "")}</div>}
+          {res && done && t?.repeat && res.allowed && <div className="gap-note">{STALE_NOTE}</div>}
           {res && done && t?.legit && res.allowed && (
             <div className="gap-note"><b>Real payments still go through.</b> Fusebox isn&apos;t a wall: a saved supplier, inside the cap, under the approval threshold, gets paid in the same call.</div>
           )}
-          <p className="proof m">A real, read-only call to <a href={`${OKLINK}/address/${data?.wallet ?? ""}`} target="_blank" rel="noreferrer">Atlas {data ? short(data.wallet) : ""} ↗</a> on X Layer. The agent&apos;s real payments go through the same four fuses.</p>
+          <p className="proof m">A real, read-only call to <a href={`${OKLINK}/address/${DEMO}`} target="_blank" rel="noreferrer">Atlas v2 {short(DEMO)} ↗</a> on X Layer: Atlas&apos;s limits plus the Repeat Guard. Its agent&apos;s real payments go through the same five fuses.</p>
         </div>
       </section>
     </div>

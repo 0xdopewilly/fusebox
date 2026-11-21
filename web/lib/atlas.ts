@@ -1,6 +1,6 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
-import { decodeEventLog, formatUnits, type Address, type Hex } from "viem";
+import { decodeEventLog, encodeAbiParameters, formatUnits, keccak256, type Address, type Hex } from "viem";
 import { fuseboxLogs } from "./logs";
 import { client, DEPLOYMENT, IS_FORK, isBuiltIn, RPC, V1, VERSIONS, versionOf } from "./chain";
 import { fuseboxWalletAbi, fuseRegistryAbi, fuseboxFactoryAbi, tapeoutProcessorAbi } from "./abi";
@@ -195,19 +195,26 @@ async function build(addr: Address): Promise<Atlas> {
 }
 
 // ------------------------------------------------------------------ the playground: a real check() against Atlas
+/** "3 h", "2 d 4 h": how long ago, for the Repeat Guard's explanation. */
+const ago = (sec: number) => { const h = Math.max(0, Math.round(sec / 3600)); return h < 48 ? `${Math.max(1, h)} h` : `${Math.floor(h / 24)} d ${h % 24} h`; };
+
 export interface CheckResult {
   allowed: boolean; block: number; amount: string; to: Address;
   fuses: { name: string; key: string; status: FuseStatus; why: string }[];
 }
 
-export async function checkPayment(to: Address, amount: bigint): Promise<CheckResult> {
-  const W = { address: DEPLOYMENT.atlas, abi: fuseboxWalletAbi } as const;
-  const [atlas, res, since, mask, head] = await Promise.all([
-    getAtlas(),
+/** A real, read-only check() of one payment against a demo wallet (Atlas by default). */
+export async function checkPayment(to: Address, amount: bigint, wallet: Address = DEPLOYMENT.atlas): Promise<CheckResult> {
+  const W = { address: wallet, abi: fuseboxWalletAbi } as const;
+  // the Repeat Guard's memory of this exact payment: when it last went out
+  const rk = keccak256(encodeAbiParameters([{ type: "address" }, { type: "address" }, { type: "uint256" }], [DEPLOYMENT.usdt0, to, amount]));
+  const [atlas, res, since, mask, head, lastPaid] = await Promise.all([
+    wallet.toLowerCase() === DEPLOYMENT.atlas.toLowerCase() ? getAtlas() : getWallet(wallet),
     client.readContract({ ...W, functionName: "check", args: [DEPLOYMENT.usdt0, to, amount] }),
     client.readContract({ ...W, functionName: "payeeAddedAt", args: [to] }),
     client.readContract({ ...W, functionName: "approvalMaskOf", args: [DEPLOYMENT.usdt0, to, amount] }),
     client.getBlockNumber(),
+    client.readContract({ ...W, functionName: "lastPaidAt", args: [rk] }).catch(() => 0n),
   ]);
   const [allowed, status] = res;
   const amt = Number(formatUnits(amount, 6));
@@ -232,7 +239,7 @@ export async function checkPayment(to: Address, amount: bigint): Promise<CheckRe
     } else if (f.key === "approval-2of3") {
       why = ok ? (amt > f.a ? `Over ${f.a} USD₮0 and approved by ${approvals} of 3.` : `Under the ${f.a} USD₮0 approval threshold.`) : `Over ${f.a} USD₮0: needs two of three approvers, has ${approvals}.`;
     } else if (f.key === "repeat-guard") {
-      why = ok ? `Not a repeat: no payment of ${amt} USD₮0 to this payee in the last ${f.a} h (or the owner cleared it).` : `${amt} USD₮0 to this payee already went out in the last ${f.a} h. The owner can clear one repeat.`;
+      why = ok ? `Not a repeat: no payment of ${amt} USD₮0 to this payee in the last ${f.a} h (or the owner cleared it).` : `${amt} USD₮0 to this payee already went out ${ago(now - Number(lastPaid))} ago, inside the ${f.a} h window: the same payment twice is paid once. The owner can clear one real repeat.`;
     }
     return { name: f.name, key: f.key, status: st, why };
   });
