@@ -259,6 +259,8 @@ if (allowed) await agent.writeContract({ address: WALLET, abi: fuseboxWalletAbi,
                   <tr><td><code>fusebox_pay</code></td><td>Pays in USD₮0 through the fuses with the agent&apos;s key; reports paid or stopped, which fuse said no, the fee and the transaction.</td></tr>
                   <tr><td><code>fusebox_status</code></td><td>The wallet&apos;s balance, fee balance, fuses (and whether any is blown), today&apos;s spend and decision counts.</td></tr>
                   <tr><td><code>fusebox_preflight</code></td><td>Checks a payment against any line of TapeOut circuits for <i>any</i> wallet, with the context you supply; returns each verdict and the next latch state. Free and read-only.</td></tr>
+                  <tr><td><code>fusebox_rules</code></td><td>Lists Fuse Studio&apos;s 13 ready-made rules: who each is for, whether it&apos;s already a live fuse, and a Studio link to build it.</td></tr>
+                  <tr><td><code>fusebox_setup_link</code></td><td>Turns rule names and limits into a link that opens wallet setup with those fuses on and filled in; the owner connects and signs.</td></tr>
                   <tr><td><code>fusebox_fetch</code></td><td>Fetches a URL; if it asks for payment over x402, pays the price through the fuses (only if they all allow it) and returns the response. <code>max_price</code> caps it, <code>dry_run</code> only reports.</td></tr>
                 </tbody>
               </table></div>

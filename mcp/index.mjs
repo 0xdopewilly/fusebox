@@ -15,6 +15,10 @@ import { createPublicClient, createWalletClient, decodeEventLog, defineChain, fo
 import { privateKeyToAccount } from "viem/accounts";
 
 const ABI = JSON.parse(readFileSync(new URL("./abi.json", import.meta.url), "utf8"));
+/** Fuse Studio's ready-made rules (synced from the app by web/scripts/sync-rules.mjs) */
+const RULES = JSON.parse(readFileSync(new URL("./rules.json", import.meta.url), "utf8"));
+const findRule = (name) => { const k = String(name).trim().toLowerCase(); return RULES.find((r) => r.id === k || r.name.toLowerCase() === k); };
+const ruleOrThrow = (name) => { const r = findRule(name); if (!r) throw new Error(`No ready-made rule called "${name}". Try one of: ${RULES.map((x) => x.id).join(", ")}.`); return r; };
 const ATLAS = "0x0Db0457715a6445D8a65F820d717a6B39Be66800";
 const USDT0 = "0x779Ded0c9e1022225f8E0630b35a9b54bE713736";
 const RPC = process.env.FUSEBOX_RPC || "https://rpc.xlayer.tech";
@@ -140,7 +144,7 @@ async function offerOf(res) {
 }
 const excerpt = async (res) => { const t = await res.text().catch(() => ""); return t.length > 4000 ? t.slice(0, 4000) + "…" : t; };
 
-const server = new McpServer({ name: "fusebox", version: "0.5.0" });
+const server = new McpServer({ name: "fusebox", version: "0.6.0" });
 
 server.registerTool("fusebox_check", {
   title: "Check a payment against the fuses",
@@ -246,21 +250,67 @@ server.registerTool("fusebox_fetch", {
   } catch (e) { return fail(e); }
 });
 
+server.registerTool("fusebox_rules", {
+  title: "List Fuse Studio's ready-made rules",
+  description: "Fuse Studio's library of ready-made payment rules (13 common agent policies: daily budgets, payee books with a trial, breakers, approvals, no double payments). Each says who it's for, whether it's already a live fuse a wallet can install today (fuse_id), and a Studio link to prove, change or tape it out. Use the names with fusebox_setup_link and fusebox_preflight.",
+  inputSchema: {
+    socket: z.number().int().min(1).max(5).optional().describe("Only rules for one socket: 1 Daily Cap, 2 Payee Guard, 3 Breaker, 4 Two of Three, 5 Repeat Guard"),
+    live_only: z.boolean().optional().describe("Only rules that are already live fuses"),
+  },
+}, async ({ socket, live_only }) => {
+  const list = RULES.filter((r) => (!socket || r.socket === socket) && (!live_only || r.fuseId));
+  const out = list.map((r) => ({ rule: r.id, name: r.name, for: r.when, socket: r.socketName, live_fuse_id: r.fuseId ?? null, studio: r.studio }));
+  return text({ rules: out }, `${out.length} ready-made rule${out.length === 1 ? "" : "s"}${out.filter((r) => r.live_fuse_id).length ? `, ${out.filter((r) => r.live_fuse_id).length} already live` : ""}: ${out.map((r) => r.rule).join(", ")}.`);
+});
+
+server.registerTool("fusebox_setup_link", {
+  title: "Make a wallet setup link from ready-made rules",
+  description: "Turn ready-made rule names (see fusebox_rules) and limits into a link that opens Fusebox's wallet setup with those fuses switched on and filled in. The owner opens it, connects their wallet and signs; nothing is sent from here. Rules that aren't live fuses yet come back with their Studio link instead.",
+  inputSchema: {
+    rules: z.array(z.string()).min(1).max(5).describe("Rule names or ids, e.g. [\"daily-budget\", \"payee-book-trial\", \"no-double-pay\"]"),
+    cap: z.number().int().min(1).max(254).optional().describe("Daily budget: the most per UTC day, USDT0 (default 50)"),
+    cooling_off_hours: z.number().int().min(0).max(255).optional().describe("Payee book: hours before a new payee gets full payments (default 24)"),
+    trial_amount: z.number().int().min(0).max(254).optional().describe("Payee book: the most a payee still cooling off can get, USDT0 (default 2)"),
+    approvals_above: z.number().int().min(0).max(254).optional().describe("Two of three: payments above this need two approvers, USDT0 (default 20)"),
+    repeat_window_hours: z.number().int().min(1).max(254).optional().describe("No double payments: hours the same payment is remembered (default 24)"),
+  },
+}, async ({ rules, cap = 50, cooling_off_hours = 24, trial_amount = 2, approvals_above = 20, repeat_window_hours = 24 }) => {
+  try {
+    const picked = rules.map(ruleOrThrow);
+    const live = [...new Map(picked.filter((r) => r.fuseId).map((r) => [r.fuseId, r])).values()];
+    const toBuild = picked.filter((r) => !r.fuseId);
+    const parts = live.map((r) => r.socket === 1 ? `${r.fuseId}:${cap}` : r.socket === 2 ? `${r.fuseId}:${cooling_off_hours}:${trial_amount}` : r.socket === 4 ? `${r.fuseId}:${approvals_above}` : r.socket === 5 ? `${r.fuseId}:${repeat_window_hours}` : `${r.fuseId}`);
+    const url = parts.length ? `${APP}/app/new?f=${parts.join(",")}` : null;
+    const out = { url, fuses: live.map((r) => ({ rule: r.id, name: r.name, fuse_id: r.fuseId })), to_build_first: toBuild.map((r) => ({ rule: r.id, name: r.name, studio: r.studio })) };
+    const summary = url ? `Open this to set up a wallet with ${live.map((r) => r.name).join(", ")}: ${url}` : "None of these rules is a live fuse yet.";
+    return text(out, summary + (toBuild.length ? ` Build first in Fuse Studio: ${toBuild.map((r) => `${r.name} (${r.studio})`).join("; ")}.` : ""));
+  } catch (e) { return fail(e); }
+});
+
 server.registerTool("fusebox_preflight", {
   title: "Pre-flight a payment against TapeOut circuits (any wallet)",
   description: "Before signing a payment from ANY wallet, run it through a line of TapeOut circuits on X Layer: each circuit's own eval/step answers yes or no, free and read-only. You supply the context a Fusebox wallet would keep on-chain. Pass the returned state back next time so latches (the Breaker) remember. Shipped fuses: 1 Daily Cap (a = cap per UTC day, USD₮0), 2 Payee Guard (a = cooling-off hours, b = trial USD₮0), 3 Breaker, 4 Two of Three (a = approvals above, USD₮0). If it says no, don't sign.",
   inputSchema: {
-    line: z.array(z.object({ fuse_id: z.number().int().positive(), a: z.number().int().min(0).max(255).optional(), b: z.number().int().min(0).max(255).optional() })).min(1).max(8).describe("Fuses by registry id with their settings"),
+    line: z.array(z.object({ fuse_id: z.number().int().positive().optional(), rule: z.string().optional().describe("A ready-made rule by name instead of fuse_id, e.g. \"daily-budget\" (see fusebox_rules)"), a: z.number().int().min(0).max(255).optional(), b: z.number().int().min(0).max(255).optional() })).min(1).max(8).describe("Fuses by registry id with their settings"),
     amount: z.string().describe("Payment amount in USD₮0, e.g. \"2.5\""),
     spent_today: z.string().optional().describe("USD₮0 already paid today through this line"),
     payee_saved: z.boolean().optional().describe("Is the payee in your payee book?"),
     hours_since_saved: z.number().int().min(0).optional().describe("Hours since the payee was saved"),
     approvals: z.number().int().min(0).max(3).optional().describe("How many of three approvers signed this exact payment"),
     state: z.record(z.string(), z.string()).optional().describe("Latch state from the previous pre-flight's state"),
+    same_payment_hours_ago: z.number().int().min(0).optional().describe("Repeat Guard: hours since this exact payment (payee and amount) last went out; omit if never"),
+    repeat_cleared: z.boolean().optional().describe("Repeat Guard: the owner cleared one repeat of this payment"),
   },
-}, async ({ line, amount, spent_today, payee_saved, hours_since_saved, approvals, state }) => {
+}, async ({ line, amount, spent_today, payee_saved, hours_since_saved, approvals, state, same_payment_hours_ago, repeat_cleared }) => {
   try {
-    const body = { line: line.map((f) => ({ fuseId: f.fuse_id, a: f.a, b: f.b })), payment: { amount }, context: { spentToday: spent_today, payee: { saved: !!payee_saved, hoursSinceSaved: hours_since_saved }, approvals: approvals ?? 0, state } };
+    const fuseOf = (f) => {
+      if (f.fuse_id) return f.fuse_id;
+      if (!f.rule) throw new Error("Each fuse in the line needs a fuse_id or a rule name.");
+      const r = ruleOrThrow(f.rule);
+      if (!r.fuseId) throw new Error(`"${r.name}" isn't a live fuse yet. Build it in Fuse Studio (no code, proved on every input) and tape it out: ${r.studio}`);
+      return r.fuseId;
+    };
+    const body = { line: line.map((f) => ({ fuseId: fuseOf(f), a: f.a, b: f.b })), payment: { amount }, context: { spentToday: spent_today, payee: { saved: !!payee_saved, hoursSinceSaved: hours_since_saved }, approvals: approvals ?? 0, state, samePaymentHoursAgo: same_payment_hours_ago, repeatCleared: !!repeat_cleared } };
     const r = await fetch(`${APP}/api/preflight`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(30_000) });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.error ?? `pre-flight ${r.status}`);

@@ -8,11 +8,16 @@ MCP tools for an AI agent that pays through a [Fusebox](https://fusebox-xlayer.v
 | `fusebox_pay` | Pays in USDT0 through the fuses with the agent's key, and reports paid or stopped, which fuse said no, the fee and the transaction link. |
 | `fusebox_status` | Returns the wallet's balance, prepaid fee balance, fuses (and whether any is blown), today's spend and the decision counts. |
 | `fusebox_preflight` | Checks a payment against any line of TapeOut circuits for any wallet (not just a Fusebox one): you pass the context, each circuit answers, and the latch state comes back for next time. Free and read-only. |
+| `fusebox_rules` | Lists Fuse Studio's 13 ready-made rules: who each is for, whether it's already a live fuse a wallet can install, and a Studio link to build it. |
+| `fusebox_setup_link` | Turns ready-made rule names and limits into a link that opens Fusebox's wallet setup with those fuses on and filled in. The owner connects and signs; nothing is sent from the server. |
 | `fusebox_fetch` | Fetches a URL. If it asks for payment over x402 (a `fusebox` offer on X Layer), the price is paid through the fuses only if they all allow it, then the response comes back. `max_price` caps what it pays (0.10 USDT0 when not set; `FUSEBOX_MAX_PRICE` changes the default), it only fetches public hosts (`FUSEBOX_ALLOW_PRIVATE_URLS=1` for local tests), and the proof it sends back is signed by the agent key so nobody else can redeem the payment; `dry_run` only reports the price and the fuses' answer. |
 
 Every tool explains all five fuses, including the **Repeat Guard** on v2 wallets (the same invoice sent twice is paid once).
 
 After each payment, `fusebox_pay` tells Fusebox the transaction hash, so anyone following the wallet on Telegram ([@FuseboxAlertsBot](https://t.me/FuseboxAlertsBot)) gets a message: paid, or stopped and why.
+
+**New in 0.6.0**
+- **Ready-made rules by name:** `fusebox_rules` and `fusebox_setup_link`, and `fusebox_preflight` takes `rule` names and the Repeat Guard's context.
 
 **New in 0.5.0**
 - **Repeat Guard and v2 wallets:** all five fuses are explained, and payments are announced to Telegram followers.

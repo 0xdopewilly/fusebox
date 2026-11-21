@@ -13,6 +13,8 @@ import { encodeHeader, decodeHeader, readPaymentRequired, pickFusebox, memoFor, 
 
 export { fuseboxWalletAbi, fuseRegistryAbi, fuseboxFactoryAbi, tapeoutProcessorAbi } from "./abi.js";
 export * as x402 from "./x402.js";
+export { RULES, type RuleTemplate } from "./rules.js";
+import { RULES, type RuleTemplate } from "./rules.js";
 
 /** X Layer mainnet (chain 196). */
 export const xLayer: Chain = defineChain({
@@ -120,8 +122,11 @@ export interface FetchResult {
 
 /** Pre-flight: a payment run through a line of TapeOut circuits for any agent wallet (see preflight()). */
 export interface PreflightRequest {
-  /** fuses by registry id with their settings, e.g. [{ fuseId: 1, a: 50 }, { fuseId: 3 }] */
-  line: { fuseId: number; a?: number; b?: number }[];
+  /**
+   * The line: live fuses by registry id or by ready-made rule name, with their settings,
+   * e.g. [{ rule: "daily-budget", a: 50 }, { fuseId: 3 }]. See RULES.
+   */
+  line: ({ fuseId: number; a?: number; b?: number } | { rule: string; a?: number; b?: number })[];
   payment: { amount: string | number; to?: string };
   context?: {
     /** USD₮0 already paid today through this line */
@@ -131,6 +136,10 @@ export interface PreflightRequest {
     approvals?: [boolean, boolean, boolean] | number;
     /** latch state from the previous result's `state` */
     state?: Record<string, Hex>;
+    /** Repeat Guard: hours since this exact payment (payee and amount) last went out; leave it out if never */
+    samePaymentHoursAgo?: number;
+    /** Repeat Guard: the owner cleared one repeat of this payment */
+    repeatCleared?: boolean;
   };
 }
 export interface PreflightResult {
@@ -147,7 +156,8 @@ export interface PreflightResult {
  */
 export async function preflight(req: PreflightRequest, opts: { api?: string } = {}): Promise<PreflightResult> {
   const api = (opts.api ?? "https://fusebox-xlayer.vercel.app").replace(/\/$/, "");
-  const body = { ...req, payment: { ...req.payment, amount: String(req.payment.amount) }, context: req.context ? { ...req.context, spentToday: req.context.spentToday === undefined ? undefined : String(req.context.spentToday) } : undefined };
+  const line = req.line.map((f) => ("rule" in f ? { fuseId: liveFuse(f.rule), a: f.a, b: f.b } : f));
+  const body = { ...req, line, payment: { ...req.payment, amount: String(req.payment.amount) }, context: req.context ? { ...req.context, spentToday: req.context.spentToday === undefined ? undefined : String(req.context.spentToday) } : undefined };
   const r = await fetch(`${api}/api/preflight`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(30_000) });
   const j = (await r.json().catch(() => ({}))) as PreflightResult & { error?: string };
   if (!r.ok) throw new FuseboxError(j.error ?? `Pre-flight unavailable (${r.status}).`);
@@ -179,6 +189,67 @@ function decodeMeta(uri: string): { name?: string; summary?: string; rule?: stri
 }
 
 export class FuseboxError extends Error {}
+
+// ---------------------------------------------------------------- ready-made rules, by name
+
+/** A ready-made rule by its id ("daily-budget") or name ("Daily budget"), ignoring case. */
+export function findRule(name: string): RuleTemplate | undefined {
+  const k = name.trim().toLowerCase();
+  return RULES.find((r) => r.id === k || r.name.toLowerCase() === k);
+}
+
+function ruleOrThrow(name: string): RuleTemplate {
+  const r = findRule(name);
+  if (!r) throw new FuseboxError(`No ready-made rule called "${name}". Try one of: ${RULES.map((x) => x.id).join(", ")}.`);
+  return r;
+}
+
+/** The live fuse id behind a ready-made rule, or an error pointing to Studio for one nobody has taped out yet. */
+function liveFuse(name: string): number {
+  const r = ruleOrThrow(name);
+  if (!r.fuseId) throw new FuseboxError(`"${r.name}" isn't a live fuse yet. Build it in Fuse Studio (no code, proved on every input) and tape it out: ${r.studio}`);
+  return r.fuseId;
+}
+
+/** The owner's limits for the live rules' fuses; anything left out takes the setup page's default. */
+export interface RuleSettings {
+  /** Daily budget: the most per UTC day, USD₮0 (default 50) */
+  cap?: number;
+  /** Payee book: hours a new payee waits before full payments (default 24) */
+  coolingOffHours?: number;
+  /** Payee book: the most a payee still cooling off can get, USD₮0 (default 2) */
+  trialAmount?: number;
+  /** Two of three: payments above this many USD₮0 need two approvers (default 20) */
+  approvalsAbove?: number;
+  /** No double payments: hours the same payment is remembered (default 24) */
+  repeatWindowHours?: number;
+}
+
+/**
+ * A link to Fusebox's wallet setup with these ready-made rules switched on and their limits filled in: the owner
+ * opens it, connects a wallet and signs. Only live rules can be installed; any others come back in `toBuild`, each
+ * with the Studio link that builds it.
+ *
+ *   setupLink(["daily-budget", "payee-book-trial", "no-double-pay"], { cap: 20 }).url
+ */
+export function setupLink(names: string[], settings: RuleSettings = {}, opts: { app?: string } = {}): { url: string | null; rules: RuleTemplate[]; toBuild: RuleTemplate[] } {
+  const app = (opts.app ?? "https://fusebox-xlayer.vercel.app").replace(/\/$/, "");
+  const picked = names.map(ruleOrThrow);
+  const live = picked.filter((r) => r.fuseId), toBuild = picked.filter((r) => !r.fuseId);
+  const int = (v: number | undefined, d: number, lo: number, hi: number, what: string) => {
+    const x = v ?? d;
+    if (!Number.isInteger(x) || x < lo || x > hi) throw new FuseboxError(`${what} must be a whole number from ${lo} to ${hi}.`);
+    return x;
+  };
+  const parts = [...new Map(live.map((r) => [r.fuseId!, r])).values()].map((r) => {
+    if (r.socket === 1) return `${r.fuseId}:${int(settings.cap, 50, 1, 254, "cap")}`;
+    if (r.socket === 2) return `${r.fuseId}:${int(settings.coolingOffHours, 24, 0, 255, "coolingOffHours")}:${int(settings.trialAmount, 2, 0, 254, "trialAmount")}`;
+    if (r.socket === 4) return `${r.fuseId}:${int(settings.approvalsAbove, 20, 0, 254, "approvalsAbove")}`;
+    if (r.socket === 5) return `${r.fuseId}:${int(settings.repeatWindowHours, 24, 1, 254, "repeatWindowHours")}`;
+    return `${r.fuseId}`;
+  });
+  return { url: parts.length ? `${app}/app/new?f=${parts.join(",")}` : null, rules: live, toBuild };
+}
 
 /** A client for one Fusebox wallet. */
 export class Fusebox {

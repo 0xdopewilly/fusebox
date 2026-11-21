@@ -8,6 +8,11 @@ taped out on [TapeOut](https://tapeout.net) and evaluated on X Layer in the same
 npm install fusebox-sdk viem
 ```
 
+**New in 0.6.0**
+- **Ready-made rules by name:** `RULES` lists Fuse Studio's 13 ready-made rules, five of them live fuses.
+  `setupLink([...names], limits)` turns names into a wallet setup link, and `preflight()` accepts `{ rule: "daily-budget" }`.
+- **Repeat Guard in pre-flight:** `context.samePaymentHoursAgo` and `context.repeatCleared`.
+
 **New in 0.5.0**
 - **v2 contracts:** new wallets and the fuse market, including the Repeat Guard (fuse 5: the same invoice sent
   twice is paid once). v1 wallets such as Atlas keep working.
@@ -123,6 +128,24 @@ const r = await preflight({
   context: { spentToday: "10", payee: { saved: true, hoursSinceSaved: 72 }, approvals: 0, state: lastState },
 });
 if (r.allowed) { lastState = r.state; /* sign it */ }
+```
+
+## Ready-made rules
+
+Fuse Studio's library is in the SDK: 13 common agent policies (a daily budget, a payee book with a trial, a breaker,
+two of three approvers, no double payments, and so on). Five are already live fuses (`fuseId`); the others carry a
+`studio` link that opens them in Fuse Studio, to prove and tape out.
+
+```ts
+import { RULES, findRule, setupLink, preflight } from "fusebox-sdk";
+
+findRule("daily-budget");   // { name: "Daily budget", fuseId: 1, studio: "https://…/app/studio?draft=…", … }
+
+// a link that opens wallet setup with these fuses on and filled in; the owner connects and signs
+const { url, toBuild } = setupLink(["daily-budget", "payee-book-trial", "no-double-pay"], { cap: 20, repeatWindowHours: 48 });
+
+// check a payment against rules by name, from any wallet
+await preflight({ line: [{ rule: "daily-budget", a: 50 }, { rule: "no-double-pay", a: 24 }], payment: { amount: "5" }, context: { samePaymentHoursAgo: 3 } });
 ```
 
 ## Approvals
