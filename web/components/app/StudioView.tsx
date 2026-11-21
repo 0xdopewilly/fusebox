@@ -7,6 +7,7 @@ import { CURRENT, DEP, pub } from "@/lib/client-chain";
 import { SOCKETS } from "@/lib/sockets";
 import { CONDS, compile, condOf, decodeDraft, encodeDraft, opOf, paramLabels, ruleProblem, ruleText, type Cond, type GroupMode, type GroupOp, type Join, type Rule } from "@/lib/studio";
 import { prove, type Proof } from "@/lib/studioProof";
+import { LIBRARY, type Template } from "@/lib/studioLibrary";
 import { optimizeAsync, type Optimized } from "@/lib/circuits/optimize";
 import records from "@/lib/circuits/optimize-records.json";
 import ui from "./StudioOptimize.module.css";
@@ -33,6 +34,10 @@ interface Line { conds: Cond[]; op: GroupOp }
 const toLines = (gs: Cond[][]): Line[] => gs.map((conds) => ({ conds, op: { m: "all", k: 0 } }));
 const MODE_LABEL: Record<GroupMode, string> = { all: "All of", any: "Any of", atleast: "At least", none: "None of" };
 const MODE_WORD: Record<GroupMode, string> = { all: "and", any: "or", atleast: "·", none: "·" };
+/** what a rule means, for spotting which ready-made rule is loaded (strikes only matter on the Breaker; the join only with 2+ groups) */
+const meaningOf = (r: Rule) => JSON.stringify(r.socket === 3 ? [3, r.strikes] : [r.socket, r.groups.map((g, i) => [opOf(r, i).m, opOf(r, i).k, g.map((c) => [c.kind, c.k])]), r.groups.length > 1 ? r.join ?? "any" : "-"]);
+// the library, compiled once: gate counts for the cards, and netlist hashes to spot rules already live on mainnet
+const LIB = LIBRARY.map((t) => { const c = compile(t.rule); return { t, gates: c.net.gates, hash: c.net.keccak.toLowerCase(), meaning: meaningOf(t.rule) }; });
 interface Ctx { circuitId?: bigint; fuseId?: number }
 // the shared write() is typed for any ABI, where viem can't see that these calls are payable; it passes value through
 type WriteArg = Parameters<ReturnType<typeof useWallet>["write"]>[0];
@@ -88,7 +93,7 @@ export default function StudioView() {
   const runProof = async () => {
     if (!active) return;
     setProgress(0);
-    const p = await prove(active, socket, (d, t) => setProgress(d / t));
+    const p = await prove(active, socket, (d, t) => setProgress(d / t), rule);
     setProof({ hash: active.net.keccak, p }); setProgress(null);
   };
 
@@ -113,6 +118,17 @@ export default function StudioView() {
   const needN = active && cost ? BigInt(Math.max(0, active.net.nand - Number(cost.haveN))) : 0n;
   const needL = active && cost ? BigInt(Math.max(0, active.net.latch - Number(cost.haveL))) : 0n;
   const okbCost = cost && active ? (needN ? cost.price * needN + cost.pfee : 0n) + (needL ? cost.price * needL + cost.pfee : 0n) + cost.tape : null;
+
+  // circuits already live in the market, by netlist hash: a ready-made rule that matches one needs no tape-out
+  const [live, setLive] = useState<Record<string, number>>({});
+  useEffect(() => {
+    let on = true;
+    fetch("/api/market").then((r) => (r.ok ? r.json() : null)).then((m: { fuses?: { fuseId: number; netlistHash: string; listed: boolean }[] } | null) => {
+      if (on && m?.fuses) setLive(Object.fromEntries(m.fuses.filter((f) => f.listed).map((f) => [f.netlistHash.toLowerCase(), f.fuseId])));
+    }).catch(() => {});
+    return () => { on = false; };
+  }, []);
+  const liveId = active ? live[active.net.keccak.toLowerCase()] ?? (compiled ? live[compiled.net.keccak.toLowerCase()] : undefined) : undefined;
 
   // describe it
   const [name, setName] = useState(""); const [summary, setSummary] = useState(""); const [fee, setFee] = useState("0.001");
@@ -145,6 +161,15 @@ export default function StudioView() {
   };
 
   const pick = (s: number) => { setSocket(s); setLines(toLines(START[s])); setJoin("any"); setProof(null); setMade(null); };
+  const meaning = meaningOf(rule);
+  const loadTemplate = (t: Template) => {
+    const r = t.rule;
+    setSocket(r.socket); setLines(r.groups.map((g, i) => ({ conds: g.map((c) => ({ ...c })), op: opOf(r, i) }))); setJoin(r.join ?? "any");
+    if (r.socket === 3) setStrikes(r.strikes);
+    // its name fills in unless you typed your own
+    if (!name.trim() || LIBRARY.some((x) => x.name === name)) setName(t.name);
+    setProof(null); setMade(null);
+  };
   // "at least k" can't ask for more conditions than the group has
   const fit = (l: Line): Line => (l.op.m === "atleast" ? { ...l, op: { m: "atleast", k: Math.max(1, Math.min(l.op.k || 1, l.conds.length)) } } : l);
   const editLines = (f: (ls: Line[]) => Line[]) => { setLines(f(lines).filter((l) => l.conds.length).map(fit)); setProof(null); };
@@ -156,10 +181,10 @@ export default function StudioView() {
   return (
     <div className="page">
       {grid}
-      <PageChrome title="Fuse Studio" sub="Any rule, no code" info={<p>Build any payment rule without code. Combine conditions with all, any, at least or none; Fusebox turns it into TapeOut gates, trims every gate it doesn&apos;t need and checks it against your rule, input by input. Tape it out from your own wallet: it lists in the market and earns you its fee on every check, the no&apos;s included.</p>} />
+      <PageChrome title="Fuse Studio" sub="Any rule, no code" info={<p>Build any payment rule without code. Combine conditions with all, any, at least or none; Fusebox turns it into TapeOut gates, trims every gate it doesn&apos;t need and proves it matches your rule on every possible input. Tape it out from your own wallet: it lists in the market and earns you its fee on every check, the no&apos;s included.</p>} />
       <section className="try-head m-hide">
         <h1 className="disp" data-a>Fuse <span className="lime">[studio]</span>.</h1>
-        <p data-a><b>Build any payment rule. No code.</b> Combine conditions with all, any, at least or none. Fusebox turns it into TapeOut gates, trims every gate it doesn&apos;t need and checks it against your rule, input by input. Tape it out from your own wallet: it guards real payments in Fusebox wallets, lists in the market, and earns you its fee on every check.</p>
+        <p data-a><b>Build any payment rule. No code.</b> Start from a ready-made rule or your own, and combine conditions with all, any, at least or none. Fusebox turns it into TapeOut gates, trims every gate it doesn&apos;t need and proves it matches your rule on every possible input. Tape it out from your own wallet: it guards real payments in Fusebox wallets, lists in the market, and earns you its fee on every check.</p>
       </section>
 
       <h2 className="sr">1. Pick a socket</h2>
@@ -171,6 +196,22 @@ export default function StudioView() {
         ))}
       </div>
 
+      <section className="st-lib" data-a aria-labelledby="st-lib-h">
+        <div className="st-lib-h m"><span id="st-lib-h">Ready-made · {SOCKETS[socket].name}</span><span className="mute">{LIBRARY.length} rules in the library · tap one, then change anything</span></div>
+        <div className="st-lib-row">
+          {LIB.filter((x) => x.t.rule.socket === socket).map((x) => {
+            const on = x.meaning === meaning, fid = live[x.hash];
+            return (
+              <button key={x.t.id} className={`st-lib-card${on ? " on" : ""}`} aria-pressed={on} onClick={() => loadTemplate(x.t)}>
+                <b>{x.t.name}</b>
+                <span className="st-lib-when">{x.t.when}</span>
+                <span className="st-lib-meta m"><span>{x.gates} gates</span>{fid ? <span className="lime">Live · fuse #{fid}</span> : <span>Yours to tape out</span>}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
       <section className="st-main" data-a>
         <div className="st-rule">
           <div className="sim-h m"><span className="lime">01</span> The rule · allow a payment when…</div>
@@ -181,7 +222,7 @@ export default function StudioView() {
             </div>
           ) : (
             <>
-              <p className="m mute st-hint">No code: pick conditions, then choose how each group combines them. Before anything is taped out, the circuit is checked against your rule input by input: every possible input for most sockets (all 16.7 million for a daily-cap rule).</p>
+              <p className="m mute st-hint">No code: pick conditions, then choose how each group combines them. Before anything is taped out, the circuit is proved against your rule on every possible input: all 16.7 million for a daily-cap rule, all 8.6 billion for a payee rule.</p>
               {lines.length > 1 && (
                 <div className="st-join m" role="radiogroup" aria-label="How the groups combine">
                   <span>Let a payment through when</span>
@@ -299,7 +340,7 @@ export default function StudioView() {
             </p>
           )}
         </div>
-        <p className="oc-say">The netlist is decoded from its own TAP-02 bytes and run, 32 inputs at a time, against the rule written in plain code. The same bytes are what TapeOut stores and what the registry pins by hash.</p>
+        <p className="oc-say">The netlist is decoded from its own TAP-02 bytes and checked against the rule written in plain code: run on every input, 32 at a time, or for Payee Guard&apos;s 8.6 billion inputs, both turned into BDDs, a form in which two circuits that agree on every input come out identical. The same bytes are what TapeOut stores and what the registry pins by hash.</p>
         <div className="st-draft m">
           <Link className={`dt-btn${draftCode ? "" : " off"}`} href={draftCode ? `/app/simulate?draft=${draftCode}` : "#"} aria-disabled={!draftCode}>Try it on payments in the simulator →</Link>
           <button className="dt-btn" disabled={!draftCode} onClick={() => { navigator.clipboard?.writeText(`${location.origin}/app/studio?draft=${draftCode}`); setCopied(true); setTimeout(() => setCopied(false), 1600); }}>{copied ? "Draft link copied" : "Copy a link to this draft"}</button>
@@ -317,6 +358,12 @@ export default function StudioView() {
             <p className="m mute" style={{ fontSize: 10.5, lineHeight: 1.6 }}>90% of every fee goes to whoever holds the circuit NFT; Fusebox keeps 10%. The description is written on X Layer with the listing.</p>
           </div>
           <div className="st-go">
+            {liveId && !made && (
+              <div className="st-live" role="note">
+                <p><b className="lime">Already live as fuse #{liveId}.</b> This exact circuit is on X Layer mainnet, so a wallet can use it today with nothing to tape out. Taping out a copy is still allowed.</p>
+                <div className="prow"><Link className="btn lime" href={`/app/new?f=${liveId}`}><span>Use it in a wallet</span> <span className="k">→</span></Link><Link className="btn" href={`/app/fuse/${liveId}`}>Its page</Link></div>
+              </div>
+            )}
             {!account ? <ConnectChoices /> : (
               <>
                 <button className="btn lime" disabled={!!blocker || q.running || !!made} onClick={launch}><span>{q.running ? "Working…" : "Tape out and list"}</span> <span className="k">→</span></button>

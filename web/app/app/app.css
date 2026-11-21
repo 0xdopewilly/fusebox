@@ -563,13 +563,29 @@
 }
 
 /* fuse studio */
-.st-sockets { display: grid; grid-template-columns: repeat(4, 1fr); border: 1px solid var(--hair2); }
+.st-sockets { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); border: 1px solid var(--hair2); }
 .st-sockets button { display: flex; flex-direction: column; gap: 6px; text-align: left; padding: 16px 18px; background: transparent; border: 0; border-left: 1px solid var(--hair2); color: var(--ink); cursor: pointer; position: relative; transition: background 0.2s; }
 .st-sockets button:first-child { border-left: 0; }
 .st-sockets button.on { background: rgba(187, 254, 47, 0.05); }
 .st-sockets button.on::after { content: ""; position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--lime); }
 .st-sockets b { font-family: var(--display); font-weight: 800; font-stretch: 104%; text-transform: uppercase; font-size: 18px; letter-spacing: -0.01em; }
 .st-sockets small { font: 500 9.5px/1.5 var(--mono); color: var(--dim); }
+/* ready-made rules: the current socket's, under its tab */
+.st-lib { border: 1px solid var(--hair2); border-top: 0; padding: 16px 18px 18px; }
+.st-lib-h { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; font-size: 10.5px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--soft); margin-bottom: 12px; }
+.st-lib-h .mute { letter-spacing: 0.04em; text-transform: none; font-size: 10.5px; }
+.st-lib-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.st-lib-card { display: flex; flex-direction: column; gap: 7px; text-align: left; padding: 13px 15px 12px; background: transparent; border: 1px solid var(--hair2); color: var(--ink); cursor: pointer; position: relative; transition: border-color 0.2s, background 0.2s; }
+.st-lib-card:hover { border-color: var(--hair3); }
+.st-lib-card:focus-visible { outline: 1px solid var(--lime); outline-offset: 2px; }
+.st-lib-card.on { border-color: var(--lime); background: rgba(187, 254, 47, 0.05); }
+.st-lib-card b { font-family: var(--display); font-weight: 800; font-stretch: 104%; text-transform: uppercase; font-size: 16px; letter-spacing: -0.005em; }
+.st-lib-when { font-size: 13.5px; line-height: 1.45; color: var(--soft); }
+.st-lib-meta { margin-top: auto; padding-top: 4px; display: flex; justify-content: space-between; gap: 10px; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--dim); }
+.st-live { border: 1px solid var(--lime); background: rgba(187, 254, 47, 0.04); padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.st-live p { margin: 0; font: 400 14px/1.5 var(--sans); color: var(--soft); text-transform: none; letter-spacing: 0; }
+.st-live p b { font-weight: 600; }
+.st-live .prow { display: flex; gap: 10px; flex-wrap: wrap; }
 .st-main { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr); border: 1px solid var(--hair2); border-top: 0; }
 .st-rule, .st-chip { padding: 22px 24px; min-width: 0; } .st-chip { border-left: 1px solid var(--hair2); }
 .st-group { border: 1px solid var(--hair2); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
@@ -603,6 +619,10 @@
   .st-sockets { grid-template-columns: 1fr 1fr; } .st-sockets button:nth-child(3) { border-left: 0; } .st-sockets button:nth-child(n+3) { border-top: 1px solid var(--hair2); }
   .st-main, .st-ship-grid { grid-template-columns: 1fr; } .st-chip { border-left: 0; border-top: 1px solid var(--hair2); }
   .st-rule, .st-chip, .st-prove, .st-ship { padding: 18px 16px; }
+  .st-lib { padding: 14px 16px 16px; }
+  .st-lib-row { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
+  .st-lib-row::-webkit-scrollbar { display: none; }
+  .st-lib-card { flex: 0 0 min(78%, 300px); scroll-snap-align: start; }
 }
 .st-cond { position: relative; padding-right: 36px; } .st-cond .sim-x { position: absolute; right: 0; top: 50%; transform: translateY(-50%); }
 

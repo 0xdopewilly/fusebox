@@ -31,7 +31,7 @@ import { OP_LATCH, OP_NAND, decode, type Element } from "./tap02";
 
 export class BddTooBig extends Error {}
 
-class Bdd {
+export class Bdd {
   readonly F = 0;
   readonly T = 1;
   private level: number[] = [1e9, 1e9];
@@ -85,6 +85,39 @@ class Bdd {
     const r = this.mk(v, this.nand(a0, b0), this.nand(a1, b1));
     this.nandMemo.set(key, r);
     return r;
+  }
+
+  and(f: number, g: number) { return this.not(this.nand(f, g)); }
+  or(f: number, g: number) { return this.nand(this.not(f), this.not(g)); }
+  xor(f: number, g: number) { const n = this.nand(f, g); return this.nand(this.nand(f, n), this.nand(g, n)); }
+
+  /** f's value under an assignment of every variable (by level). */
+  at(f: number, value: (level: number) => number): number {
+    while (f > 1) f = value(this.level[f]) ? this.hi[f] : this.lo[f];
+    return f;
+  }
+
+  /** One assignment (variable level -> 0/1) that makes f true, or null if f is false everywhere. */
+  pick(f: number): Map<number, number> | null {
+    if (f === this.F) return null;
+    const out = new Map<number, number>();
+    while (f !== this.T) { if (this.lo[f] !== this.F) { out.set(this.level[f], 0); f = this.lo[f]; } else { out.set(this.level[f], 1); f = this.hi[f]; } }
+    return out;
+  }
+
+  /** How many assignments of `nVars` variables (levels 0..nVars-1) make f true. */
+  count(f: number, nVars: number): bigint {
+    const memo = new Map<number, bigint>();
+    const lv = (x: number) => (x <= 1 ? nVars : this.level[x]);
+    const go = (x: number): bigint => {
+      if (x === this.F) return 0n;
+      if (x === this.T) return 1n;
+      const hit = memo.get(x); if (hit !== undefined) return hit;
+      const l = this.lo[x], h = this.hi[x], v = this.level[x];
+      const r = go(l) * 2n ** BigInt(lv(l) - v - 1) + go(h) * 2n ** BigInt(lv(h) - v - 1);
+      memo.set(x, r); return r;
+    };
+    return go(f) * 2n ** BigInt(lv(f));
   }
 }
 

@@ -3,8 +3,9 @@
  * never through the builder's internal graph.
  *
  * - Daily Cap (24 inputs) and Two of Three (19 inputs): exhaustive, all 2^nIn vectors, bitsliced.
- * - Payee Guard (33 inputs, 2^33 is too many): exhaustive over each comparator's 2^16 operand pairs
- *   for both values of `listed` with the other block held at every boundary case, plus 4M random vectors.
+ * - Payee Guard (33 inputs): proved on all 2^33 by BDD equivalence in symbolic.test.ts; here, as a cross-check
+ *   by simulation, exhaustive over each comparator's 2^16 operand pairs for both values of `listed` with the
+ *   other block held at every boundary case, plus 4M random vectors.
  * - Breaker (1 LATCH): every (state, input) pair, plus scripted sequences.
  * - Repeat Guard (2 inputs): all 4 vectors, plus every gate stuck at 0 and at 1.
  */

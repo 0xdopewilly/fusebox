@@ -137,11 +137,12 @@ A payment to a stranger blocks itself and latches; every later payment is blocke
 
 **Two of Three**: `amount <= threshold OR MAJ(a0, a1, a2)`: comparator (37), majority (6), OR (3).
 
-**Verification** (`npm test` in `circuits/`, 17 tests): the toolchain passes the official TAP-02 vectors
+**Verification** (`npm test` in `circuits/`, 36 tests): the toolchain passes the official TAP-02 vectors
 (file pinned by SHA-256, including LATCH and REF cases and every ill-formed case); every fuse is checked
 through its encoded bytes: all 2^24 Daily Cap vectors and all 2^19 Two of Three vectors, the Payee Guard
-exhaustively per comparator block plus 4M random vectors, the Breaker on every (state, input) pair plus
-scripted sequences; and a stuck-at fault test shows that every gate of every combinational fuse is
+on all 2^33 inputs by BDD equivalence (the circuit's BDD, built gate by gate from its bytes, equals the rule's,
+built from its definition; `src/symbolic.ts`), cross-checked per comparator block plus 4M random vectors,
+the Breaker on every (state, input) pair plus scripted sequences; and a stuck-at fault test shows that every gate of every combinational fuse is
 observable (none is redundant). The same spec vectors are replayed on the Solidity mock processor and on
 the real X Layer processor in the fork tests.
 

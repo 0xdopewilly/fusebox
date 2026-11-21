@@ -48,7 +48,7 @@ export default function Designers() {
       <div className="wrap sh"><div className="m">[07]</div><div className="m">For circuit designers</div><div className="m" style={{ gridColumn: "5 / 7" }}>Tape out on TapeOut. Every fee goes to whoever owns the circuit NFT</div></div>
       <div className="wrap body">
         <h2 className="disp">A fuse is a product. It pays you every time it decides.</h2>
-        <p className="studio-lead">Build one without code. Fuse Studio combines payment conditions with <b>all</b>, <b>any</b>, <b>at least</b> or <b>none</b>, turns the rule into TapeOut gates, trims every gate it doesn&apos;t need and checks it against your rule, input by input, before you tape it out. <a href="/app/studio">Open Fuse Studio →</a></p>
+        <p className="studio-lead">Build one without code. Fuse Studio combines payment conditions with <b>all</b>, <b>any</b>, <b>at least</b> or <b>none</b>, turns the rule into TapeOut gates, trims every gate it doesn&apos;t need and proves it matches your rule on every possible input before you tape it out. <a href="/app/studio">Open Fuse Studio →</a></p>
         <div className="pts">
           <div><b data-count="90" data-suffix="%">90%</b><p>of every fee goes to the circuit&apos;s owner. Fusebox keeps 10%, and the contract caps its share at 20%.</p></div>
           <div><b>Even the no</b><p>A fuse that stops a scam has done its job, so blocked attempts pay too, within daily caps.</p></div>

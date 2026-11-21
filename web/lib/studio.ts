@@ -9,6 +9,7 @@
  * the Nth blows it until the owner resets.
  */
 import { Builder, add, lessOrEqual, majority3, ONE, ZERO, type Netlist, type Sig } from "./circuits/builder";
+import { symGeK, symLe, symLeK, type Sym } from "./circuits/symbolic";
 import { SOCKETS } from "./sockets";
 
 export type Fields = Record<string, number>;
@@ -22,6 +23,8 @@ export interface CondDef {
   uses?: { a?: string; b?: string };
   build: (b: Builder, p: (name: string) => Sig[], k: number) => Sig;
   spec: (f: Fields, k: number) => boolean;
+  /** the same meaning as a BDD, built from its definition (not from gates): the complete proof compares against it */
+  sym?: (z: Sym, p: (name: string) => number[], k: number) => number;
 }
 export interface Cond { kind: string; k: number }
 export type GroupMode = "all" | "any" | "atleast" | "none";
@@ -66,13 +69,15 @@ export const CONDS: Record<number, CondDef[]> = {
       build: (b, p, k) => lessOrEqual(b, p("amount"), konst(k)), spec: (f, k) => f.amount <= k },
   ],
   2: [
-    { kind: "listed", label: () => "the payee is saved", build: (b, p) => p("listed")[0], spec: (f) => f.listed === 1 },
-    { kind: "cooled", label: () => "its cooling-off is over", uses: { a: "Cooling-off" }, build: (b, p) => lessOrEqual(b, p("cooldown"), p("age")), spec: (f) => f.age >= f.cooldown },
-    { kind: "trial", label: () => "this payment is within the trial amount", uses: { b: "Trial amount" }, build: (b, p) => lessOrEqual(b, p("amount"), p("trial")), spec: (f) => f.amount <= f.trial },
+    { kind: "listed", label: () => "the payee is saved", build: (b, p) => p("listed")[0], spec: (f) => f.listed === 1, sym: (z, p) => p("listed")[0] },
+    { kind: "cooled", label: () => "its cooling-off is over", uses: { a: "Cooling-off" }, build: (b, p) => lessOrEqual(b, p("cooldown"), p("age")), spec: (f) => f.age >= f.cooldown,
+      sym: (z, p) => symLe(z, p("cooldown"), p("age")) },
+    { kind: "trial", label: () => "this payment is within the trial amount", uses: { b: "Trial amount" }, build: (b, p) => lessOrEqual(b, p("amount"), p("trial")), spec: (f) => f.amount <= f.trial,
+      sym: (z, p) => symLe(z, p("amount"), p("trial")) },
     { kind: "age", label: (k) => `it was saved at least ${k} hours ago`, param: { label: "Hours", min: 1, max: 255, def: 72 },
-      build: (b, p, k) => lessOrEqual(b, konst(k), p("age")), spec: (f, k) => f.age >= k },
+      build: (b, p, k) => lessOrEqual(b, konst(k), p("age")), spec: (f, k) => f.age >= k, sym: (z, p, k) => symGeK(z, p("age"), k) },
     { kind: "fixed", label: (k) => `this payment is at most ${k} USD₮0`, param: { label: "Fixed limit (USD₮0)", min: 1, max: 254, def: 10 },
-      build: (b, p, k) => lessOrEqual(b, p("amount"), konst(k)), spec: (f, k) => f.amount <= k },
+      build: (b, p, k) => lessOrEqual(b, p("amount"), konst(k)), spec: (f, k) => f.amount <= k, sym: (z, p, k) => symLeK(z, p("amount"), k) },
   ],
   4: [
     { kind: "small", label: () => "this payment is at most the threshold", uses: { a: "Approvals above" }, build: (b, p) => lessOrEqual(b, p("amount"), p("threshold")), spec: (f) => f.amount <= f.threshold },
@@ -99,7 +104,11 @@ export function pinsOf(socket: number) {
 }
 
 export function ruleText(r: Rule): string {
-  if (r.socket === 3) return r.strikes === 1 ? "a payment to a stranger blows it; it stays blown until the owner resets it" : `the first ${r.strikes - 1} payment${r.strikes > 2 ? "s" : ""} to strangers ${r.strikes > 2 ? "are" : "is"} refused and counted; stranger number ${r.strikes} blows it until the owner resets it`;
+  if (r.socket === 3) {
+    if (r.strikes === 1) return "a payment to a stranger blows it; it stays blown until the owner resets it";
+    const nth = ["", "first", "second", "third"][r.strikes] ?? `number ${r.strikes}`;
+    return `${r.strikes === 2 ? "the first payment to a stranger is" : `the first ${r.strikes - 1} payments to strangers are`} refused and counted; the ${nth} blows it until the owner resets it`;
+  }
   const phrase = (g: Cond[], op: GroupOp) => {
     const ls = g.map((c) => condOf(r.socket, c.kind)?.label(c.k) ?? c.kind);
     const list = (w: string) => (ls.length > 1 ? `${ls.slice(0, -1).join(", ")} ${w} ${ls[ls.length - 1]}` : ls[0]);
@@ -146,8 +155,14 @@ function strikesSpec(n: number, f: Fields, s: number[]): { out: number; newState
 }
 function strikesBuild(b: Builder, p: (n: string) => Sig[], n: number): Sig {
   const [set] = p("set"), [clear] = p("clear"), [attempt] = p("attempt"), [suspect] = p("suspect");
+  if (n === 1) {
+    // same gate order as the shipped Breaker (circuit #17), so the Studio rebuilds it byte for byte
+    const q = b.latch();
+    const nTrip = b.nand(attempt, suspect), nHold = b.nand(q, b.not(clear)), setOrTrip = b.nand(b.not(set), nTrip);
+    b.setD(q, b.nand(b.not(setOrTrip), nHold));
+    return b.and(b.not(q), nTrip);
+  }
   const trip = b.and(attempt, suspect), keep = b.not(clear);
-  if (n === 1) { const q = b.latch(); b.setD(q, b.or(set, b.or(trip, b.and(q, keep)))); return b.and(b.not(q), b.not(trip)); }
   if (n === 2) { const st = b.latch(), q = b.latch(); b.setD(st, b.and(keep, b.or(st, trip))); b.setD(q, b.or(set, b.or(b.and(trip, st), b.and(q, keep)))); return b.and(b.not(q), b.not(trip)); }
   const c0 = b.latch(), c1 = b.latch(), q = b.latch();
   const zero = b.and(b.not(c0), b.not(c1)), any = b.or(c0, c1);
@@ -160,6 +175,24 @@ function strikesBuild(b: Builder, p: (n: string) => Sig[], n: number): Sig {
 }
 
 export interface Compiled { net: Netlist; spec: (f: Fields, state: number[]) => { out: number; newState: number[] }; nIn: number; nState: number }
+
+/** The whole rule as a BDD, from each condition's definition and the group/join meaning; null if a condition has none. */
+export function ruleSym(r: Rule, z: Sym, p: (name: string) => number[]): number | null {
+  if (r.socket === 3 || !r.groups.every((g) => g.every((c) => condOf(r.socket, c.kind)?.sym))) return null;
+  const gs = r.groups.map((g, i) => {
+    const op = opOf(r, i), xs = g.map((c) => condOf(r.socket, c.kind)!.sym!(z, p, c.k));
+    const any = () => xs.reduce((a, x) => z.or(a, x), z.F);
+    if (op.m === "any") return any();
+    if (op.m === "none") return z.not(any());
+    if (op.m === "atleast") {
+      const t = [z.T, ...Array.from({ length: op.k }, () => z.F)];
+      for (const x of xs) for (let j = op.k; j >= 1; j--) t[j] = z.or(t[j], z.and(x, t[j - 1]));
+      return t[op.k];
+    }
+    return xs.reduce((a, x) => z.and(a, x), z.T);
+  });
+  return joinOf(r) === "all" ? gs.reduce((a, x) => z.and(a, x), z.T) : gs.reduce((a, x) => z.or(a, x), z.F);
+}
 
 export function compile(r: Rule): Compiled {
   const pins = pinsOf(r.socket), nIn = pins.reduce((t, p) => t + p.width, 0);

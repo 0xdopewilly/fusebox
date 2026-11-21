@@ -1,18 +1,49 @@
 /**
  * Proves a Fuse Studio circuit: its encoded TAP-02 bytes, decoded and run (bitsliced, 32 vectors a word), must
  * give the rule's answer on every input checked. Combinational sockets up to 24 inputs are checked exhaustively;
- * Payee Guard (33 inputs) is checked block-exhaustively over each comparator's operands plus random vectors;
- * the Breaker is checked on every (state, input) pair and long random sequences. Runs in chunks so the page stays live.
+ * Payee Guard (33 inputs, 8.6 billion of them) is proved symbolically: the circuit, gate by gate from its own bytes,
+ * and the rule, built from each condition's definition, become BDDs over one variable order, and equal BDDs mean the
+ * same answer on every input. If they differ, a real counterexample is run through the circuit and reported.
+ * The Breaker is checked on every (state, input) pair and long random sequences. Runs in chunks so the page stays live.
  */
 import { beat, compileBitsliced, load } from "./circuits/tap02";
-import { pinsOf, type Compiled, type Fields } from "./studio";
+import { Bdd, BddTooBig } from "./circuits/optimize";
+import { circuitBdd, compare, orderFor, symOf } from "./circuits/symbolic";
+import { pinsOf, ruleSym, type Compiled, type Fields, type Rule } from "./studio";
 
 export interface Proof { checked: number; mismatches: number; mode: string; example?: { fields: Fields; want: number; got: number } }
 
 const LANE = [0xaaaaaaaa | 0, 0xcccccccc | 0, 0xf0f0f0f0 | 0, 0xff00ff00 | 0, 0xffff0000 | 0];
 const tick = () => new Promise<void>((r) => setTimeout(r, 0));
 
-export async function prove(c: Compiled, socket: number, onProgress: (done: number, total: number) => void): Promise<Proof> {
+/** Every input at once: the circuit's BDD against the rule's. Null when it can't be done (then the caller samples). */
+export function proveSymbolic(c: Compiled, socket: number, rule: Rule): Proof | null {
+  if (c.nState) return null;
+  const pins = pinsOf(socket);
+  const levelOf = orderFor(c.nIn, pins, [["age", "cooldown"], ["amount", "trial"], ["spent", "cap"], ["amount", "threshold"]]);
+  try {
+    const bdd = new Bdd(2_000_000);
+    const bus = (name: string) => { const q = pins.find((x) => x.name === name); if (!q) throw new Error(`no pin ${name}`); return Array.from({ length: q.width }, (_, k) => bdd.variable(levelOf[q.offset + k])); };
+    const want = ruleSym(rule, symOf(bdd), bus);
+    // the circuit as TapeOut will run it: decoded from its own bytes, every NAND applied in order
+    const got = want === null ? null : circuitBdd(bdd, c.net.bytes, c.nIn, levelOf);
+    if (want === null || got === null) return null;
+    const total = 2 ** c.nIn;
+    const r = compare(bdd, got, want, c.nIn, levelOf);
+    if (r.equal) return { checked: total, mismatches: 0, mode: `every one of the 2^${c.nIn} inputs (${total.toLocaleString("en-US")}), proved with BDDs: the circuit and the rule are the same function` };
+    // they differ: the counterexample is run through the real circuit and the rule, so the report can't be fake
+    const bits = r.counterexample!;
+    const fields: Fields = {};
+    for (const q of pins) { let v = 0; for (let k = 0; k < q.width; k++) v |= bits[q.offset + k] << k; fields[q.name] = v; }
+    const run = beat(load(c.net.bytes, c.nIn, 1), [], bits).outputs[0];
+    return { checked: total, mismatches: Number(r.mismatches), mode: `every one of the 2^${c.nIn} inputs, compared with BDDs`, example: { fields, want: c.spec(fields, []).out, got: run } };
+  } catch (e) {
+    if (e instanceof BddTooBig) return null;
+    throw e;
+  }
+}
+
+export async function prove(c: Compiled, socket: number, onProgress: (done: number, total: number) => void, rule?: Rule): Promise<Proof> {
   const circuit = load(c.net.bytes, c.nIn, 1);
   const pins = pinsOf(socket);
   let bad = 0, checked = 0;
@@ -39,7 +70,7 @@ export async function prove(c: Compiled, socket: number, onProgress: (done: numb
       if (i % 4000 === 0) { onProgress(checked, total); await tick(); }
     }
     onProgress(total, total);
-    return { checked, mismatches: bad, mode: `every state and input pair (${2 ** nS} × ${2 ** c.nIn}) and 20,000 random beats in sequence`, example };
+    return { checked, mismatches: bad, mode: `every state with every input (${2 ** nS} × ${2 ** c.nIn}), so every sequence of payments follows the rule; plus 20,000 random beats in a row`, example };
   }
 
   const ev = compileBitsliced(circuit);
@@ -69,7 +100,11 @@ export async function prove(c: Compiled, socket: number, onProgress: (done: numb
     return { checked, mismatches: bad, mode: `every one of the 2^${c.nIn} inputs`, example };
   }
 
-  // 33 inputs: each 16-bit operand pair exhaustively (both values of the 1-bit pin), the rest random; then random
+  // above 24 inputs: the complete symbolic proof
+  if (rule) { onProgress(0, 1); await tick(); const sym = proveSymbolic(c, socket, rule); if (sym) { onProgress(1, 1); return sym; } }
+
+  // fallback when a symbolic proof can't be built: each 16-bit operand pair exhaustively (both values of the 1-bit
+  // pin), the rest random; then random
   let seed = 0x1234567;
   const rnd32 = () => { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return seed | 0; };
   const byName = Object.fromEntries(pins.map((p) => [p.name, p]));

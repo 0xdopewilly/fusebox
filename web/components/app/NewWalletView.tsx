@@ -142,6 +142,7 @@ export default function NewWalletView() {
   // arriving from the line simulator (?f=fuseId:a:b,…): start with the line that was tested
   useEffect(() => {
     const f = new URLSearchParams(window.location.search).get("f"); if (!f) return;
+    setQuick(false); // the fuses were already chosen: show them, not the starter questions
     const ask = new Map(f.split(",").map((t) => { const [id, a, b] = t.split(":"); return [Number(id), { a, b }] as const; }));
     setOn(Object.fromEntries(FUSES.map((x) => [x.key, ask.has(x.id)])) as Record<Key, boolean>);
     const v = (id: number, k: "a" | "b") => ask.get(id)?.[k];
