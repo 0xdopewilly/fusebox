@@ -14,6 +14,12 @@ Every tool explains all five fuses, including the **Repeat Guard** on v2 wallets
 
 After each payment, `fusebox_pay` tells Fusebox the transaction hash, so anyone following the wallet on Telegram ([@FuseboxAlertsBot](https://t.me/FuseboxAlertsBot)) gets a message: paid, or stopped and why.
 
+**New in 0.5.0**
+- **Repeat Guard and v2 wallets:** all five fuses are explained, and payments are announced to Telegram followers.
+- **Safer paid fetches:** `fusebox_fetch` pays at most 0.10 USDT0 per call unless you set `max_price`. It only
+  fetches public hosts, refuses redirects, and signs its payment proof with the agent key, so nobody else can
+  redeem the payment. Sellers on the `fusebox` scheme need 0.5.0 of `fusebox-sdk` to check that signature.
+
 Without a key the server is read-only, and by default it points at **Atlas**, the public demo wallet, so you can try `fusebox_check` right away.
 
 ## Setup

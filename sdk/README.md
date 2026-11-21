@@ -8,6 +8,14 @@ taped out on [TapeOut](https://tapeout.net) and evaluated on X Layer in the same
 npm install fusebox-sdk viem
 ```
 
+**New in 0.5.0**
+- **v2 contracts:** new wallets and the fuse market, including the Repeat Guard (fuse 5: the same invoice sent
+  twice is paid once). v1 wallets such as Atlas keep working.
+- **Telegram alerts:** `pay()` reports its transaction, so anyone following the wallet on Telegram gets a message.
+- **x402 proofs are signed (breaking):** `fetch()` signs its payment proof with the agent key, and
+  `requirePayment` / `verifyFuseboxPayment` require that signature from the agent that paid. Before this, anyone
+  watching the chain could redeem a buyer's payment first. Buyers and sellers both need 0.5.0.
+
 ## Check a payment (free, no key)
 
 ```ts
