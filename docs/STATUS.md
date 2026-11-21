@@ -17,7 +17,7 @@ the site and app, the docs and an MCP server for agents. Addresses are in the [R
 | Fuse market and designers | https://fusebox-xlayer.vercel.app/app/market and /app/designers: netlists read from TapeOut, earnings, claims, listing |
 | Docs | https://fusebox-xlayer.vercel.app/docs |
 | MCP server | [`fusebox-mcp`](https://www.npmjs.com/package/fusebox-mcp) on npm: `fusebox_check`, `fusebox_pay`, `fusebox_status` |
-| DeWEB edition | Built for circuit #15's container (`15.2.272.tape`); previewed at https://fusebox-xlayer.vercel.app/onchain |
+| DeWEB edition | Live on X Layer in circuit #15's container (`15.2.272.tape`), served by TapeKit at https://15-2-272.tapekit.org/ (published 2026-11-21) |
 
 On mainnet at the time of writing, Atlas has made 5 decisions (2 paid, 3 stopped), and its fuses have
 been checked 20 times. They earned their designer 0.02025 USDT0, and the protocol earned 0.00225 USDT0.
@@ -47,9 +47,9 @@ The app always shows the live figures.
 | Status (`/app/status`) | Live health: X Layer RPCs (latency, head), event index lag, TapeOut processor trust, Atlas's line and fee coverage, the AI agent, NEAR AI, x402 offers, alerts; cached 30 s; JSON at `/api/status`. |
 | Gate golf (Fuse Studio) | `circuits/src/optimize.ts`: structural rules, BDD-based functional reduction and redundancy removal, latches untouched; every result proven identical on all inputs (exhaustive up to 24 bits, BDD above). Our eight circuits are already minimal; Studio rules shrink 5-75% (e.g. 74 → 35). Gas model ≈ 22,602 + 2,400 per gate. |
 | Badges | `/api/badge/<wallet>`: an SVG with the wallet's fuses and whether any is blown or the wallet is paused, cached five minutes; copied from a wallet page as Markdown. |
-| Rival fuses (`circuits/src/rivals.ts`) | Per-Payment Cap (37 NAND), Strict Payee Book (39), Two-Strike Breaker (16 NAND + 2 LATCH), Lead Approver (43). Exhaustively tested, taped out and listed on a mainnet fork, and paid through end to end. The mainnet tape-out (about 0.02 OKB) waits on funds. |
+| Rival fuses (`circuits/src/rivals.ts`) | Per-Payment Cap (37 NAND), Strict Payee Book (39), Two-Strike Breaker (16 NAND + 2 LATCH), Lead Approver (43). Exhaustively tested, rehearsed on a fork, then taped out and listed on mainnet 2026-11-21: circuits #22–25, v2 market fuses 6–9. |
 | Agents (`mcp/`) | An MCP server for Claude Code, Claude Desktop, Cursor and any MCP client. Without a key it is read-only; `fusebox_check` dry-runs a payment for free, with an agent key `fusebox_pay` sends it, and `fusebox_fetch` pays for x402 APIs through the fuses. |
-| DeWEB (`deweb/`) | One self-contained page with no off-chain references, plus a resumable publisher. The publish was rehearsed on a mainnet fork: the SHA-256 read back from the chain matched. |
+| DeWEB (`deweb/`) | One self-contained page with no off-chain references, plus a resumable publisher. Published on mainnet 2026-11-21 after a fork rehearsal: 164,087 bytes in 7 chunks, the SHA-256 read back from the chain matched, and the name `15.2.272.tape` is live. |
 | Reliability | Event history comes from a block index plus cached 1,000-block windows. Reads race three X Layer RPCs (tapeout.net, drpc, rpc.xlayer.tech), because one of them intermittently hangs. An hourly GitHub Action keeps the cache warm. |
 
 ## Tests and checks
@@ -95,7 +95,6 @@ What was verified against the real TapeOut contracts on a fork before launch:
 ## Known gaps
 
 - The contracts have no third-party audit yet; [ASSURANCE.md](ASSURANCE.md) lists what stands in for one. Atlas is a public demo wallet with small balances.
-- The DeWEB edition's mainnet publish waits on TapeOut's one-time 0.08 OKB container fee.
 - Atlas itself is a v1 wallet and can't run the Repeat Guard, so *Try to scam it* and *Rob the agent* check against its v2 twin (`0x6292…577c`), which stops the duplicate invoice. The twin's Repeat Guard remembers a payment for 254 h: its last real invoice (2026-11-21 10:26 UTC) is remembered until 2026-12-02 00:26 UTC, so it needs one new payment before then. See [V2-REPEAT-GUARD.md](V2-REPEAT-GUARD.md).
 - An OKX Agentic Wallet has not been tested as the agent key. It needs to send `pay` on X Layer with a ~3M gas limit.
 - A release-after-delivery fuse isn't built: it needs a delivery attestation source and a new socket.

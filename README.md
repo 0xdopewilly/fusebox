@@ -65,9 +65,8 @@ Every address is in [`deployments/xlayer-mainnet.json`](deployments/xlayer-mainn
 - **Every fuse is a TapeOut circuit.** Circuits #15–18 live on TapeOut's OrderGuard processor, and every payment calls the processor's `eval` or `step` on X Layer.
 - **TAP-02 toolchain.** [`circuits/`](circuits) builds, encodes and simulates TAP-02 netlists, and its tests pass TapeOut's official test vectors.
 - **Netlist integrity in the app.** The [fuse market](https://fusebox-xlayer.vercel.app/app/market) reads each fuse's netlist straight from its TapeOut processor and checks it against the hash the registry pinned when the fuse was listed. Fuses without a hand-drawn schematic get their real wiring drawn from those bytes.
-- **DeWEB and TapeKit.** [`deweb/`](deweb) is a version of Fusebox meant to be stored on X Layer in circuit #15's container and opened through TapeKit at `15-2-272.tapekit.org`. It has no off-chain references, and your browser reads every number, including a live "scam Atlas" `check()`, from X Layer.
-  - The publish was rehearsed on a mainnet fork: the container was opened, all 7 chunks stored and the name bound, and the SHA-256 read back from the chain matched.
-  - The mainnet publish waits on TapeOut's one-time 0.08 OKB container fee. Until then, the same file is previewed at [/onchain](https://fusebox-xlayer.vercel.app/onchain).
+- **DeWEB and TapeKit.** [`deweb/`](deweb) is a version of Fusebox stored on X Layer in circuit #15's container and opened through TapeKit: **[https://15-2-272.tapekit.org/](https://15-2-272.tapekit.org/)** (`15.2.272.tape`). It has no off-chain references, and your browser reads every number, including a live "scam Atlas" `check()`, from X Layer.
+  - Published on mainnet 2026-11-21: the container was opened (0.08 OKB to TapeOut), all 7 chunks stored and the name bound, and the SHA-256 read back from the chain matched (`0xdd038cb2…41ae`). The same file is also previewed at [/onchain](https://fusebox-xlayer.vercel.app/onchain).
 
 ## Repository
 

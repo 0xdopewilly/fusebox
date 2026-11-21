@@ -388,7 +388,7 @@ await wallet.sendTransaction(…);`}</Code>
                 <li><b>Try before you tape out.</b> From the Studio, send a draft to the <Link href="/app/simulate">line simulator</Link>: it is compiled and evaluated in the browser from the same bytes TapeOut would store, next to listed fuses, on any sequence of payments. A draft is also a link you can share; it reopens in the Studio as designed.</li>
                 <li><b>Run it like a product.</b> From the designers page, change the fee (<code>setFee</code>), delist it from new installs (<code>setListed</code>) or link a page that explains it (<code>setMetadataURI</code>). A lower fee applies to everyone at once; a higher one only to wallets whose owner accepts it.</li>
               </ol>
-              <p>Several designs can compete on one socket. The repo ships four rivals for the same sockets, exhaustively tested and rehearsed on a mainnet fork but not yet taped out on mainnet: <b>Per-Payment Cap</b> (no single payment over the cap), <b>Strict Payee Book</b> (no trial amount), <b>Two-Strike Breaker</b> (two latches: the first stranger is refused, the second blows it) and <b>Lead Approver</b> (seat 1 must be one of the two signers). A rival names its settings in its metadata, and the app labels them that way.</p>
+              <p>Several designs can compete on one socket. Four rivals for the same sockets are live in the market (fuses 6–9, TapeOut circuits #22–25), exhaustively tested before they were taped out: <b>Per-Payment Cap</b> (no single payment over the cap), <b>Strict Payee Book</b> (no trial amount), <b>Two-Strike Breaker</b> (two latches: the first stranger is refused, the second blows it) and <b>Lead Approver</b> (seat 1 must be one of the two signers). A rival names its settings in its metadata, and the app labels them that way.</p>
               <p className="small">Business hours only, per-payee caps, velocity limits: there&apos;s room for many more fuses. The duplicate-invoice check is now the fifth: the Repeat Guard.</p>
             </section>
 
@@ -437,7 +437,7 @@ await wallet.sendTransaction(…);`}</Code>
               <details><summary>What does a payment cost?</summary><p>Gas on X Layer (fractions of a cent) plus the fees of the fuses on the line. On Atlas, all four fuses together cost 0.0045 USD₮0.</p></details>
               <details><summary>Why do blocked payments pay fees?</summary><p>Stopping the scam is the fuse&apos;s job. Daily budgets cap how much blocked attempts can cost.</p></details>
               <details><summary>Can I use my own circuit?</summary><p>Yes: tape it out for one of the five sockets and list it. Wallets can install it straight away (a Repeat Guard design needs a wallet made since Nov 20).</p></details>
-              <details><summary>Is there a version with no server at all?</summary><p>The <Link href="/onchain">DeWEB edition</Link> is one self-contained page that reads X Layer from your browser, built to be stored on-chain at 15.2.272.tape and served by TapeKit.</p></details>
+              <details><summary>Is there a version with no server at all?</summary><p>The DeWEB edition is one self-contained page that reads X Layer from your browser, stored on-chain in circuit #15&apos;s container at 15.2.272.tape and served by TapeKit: <a href="https://15-2-272.tapekit.org/" target="_blank" rel="noreferrer">15-2-272.tapekit.org</a> (also previewed at <Link href="/onchain">/onchain</Link>).</p></details>
             </section>
 
             <footer className="docs-foot m">
