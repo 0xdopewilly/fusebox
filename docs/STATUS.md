@@ -90,7 +90,7 @@ What was verified against the real TapeOut contracts on a fork before launch:
 | Protocol share | 10% of every fee; the contract caps it at 20%. |
 | Fees for our fuses | Daily Cap and Payee Guard 0.001 USDT0 per check, Breaker 0.0005, Two of Three 0.002, Repeat Guard 0.0005. |
 | Who can freeze | The owner, agents and approvers can freeze; only the owner can reset. |
-| Registry admin | The deployer for now. `contracts/script/registry-to-safe.sh` moves both registries to a Safe multisig, rehearsed on a mainnet fork; it waits on the owners' addresses. |
+| Registry admin | A 2-of-2 Safe multisig, `0xCd2fd44A9f78e0fA45F3051494Fa79E49bD7F73d`: the deployer plus the project owner's own wallet (moved 2026-11-21 by `contracts/script/registry-to-safe.sh`). |
 
 ## Known gaps
 

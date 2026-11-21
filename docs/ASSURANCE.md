@@ -132,13 +132,23 @@ amount limit.
 
 ## The admin key and the keys here
 
-**Registry admin.** One key, the deployer, can change the registries' trust settings and protocol fee. It
-can't touch anyone's funds or fee balances, but it could approve a fake processor for new listings.
-[`contracts/script/registry-to-safe.sh`](../contracts/script/registry-to-safe.sh) moves both registries to a
-Safe multisig (Safe 1.4.1, already on X Layer). It creates the Safe at threshold 1 with the deployer as an owner,
-hands over both registries, accepts them from the Safe, then raises the threshold. A rehearsal on a mainnet fork
-moved both registries to a 2-of-3 Safe. Afterwards the deployer's direct call was refused, and a single
-signature through the Safe was refused (`GS020`). The mainnet move waits on the owners' addresses.
+**Registry admin.** Both registries answer to a 2-of-2 Safe multisig,
+[`0xCd2fd44A9f78e0fA45F3051494Fa79E49bD7F73d`](https://www.oklink.com/xlayer/address/0xCd2fd44A9f78e0fA45F3051494Fa79E49bD7F73d) (Safe 1.4.1). Its owners are the
+deployer and the project owner's own wallet, so the deployer key on the build machine can't change trust settings
+or the protocol fee by itself. The admin role never touches anyone's funds or fee balances.
+
+[`contracts/script/registry-to-safe.sh`](../contracts/script/registry-to-safe.sh) made the move on 2026-11-21. It
+created the Safe at threshold 1 with the deployer as an owner, handed both registries over, accepted them from the
+Safe, then raised the threshold to 2.
+- *Rehearsed first on a mainnet fork:* the deployer's direct call was refused; a single signature through the
+  Safe was refused (`GS020`); both owners without approval were refused (`GS025`); an action the second owner
+  approved and the deployer executed went through.
+- *Checked on mainnet afterwards:* both registries are owned by the Safe with no handover pending, the
+  threshold is 2, and the deployer's direct admin call reverts.
+
+Later admin actions are signed in the Safe app, which supports X Layer (`xlayer:0xCd2fd44A9f78e0fA45F3051494Fa79E49bD7F73d`). An example is attesting
+a new TapeOut implementation. Both owner keys must stay recoverable; a third owner can be added with both
+signatures.
 
 **Keys on the build machine.** No key, mnemonic or `.env` file has ever been committed (the whole git history
 was scanned), and the key files are readable by their owner only. The plain-text backups of the hackathon
