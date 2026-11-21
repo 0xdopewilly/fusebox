@@ -1,0 +1,15 @@
+# Telegram alerts (@FuseboxAlertsBot): payments made through the app, SDK or MCP are announced at once; this sweep
+# catches any other payment from a followed wallet. Every 10 minutes; each decision is announced only once.
+name: Telegram alerts sweep
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+permissions: {}
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Announce new decisions
+        run: curl -s --max-time 90 -w "\n%{http_code}\n" "https://fusebox-xlayer.vercel.app/api/telegram/sweep" || true

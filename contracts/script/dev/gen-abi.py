@@ -5,7 +5,7 @@ import json, pathlib, re
 root = pathlib.Path(__file__).resolve().parents[3]
 out = root / "contracts" / "out"
 abis = {name: json.loads((out / f"{src}.sol" / f"{src}.json").read_text())["abi"]
-        for name, src in [("fuseboxWalletAbi", "FuseboxWallet"), ("fuseRegistryAbi", "FuseRegistry"), ("fuseboxFactoryAbi", "FuseboxFactory")]}
+        for name, src in [("fuseboxWalletAbi", "FuseboxWallet"), ("fuseRegistryAbi", "FuseRegistry"), ("fuseboxFactoryAbi", "FuseboxFactory"), ("fuseboxSetupAbi", "FuseboxSetup")]}
 for f in [root / "web/lib/abi.ts", root / "sdk/src/abi.ts"]:
     lines = f.read_text().split("\n")
     for i, l in enumerate(lines):

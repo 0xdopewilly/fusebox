@@ -37,6 +37,10 @@ else console.log(r.summary); // "Not sent. Stopped: Daily Cap (…)" — ask the
 on-chain and its checks are still paid for. Pass `{ checkFirst: false }` to record the attempt anyway. The memo
 is stored with the decision; no fuse ever reads it, so a convincing story can't talk a payment through.
 
+After each payment, `pay` tells Fusebox its transaction hash, so anyone following the wallet on Telegram
+([@FuseboxAlertsBot](https://t.me/FuseboxAlertsBot)) gets a message: paid, or stopped and why. Fusebox reads the decision
+back from X Layer itself; nothing else is sent.
+
 ## Five fuses
 
 Wallets made since Nov 20 (v2, `ADDRESSES.factory`) can install five fuses: Daily Cap, Payee Guard, Breaker,

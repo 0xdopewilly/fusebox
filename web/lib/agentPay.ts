@@ -47,6 +47,8 @@ export async function agentPay(key: Hex, wallet: Address, to: Address, amount: s
     throw new Error(m.split("\n")[0]);
   }
   const receipt = await pub.waitForTransactionReceipt({ hash, timeout: 90_000 });
+  // Telegram alerts for anyone following this wallet (the server reads the decision back from X Layer)
+  fetch("/api/telegram/notify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tx: hash }), keepalive: true }).catch(() => {});
   for (const l of receipt.logs) {
     try {
       const ev = decodeEventLog({ abi: fuseboxWalletAbi, data: l.data, topics: l.topics });

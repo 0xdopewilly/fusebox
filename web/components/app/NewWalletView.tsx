@@ -1,9 +1,10 @@
 "use client";
 import Link from "next/link";
+import { alertsLink } from "@/lib/alerts";
 import { useEffect, useMemo, useRef, useState } from "react";
 import GuardrailsCard from "./GuardrailsCard";
-import { decodeEventLog, isAddress, parseUnits, getAddress, toHex, type Address } from "viem";
-import { fuseboxFactoryAbi, fuseboxWalletAbi, fuseRegistryAbi } from "@/lib/abi";
+import { decodeEventLog, domainSeparator, isAddress, parseSignature, parseUnits, getAddress, toHex, type Address, type Hex } from "viem";
+import { fuseboxFactoryAbi, fuseboxSetupAbi, fuseboxWalletAbi, fuseRegistryAbi } from "@/lib/abi";
 import { CURRENT, DEP, pub } from "@/lib/client-chain";
 import { useTxQueue, type TxStep } from "@/lib/useTxQueue";
 import { short, OKLINK } from "@/lib/hooks";
@@ -15,7 +16,7 @@ import { PageChrome } from "./m/chrome";
 import { MRow, MSheet, MSticky, MChips } from "./m/ui";
 import { Glyph, Plate, type GlyphName } from "./Pixel";
 import Term from "./m/Term";
-import { OKX_DOWNLOAD } from "@/lib/walletLinks";
+import { OKX_DOWNLOAD, errCode } from "@/lib/walletLinks";
 import { parseEther } from "viem";
 import AgentConnect from "./AgentConnect";
 import { download, keyFile, loadPendingKey, newAgentKey, saveAgentKey, savePendingKey, type AgentKey } from "@/lib/agentKey";
@@ -67,6 +68,8 @@ const erc20 = [
   { type: "function", name: "allowance", stateMutability: "view", inputs: [{ name: "o", type: "address" }, { name: "s", type: "address" }], outputs: [{ type: "uint256" }] },
   { type: "function", name: "approve", stateMutability: "nonpayable", inputs: [{ name: "s", type: "address" }, { name: "v", type: "uint256" }], outputs: [{ type: "bool" }] },
   { type: "function", name: "transfer", stateMutability: "nonpayable", inputs: [{ name: "t", type: "address" }, { name: "v", type: "uint256" }], outputs: [{ type: "bool" }] },
+  { type: "function", name: "nonces", stateMutability: "view", inputs: [{ name: "o", type: "address" }], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "DOMAIN_SEPARATOR", stateMutability: "view", inputs: [], outputs: [{ type: "bytes32" }] },
 ] as const;
 const USDT = 1_000_000n;
 // new wallets are made by the v2 factory, so they can splice in the Repeat Guard (fuse 5)
@@ -78,7 +81,10 @@ const FUSES = [
   { key: "repeat-guard", id: CURRENT.fuseIds[4], name: "Repeat Guard", fee: 500n, say: "The same invoice sent twice gets paid once: the same amount to the same payee inside the window is stopped. You can clear a real repeat. Leave it off for an agent that pays per call." },
 ] as const;
 type Key = (typeof FUSES)[number]["key"];
-interface Ctx { wallet?: Address; block?: number }
+interface Permit { value: bigint; deadline: bigint; v: number; r: Hex; s: Hex }
+interface Ctx { wallet?: Address; block?: number; permit?: Permit }
+const NO_PERMIT: Permit = { value: 0n, deadline: 0n, v: 0, r: `0x${"0".repeat(64)}`, s: `0x${"0".repeat(64)}` };
+const PERMIT_TYPES = { Permit: [{ name: "owner", type: "address" }, { name: "spender", type: "address" }, { name: "value", type: "uint256" }, { name: "nonce", type: "uint256" }, { name: "deadline", type: "uint256" }] } as const;
 const clamp = (v: string) => Math.max(0, Math.min(254, Math.floor(Number(v) || 0)));
 const hours = (v: string) => Math.max(1, clamp(v)); // the Repeat Guard's window: 1 to 254 hours
 
@@ -102,7 +108,7 @@ function Field({ label, v, set, suffix }: { label: string; v: string; set: (s: s
 }
 
 export default function NewWalletView() {
-  const { account, write, send } = useWallet();
+  const { account, write, send, signTyped } = useWallet();
   const q = useTxQueue<Ctx>();
   // designers can reprice their fuses, so the wizard reads today's fee and accepts exactly that
   const { data: market } = useMarket();
@@ -166,7 +172,70 @@ export default function NewWalletView() {
     return p;
   }, [account, agent, on, approvers, goodPayees, depositUnits, floatUnits, bal, gas, gasWei]);
 
-  const plan = (): TxStep<Ctx>[] => {
+  const ZERO = "0x0000000000000000000000000000000000000000" as Address;
+  const paramsOf = (f: (typeof FUSES)[number]) => f.key === "breaker" ? { token: ZERO, unit: 0n, a: 0, b: 0 }
+    : f.key === "repeat-guard" ? { token: ZERO, unit: 0n, a: hours(win), b: 0 }
+    : { token: DEP.usdt0 as Address, unit: USDT, a: f.key === "daily-cap" ? clamp(cap) : f.key === "payee-guard" ? clamp(cool) : clamp(thr), b: f.key === "payee-guard" ? clamp(trial) : 0 };
+  const remember = (c: Ctx) => { try { const k = "fusebox:mine"; const list = JSON.parse(localStorage.getItem(k) || "[]"); list.unshift({ address: c.wallet, block: c.block, owner: account }); localStorage.setItem(k, JSON.stringify(list.slice(0, 20))); } catch {} };
+
+  // three taps through FuseboxSetup: a free USD₮0 permit, one transaction that does every step, then accept ownership
+  const planFast = (SETUP: Address): TxStep<Ctx>[] => {
+    const USD = DEP.usdt0 as Address;
+    const pull = depositUnits + floatUnits;
+    const installs = FUSES.filter((f) => on[f.key]);
+    const names = installs.map((f) => f.name).join(", ");
+    const seats = on["approval-2of3"] ? approvers.map((a) => getAddress(a.trim().toLowerCase())) as [Address, Address, Address] : [ZERO, ZERO, ZERO] as [Address, Address, Address];
+    const salt = toHex(crypto.getRandomValues(new Uint8Array(32)));
+    const money = [depositUnits > 0n && `${deposit} USD₮0 fees`, floatUnits > 0n && `${float} USD₮0 to spend`, gasWei > 0n && `${gas} OKB agent gas`].filter(Boolean).join(" · ");
+    return [
+      {
+        id: "permit", label: "Let the setup take your USD₮0", detail: pull > 0n ? `${Number(pull) / 1e6} USD₮0 · a free signature, no gas` : "nothing to move", nullIs: "done",
+        run: async (c) => {
+          c.permit = NO_PERMIT;
+          if (pull === 0n) return null;
+          const have = await pub.readContract({ address: USD, abi: erc20, functionName: "allowance", args: [account!, SETUP] });
+          if (have >= pull) return null;
+          try {
+            const domain = { name: "USD₮0", version: "1", chainId: 196, verifyingContract: USD } as const;
+            const [nonce, onchain] = await Promise.all([
+              pub.readContract({ address: USD, abi: erc20, functionName: "nonces", args: [account!] }),
+              pub.readContract({ address: USD, abi: erc20, functionName: "DOMAIN_SEPARATOR" }),
+            ]);
+            if (domainSeparator({ domain }) !== onchain) throw new Error("USD₮0's signing domain changed");
+            const deadline = BigInt(Math.floor(Date.now() / 1000) + 3600);
+            const sig = await signTyped({ domain, types: PERMIT_TYPES, primaryType: "Permit", message: { owner: account!, spender: SETUP, value: pull, nonce, deadline } });
+            const { r, s: ss, v, yParity } = parseSignature(sig);
+            c.permit = { value: pull, deadline, v: Number(v ?? BigInt(yParity + 27)), r, s: ss };
+            return null;
+          } catch (e) {
+            if (errCode(e) === 4001 || /reject|denied|cancel/i.test(String((e as Error).message))) throw e;
+            // this wallet can't sign a permit: an approval transaction does the same job
+            return write({ address: USD, abi: erc20, functionName: "approve", args: [SETUP, pull] });
+          }
+        },
+      },
+      {
+        id: "setup", label: "Wire up your wallet", detail: `one transaction: ${installs.length} fuse${installs.length === 1 ? "" : "s"} (${names}) · ${goodPayees.length} payee${goodPayees.length === 1 ? "" : "s"}${money ? ` · ${money}` : ""}`,
+        run: (c) => write({
+          address: SETUP, abi: fuseboxSetupAbi, functionName: "setUpWallet", ...({ value: gasWei > 0n ? gasWei : 0n } as object),
+          args: [{
+            agents: [getAddress(agent.trim().toLowerCase())], salt, token: USD,
+            fuses: installs.map((f) => ({ fuseId: BigInt(f.id), params: paramsOf(f), maxFee: feeOf(f) })),
+            payees: goodPayees.map((x) => getAddress(x.trim().toLowerCase())), approvers: seats,
+            feeDeposit: depositUnits > 0n ? depositUnits : 0n, walletFloat: floatUnits > 0n ? floatUnits : 0n,
+          }, c.permit ?? NO_PERMIT],
+        }),
+        after: (r, c) => {
+          for (const l of r.logs) { try { const ev = decodeEventLog({ abi: fuseboxSetupAbi, data: l.data, topics: l.topics }); if (ev.eventName === "WalletSetUp") c.wallet = ev.args.wallet; } catch {} }
+          c.block = Number(r.blockNumber); remember(c);
+        },
+      },
+      { id: "accept", label: "Make it yours", detail: "accept ownership: only you can change its fuses from now on", run: (c) => write({ address: c.wallet!, abi: fuseboxWalletAbi, functionName: "acceptOwnership" }) },
+    ];
+  };
+
+  // the step-by-step way: one transaction per step (used when no setup helper is deployed)
+  const planClassic = (): TxStep<Ctx>[] => {
     const W = () => ({ abi: fuseboxWalletAbi, address: undefined as unknown as Address });
     const steps: TxStep<Ctx>[] = [
       {
@@ -174,19 +243,14 @@ export default function NewWalletView() {
         run: () => write({ address: CURRENT.factory, abi: fuseboxFactoryAbi, functionName: "createWallet", args: [account!, [getAddress(agent.trim().toLowerCase())], toHex(crypto.getRandomValues(new Uint8Array(32)))] }),
         after: (r, c) => {
           for (const l of r.logs) { try { const ev = decodeEventLog({ abi: fuseboxFactoryAbi, data: l.data, topics: l.topics }); if (ev.eventName === "WalletCreated") c.wallet = ev.args.wallet; } catch {} }
-          c.block = Number(r.blockNumber);
-          try { const k = "fusebox:mine"; const list = JSON.parse(localStorage.getItem(k) || "[]"); list.unshift({ address: c.wallet, block: c.block, owner: account }); localStorage.setItem(k, JSON.stringify(list.slice(0, 20))); } catch {}
+          c.block = Number(r.blockNumber); remember(c);
         },
       },
       { id: "token", label: "Let it pay in USD₮0", run: (c) => write({ ...W(), address: c.wallet!, functionName: "setToken", args: [DEP.usdt0 as Address, true] }) },
     ];
     FUSES.filter((f) => on[f.key]).forEach((f) => {
-      const ZERO = "0x0000000000000000000000000000000000000000" as Address;
-      const params = f.key === "breaker" ? { token: ZERO, unit: 0n, a: 0, b: 0 }
-        : f.key === "repeat-guard" ? { token: ZERO, unit: 0n, a: hours(win), b: 0 }
-        : { token: DEP.usdt0 as Address, unit: USDT, a: f.key === "daily-cap" ? clamp(cap) : f.key === "payee-guard" ? clamp(cool) : clamp(thr), b: f.key === "payee-guard" ? clamp(trial) : 0 };
       const detail = f.key === "daily-cap" ? `${clamp(cap)} USD₮0 a day` : f.key === "payee-guard" ? `${clamp(cool)} h cooling-off, ${clamp(trial)} USD₮0 trial` : f.key === "approval-2of3" ? `approvals over ${clamp(thr)} USD₮0` : f.key === "repeat-guard" ? `the same payment once per ${hours(win)} h` : "trips on strangers";
-      steps.push({ id: `fuse-${f.key}`, label: `Splice in ${f.name}`, detail: `${detail} · ${Number(feeOf(f)) / 1e6} USD₮0 per check`, run: (c) => write({ ...W(), address: c.wallet!, functionName: "addFuse", args: [BigInt(f.id), params, feeOf(f)] }) });
+      steps.push({ id: `fuse-${f.key}`, label: `Splice in ${f.name}`, detail: `${detail} · ${Number(feeOf(f)) / 1e6} USD₮0 per check`, run: (c) => write({ ...W(), address: c.wallet!, functionName: "addFuse", args: [BigInt(f.id), paramsOf(f), feeOf(f)] }) });
     });
     goodPayees.forEach((p, i) => steps.push({ id: `payee-${i}`, label: "Save a payee", detail: short(p.trim()), run: (c) => write({ ...W(), address: c.wallet!, functionName: "addPayee", args: [getAddress(p.trim().toLowerCase())] }) }));
     if (on["approval-2of3"]) steps.push({ id: "approvers", label: "Seat the three approvers", detail: approvers.map((a) => short(a.trim())).join(" · "), run: (c) => write({ ...W(), address: c.wallet!, functionName: "setApprovers", args: [approvers.map((a) => getAddress(a.trim().toLowerCase())) as [Address, Address, Address]] }) });
@@ -201,6 +265,7 @@ export default function NewWalletView() {
     if (floatUnits > 0n) steps.push({ id: "float", label: "Fund the wallet for payments", detail: `${float} USD₮0`, run: (c) => write({ address: DEP.usdt0 as Address, abi: erc20, functionName: "transfer", args: [c.wallet!, floatUnits] }) });
     return steps;
   };
+  const plan = (): TxStep<Ctx>[] => (CURRENT.setup ? planFast(CURRENT.setup) : planClassic());
 
   const launch = async () => { setMade(null); const ok = await q.start(plan(), {}); if (ok) setMade({ ...(q.ctx() ?? {}) }); };
   const retry = async () => { const ok = await q.retry(); if (ok) setMade({ ...(q.ctx() ?? {}) }); };
@@ -234,6 +299,7 @@ export default function NewWalletView() {
           <Link className="btn lime" style={{ marginTop: 16, justifyContent: "center", height: 52 }} href={`/app/first?wallet=${made.wallet}`}>Make your first payment <span className="k">→</span></Link>
           <div className="mlabel m" style={{ marginTop: 18 }}><span>Connect your agent</span></div>
           <AgentConnect wallet={made.wallet} agentKey={keyLive?.key} />
+          <a className="btn" style={{ marginTop: 12, justifyContent: "center", height: 48 }} href={alertsLink(made.wallet)} target="_blank" rel="noreferrer">Get alerts on Telegram <span className="k">↗</span></a>
           <Link className="btn" style={{ marginTop: 12, justifyContent: "center", height: 48 }} href={`/app/w/${made.wallet}`}>Open my wallet</Link>
         </div>
       ) : <>
@@ -309,11 +375,11 @@ export default function NewWalletView() {
           </div></div>
           {q.steps.length > 0 && <ul className="txs">{q.steps.map((s) => (
             <li key={s.id} className={s.state}><span className="dot" /><span>{s.label}{s.detail ? <span className="m mute" style={{ display: "block", marginTop: 3 }}>{s.detail}</span> : null}</span>
-              <span className="st">{s.hash ? <a href={`${OKLINK}/tx/${s.hash}`} target="_blank" rel="noreferrer">{s.state === "done" ? "Done ↗" : "Mining ↗"}</a> : s.state === "sign" ? "Sign" : s.state === "skip" ? "Not needed" : s.state === "error" ? "Failed" : ""}</span>
+              <span className="st">{s.hash ? <a href={`${OKLINK}/tx/${s.hash}`} target="_blank" rel="noreferrer">{s.state === "done" ? "Done ↗" : "Mining ↗"}</a> : s.state === "sign" ? "Sign" : s.state === "skip" ? "Not needed" : s.state === "error" ? "Failed" : s.state === "done" ? "Signed" : ""}</span>
               {s.error && <span className="e">{s.error}</span>}</li>))}</ul>}
           {!q.running && problems.length > 0 && <p className="mnote" style={{ color: "var(--red)" }}>{problems[0]}</p>}
         </>}
-        {step === 5 && !q.steps.length && <p className="m mute">Each step is one transaction you sign.</p>}
+        {step === 5 && !q.steps.length && <p className="m mute">{CURRENT.setup ? "Three taps: a free signature, one transaction that sets everything up, then make it yours." : "Each step is one transaction you sign."}</p>}
         <MSticky>
           {step > 0 && <button className="btn fit" onClick={() => go(step - 1)} disabled={q.running}>Back</button>}
           {step < STEPS.length - 1
@@ -464,7 +530,7 @@ export default function NewWalletView() {
                   <li key={s.id} className={s.state}>
                     <span className="dot" />
                     <span>{s.label}{s.detail ? <span className="m mute" style={{ display: "block", marginTop: 3 }}>{s.detail}</span> : null}</span>
-                    <span className="st">{s.hash ? <a href={`${OKLINK}/tx/${s.hash}`} target="_blank" rel="noreferrer">{s.state === "done" ? "Done ↗" : "Mining ↗"}</a> : s.state === "sign" ? "Sign" : s.state === "skip" ? "Not needed" : s.state === "error" ? "Failed" : ""}</span>
+                    <span className="st">{s.hash ? <a href={`${OKLINK}/tx/${s.hash}`} target="_blank" rel="noreferrer">{s.state === "done" ? "Done ↗" : "Mining ↗"}</a> : s.state === "sign" ? "Sign" : s.state === "skip" ? "Not needed" : s.state === "error" ? "Failed" : s.state === "done" ? "Signed" : ""}</span>
                     {s.error && <span className="e">{s.error}</span>}
                   </li>
                 ))}
@@ -478,6 +544,7 @@ export default function NewWalletView() {
                   <div className="prow" style={{ marginTop: 14 }}><Link className="btn lime" href={`/app/first?wallet=${made.wallet}`} data-cursor="Pay">Make your first payment <span className="k">→</span></Link><Link className="btn" href={`/app/w/${made.wallet}`} data-cursor="Open">Open my wallet</Link></div>
                   <h4 style={{ marginTop: 18 }}>Connect your agent</h4>
                   <AgentConnect wallet={made.wallet} agentKey={keyLive?.key} />
+                  <p style={{ color: "var(--soft)", fontSize: 14, lineHeight: 1.5, marginTop: 16 }}>Want a message on your phone for every payment your agent tries? <a className="lime" href={alertsLink(made.wallet)} target="_blank" rel="noreferrer">Get alerts on Telegram ↗</a></p>
                 </div>
               ) : failed ? (
                 <button className="btn lime" onClick={retry} disabled={q.running} data-cursor="Retry">{q.running ? "Working…" : "Retry from the failed step"}</button>
@@ -485,7 +552,7 @@ export default function NewWalletView() {
                 <button className="btn lime" onClick={launch} disabled={q.running || problems.length > 0} data-cursor="Wire it">{q.running ? "Sign in your wallet…" : <><span className="roll"><span>Wire it up</span><span aria-hidden="true">Wire it up</span></span> <span className="k">→</span></>}</button>
               )}
               {!q.running && !made && problems.length > 0 && <div className="warn2">{problems[0]}</div>}
-              {!made && <p className="m mute" style={{ marginTop: 12, lineHeight: 1.6 }}>Each step is one transaction you sign. Gas on X Layer is a tiny fraction of a cent.</p>}
+              {!made && <p className="m mute" style={{ marginTop: 12, lineHeight: 1.6 }}>{CURRENT.setup ? "Three taps: a free signature, one transaction that sets everything up, then you accept the wallet as yours. Gas on X Layer is a tiny fraction of a cent." : "Each step is one transaction you sign. Gas on X Layer is a tiny fraction of a cent."}</p>}
             </div>
           </div>
         </div>

@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { alertsLink } from "@/lib/alerts";
+import AcceptOwnership from "./AcceptOwnership";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { gsap, useGSAP, reduced } from "@/lib/gsap";
 import { useAtlas, short, fmt, OKLINK } from "@/lib/hooks";
@@ -98,6 +100,7 @@ export default function WalletView({ address, from }: { address?: string; from?:
     <div className="page" ref={root}>
       <div className="grid" aria-hidden="true"><i /><i /><i /><i /><i /><i /></div>
       <h1 className="sr">{a.isAtlas ? "Atlas, the public Fusebox demo wallet" : `Fusebox wallet ${short(a.wallet)}`}</h1>
+      {!a.isAtlas && <AcceptOwnership wallet={a.wallet} style={{ marginTop: 32, marginBottom: -16 }} />}
       <section className="w-hero">
         <div className="who" data-b>
           <div className="m">{a.isAtlas ? <><span className="lime">[<Term k="atlas">Atlas</Term>]</span> <span className="mute">a live AI agent&apos;s wallet on X Layer · try to trick it into paying a scammer</span></> : <><span className="lime">[Fusebox wallet]</span> <span className="mute">owner {short(a.owner)} · agent {short(a.agent)}</span></>}</div>
@@ -106,13 +109,14 @@ export default function WalletView({ address, from }: { address?: string; from?:
           <div className={`state-line${blown || a.paused ? " bad" : ""}`}>
             <i />{a.paused ? <span><b>Paused.</b> The owner froze the wallet; nothing pays until they unfreeze it.</span>
               : blown ? <span><b>{blown.name} blown.</b> Nothing can be paid until the owner resets it.</span>
-              : <span><b>All {a.fuses.length} fuses holding.</b> A payment reaches the payee only if every <Term k="fuse">fuse</Term> says yes; one no and nothing moves.</span>}
+              : <span><b>{a.fuses.length === 1 ? "Its fuse is holding." : `All ${a.fuses.length} fuses holding.`}</b> A payment reaches the payee only if every <Term k="fuse">fuse</Term> says yes; one no and nothing moves.</span>}
           </div>
         </div>
         <div className="acts" data-b>
           {a.isAtlas ? <Link className="btn lime" href="/app/try" data-cursor="Try it"><span className="roll"><span>Try to scam Atlas</span><span aria-hidden="true">Try to scam Atlas</span></span> <span className="k">→</span></Link>
             : <Link className="btn lime" href={`/app/assistant?wallet=${a.wallet}`} data-cursor="Chat"><span className="roll"><span>Pay by chatting</span><span aria-hidden="true">Pay by chatting</span></span> <span className="k">→</span></Link>}
           <a className="btn" href={`${OKLINK}/address/${a.wallet}`} target="_blank" rel="noreferrer" data-cursor="OKLink"><span className="roll"><span>Open on OKLink</span><span aria-hidden="true">Open on OKLink</span></span> <span className="k">↗</span></a>
+          <a className="btn" href={alertsLink(a.wallet)} target="_blank" rel="noreferrer" data-cursor="Telegram" title="A Telegram message for every payment this wallet's agent tries"><span className="roll"><span>Alerts on Telegram</span><span aria-hidden="true">Alerts on Telegram</span></span> <span className="k">↗</span></a>
         </div>
       </section>
 

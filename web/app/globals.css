@@ -591,3 +591,9 @@ p a:not(.btn), li a:not(.btn), .docs-foot .mute a { text-decoration: underline; 
 .hero .lockup .x { color: var(--dim); font-size: 13px; }
 .hero .eyebrow a { border-bottom: 1px solid rgba(187, 254, 47, 0.4); }
 @media (max-height: 640px) { .sm-meta { display: none; } .sm-cta { height: 46px; } .sm-pages { gap: 6px; } .sm-page { min-height: 40px; } }
+
+/* a wallet set up through FuseboxSetup, waiting for its new owner to accept it */
+.handover { position: relative; z-index: 2; border: 1px solid var(--lime); background: rgba(187, 254, 47, 0.05); padding: 16px 18px; margin: 0 0 24px; display: grid; gap: 14px; }
+.handover-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.handover p { margin-top: 6px; color: var(--soft); line-height: 1.5; }
+.mpage .handover { margin: 0 0 16px; }

@@ -12,6 +12,8 @@ MCP tools for an AI agent that pays through a [Fusebox](https://fusebox-xlayer.v
 
 Every tool explains all five fuses, including the **Repeat Guard** on v2 wallets (the same invoice sent twice is paid once).
 
+After each payment, `fusebox_pay` tells Fusebox the transaction hash, so anyone following the wallet on Telegram ([@FuseboxAlertsBot](https://t.me/FuseboxAlertsBot)) gets a message: paid, or stopped and why.
+
 Without a key the server is read-only, and by default it points at **Atlas**, the public demo wallet, so you can try `fusebox_check` right away.
 
 ## Setup

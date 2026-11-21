@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { alertsLink } from "@/lib/alerts";
+import AcceptOwnership from "../AcceptOwnership";
 import { useState } from "react";
 import type { Atlas, DecisionRow, FuseSlot } from "@/lib/atlas";
 import { LAYERS } from "@/lib/fuses";
@@ -51,7 +53,7 @@ export default function WalletMobile({ a, fresh }: { a: Atlas; fresh: Set<number
   const copy = () => { navigator.clipboard?.writeText(a.wallet); setCopied(true); setTimeout(() => setCopied(false), 1400); };
   const actions: Action[] = a.isAtlas
     ? [{ icon: "rob", label: "AI reads a scam", href: "/app/rob" }, { icon: "sim", label: "Test a line", href: "/app/simulate" }, { icon: "copy", label: copied ? "Copied" : "Copy", onClick: copy }, { icon: "ext", label: "OKLink", href: `${OKLINK}/address/${a.wallet}`, ext: true }]
-    : [{ icon: "rob", label: "Assistant", href: `/app/assistant?wallet=${a.wallet}` }, { icon: "coin", label: "First payment", href: `/app/first?wallet=${a.wallet}` }, { icon: "copy", label: copied ? "Copied" : "Copy", onClick: copy }, { icon: "ext", label: "OKLink", href: `${OKLINK}/address/${a.wallet}`, ext: true }];
+    : [{ icon: "rob", label: "Assistant", href: `/app/assistant?wallet=${a.wallet}` }, { icon: "coin", label: "First payment", href: `/app/first?wallet=${a.wallet}` }, { icon: "copy", label: copied ? "Copied" : "Copy", onClick: copy }, { icon: "bell", label: "Alerts", href: alertsLink(a.wallet), ext: true }];
   const tabs = [["act", "Activity"], ["fuses", "Fuses"], ["spend", "Spend"], ...(owner ? [["owner", "Owner"] as const] : [])] as const;
 
   return (
@@ -65,9 +67,10 @@ export default function WalletMobile({ a, fresh }: { a: Atlas; fresh: Set<number
           <p>Wallet <span className="m">{a.wallet}</span> · owner {short(a.owner)}.{a.isAtlas && <> <a href={`https://repo.sourcify.dev/196/${a.wallet}`} target="_blank" rel="noreferrer">Verified source ↗</a></>}</p>
         </>}
       />
+      {!a.isAtlas && <AcceptOwnership wallet={a.wallet} />}
       <MHero
         label="In the wallet"
-        right={a.paused ? "Paused" : blown ? `${blown.name} blown` : <><i className="kc-live" />All {a.fuses.length} fuses holding</>}
+        right={a.paused ? "Paused" : blown ? `${blown.name} blown` : <><i className="kc-live" />{a.fuses.length === 1 ? "Its fuse is holding" : `All ${a.fuses.length} fuses holding`}</>}
         tone={a.paused || blown ? "bad" : undefined}
         value={Number(a.balance).toFixed(4)} unit={<Term k="usdt0" />}
         foot={<><span>{cap ? `Spent today ${Number(cap.spentToday).toFixed(2)} of ${cap.a}` : `${a.counts.decisions} payments`}</span><span>{left !== null ? <Term k="fees">{feeRunway(Number(a.feeBalance), perDecision)}</Term> : ""}</span></>}

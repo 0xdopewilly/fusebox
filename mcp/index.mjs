@@ -101,6 +101,8 @@ async function payThrough(to, amount, memo) {
   const hash = await signer.writeContract({ ...W, functionName: "pay", args: [USDT0, payee, amt, memo], gas: 3_000_000n });
   const r = await pub.waitForTransactionReceipt({ hash, timeout: 120_000 });
   if (r.status !== "success") throw new Error(`The transaction reverted: ${EXPLORER}/tx/${hash}`);
+  // Telegram alerts (@FuseboxAlertsBot) for anyone following this wallet
+  fetch(`${APP}/api/telegram/notify`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tx: hash }), signal: AbortSignal.timeout(8_000) }).catch(() => {});
   let d;
   for (const l of r.logs) { try { const ev = decodeEventLog({ abi: ABI.wallet, data: l.data, topics: l.topics }); if (ev.eventName === "Decision") d = ev.args; } catch {} }
   const fs = await fuses();

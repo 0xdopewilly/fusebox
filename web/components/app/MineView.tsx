@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import AcceptOwnership from "./AcceptOwnership";
 import { useEffect, useState } from "react";
 import { fuseboxWalletAbi } from "@/lib/abi";
 import { useTxQueue } from "@/lib/useTxQueue";
@@ -54,6 +55,7 @@ export default function MineView() {
     <div className="mpage">
       <PageChrome title="My wallets" sub={rows ? `${rows.length} wallet${rows.length === 1 ? "" : "s"} · your fleet` : "Your fleet"}
         info={<p>Every Fusebox wallet your connected address owns, as one fleet: the money, the fees left, what&apos;s blown and what the agents did today. Read from X Layer; nothing is signed just to look.</p>} />
+      <AcceptOwnership />
       {!account ? <><p className="mcap">Connect the wallet that owns them. Nothing is signed just to look.</p><ConnectChoices /></>
         : !rows ? <Loading label="Finding your wallets in the factory" error={err} /> : <>
           {t && <MHero label="In your wallets" right={`${rows.length} wallet${rows.length === 1 ? "" : "s"}`} value={usd(t.balance)} unit="USD₮0"
@@ -81,6 +83,7 @@ export default function MineView() {
         <h1 className="disp" data-a>My <span className="lime">[wallets]</span>.</h1>
         <p data-a>Every Fusebox wallet your connected address owns, as one fleet: the money, the fees left, what&apos;s blown and what the agents did today. Read from X Layer; nothing is signed just to look.</p>
       </section>
+      <AcceptOwnership />
       <h2 className="sr">Your wallets</h2>
       {!account ? (
         <div className="empty-card" data-a>

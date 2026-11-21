@@ -5,7 +5,7 @@ import { pub } from "./client-chain";
 import { txError } from "./txError";
 
 export type StepState = "todo" | "sign" | "mine" | "done" | "skip" | "error";
-export interface TxStep<C> { id: string; label: string; detail?: string; run: (ctx: C) => Promise<Hash | null>; after?: (r: TransactionReceipt, ctx: C) => void }
+export interface TxStep<C> { id: string; label: string; detail?: string; run: (ctx: C) => Promise<Hash | null>; after?: (r: TransactionReceipt, ctx: C) => void; /** what a step that sent no transaction counts as: "skip" (default) or "done" (e.g. a signature) */ nullIs?: "skip" | "done" }
 export interface StepView { id: string; label: string; detail?: string; state: StepState; hash?: Hash; error?: string }
 
 /** Runs wallet transactions one by one: sign, wait for the receipt, carry results forward; retry resumes at the failure. */
@@ -25,7 +25,7 @@ export function useTxQueue<C extends object>() {
         patch(i, { state: "sign", error: undefined });
         try {
           const hash = await st.run(pl.ctx);
-          if (!hash) { patch(i, { state: "skip" }); continue; }
+          if (!hash) { patch(i, { state: st.nullIs ?? "skip" }); continue; }
           patch(i, { state: "mine", hash });
           const r = await pub.waitForTransactionReceipt({ hash, timeout: 120_000 });
           if (r.status !== "success") throw new Error("The transaction reverted on X Layer.");

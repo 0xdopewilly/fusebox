@@ -6,12 +6,12 @@ import type { Address } from "viem";
  * fuse market use v2. Fuses 1-4 are the same circuits (#15-18) with the same ids on both, so a fuse id means the same
  * design either way; a wallet always pays fees to, and installs from, the registry it was made with.
  */
-export interface Version { tag: "v1" | "v2"; registry: Address; factory: Address; fuseIds: number[]; fromBlock: number }
-interface Dep { registry: string; factory: string; fuseIds: number[]; fromBlock: number; v2: { registry: string; factory: string; fuseIds: number[]; fromBlock: number } }
+export interface Version { tag: "v1" | "v2"; registry: Address; factory: Address; fuseIds: number[]; fromBlock: number; /** FuseboxSetup: one-transaction wallet setup (v2) */ setup?: Address }
+interface Dep { registry: string; factory: string; fuseIds: number[]; fromBlock: number; v2: { registry: string; factory: string; fuseIds: number[]; fromBlock: number; setup?: string } }
 
 export function versionsOf(dep: Dep) {
   const V1: Version = { tag: "v1", registry: dep.registry as Address, factory: dep.factory as Address, fuseIds: dep.fuseIds, fromBlock: dep.fromBlock };
-  const V2: Version = { tag: "v2", registry: dep.v2.registry as Address, factory: dep.v2.factory as Address, fuseIds: dep.v2.fuseIds, fromBlock: dep.v2.fromBlock };
+  const V2: Version = { tag: "v2", registry: dep.v2.registry as Address, factory: dep.v2.factory as Address, fuseIds: dep.v2.fuseIds, fromBlock: dep.v2.fromBlock, setup: dep.v2.setup as Address | undefined };
   const VERSIONS = [V1, V2];
   const versionOf = (registry: string) => VERSIONS.find((v) => v.registry.toLowerCase() === registry.toLowerCase());
   return {

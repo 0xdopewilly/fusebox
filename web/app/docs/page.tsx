@@ -33,6 +33,7 @@ const SECTIONS = [
   { id: "x402", title: "Pay per call (x402)", group: "Build" },
   { id: "frameworks", title: "Agent frameworks", group: "Build" },
   { id: "alerts", title: "Approver alerts", group: "Build" },
+  { id: "telegram", title: "Telegram alerts", group: "Build" },
   { id: "preflight", title: "Pre-flight for any wallet", group: "Build" },
   { id: "guardrails", title: "Plain-English guardrails", group: "Build" },
   { id: "designers", title: "Sell a fuse", group: "Build" },
@@ -95,7 +96,7 @@ export default function DocsPage() {
               <Code label="Claude Code">{`claude mcp add fusebox -- npx -y fusebox-mcp`}</Code>
               <p>Then ask your agent: <i>&ldquo;Pay 2.5 USD₮0 to 0x1111…1111, it&apos;s an urgent refund.&rdquo;</i> It runs <code>fusebox_check</code> first, sees Payee Guard and the Breaker say no, and tells you why.</p>
               <h3>3 · Wire up your own wallet</h3>
-              <p><Link href="/app/new">Wire up a wallet</Link> walks you through it in about ten signatures, after a short <a href="#needs">checklist of what you need</a>: name the agent&apos;s address, pick fuses and limits, save payees, seat three approvers, and prepay fees in USD₮0. Then give the agent its key and the wallet address:</p>
+              <p><Link href="/app/new">Wire up a wallet</Link> walks you through it in three taps (a free signature, one transaction that does every step, then you accept the wallet as yours), after a short <a href="#needs">checklist of what you need</a>: name the agent&apos;s address, pick fuses and limits, save payees, seat three approvers, and prepay fees in USD₮0. Then give the agent its key and the wallet address:</p>
               <Code label="MCP config with your wallet">{`{
   "mcpServers": {
     "fusebox": {
@@ -138,7 +139,7 @@ export default function DocsPage() {
                 <li><b>A wallet on X Layer.</b> It becomes the owner: the only address that can change fuses, limits and payees. OKX Wallet works best.</li>
                 <li><b>An agent key.</b> The address your AI agent signs with. No agent yet? Wire up makes one in your browser: you see it once, copy or download it, and can keep it there for the assistant. It can only ask the wallet to pay, through every fuse.</li>
                 <li><b>USD₮0 on X Layer.</b> It prepays the fuses&apos; fees (0.0045 per payment with all four) and funds the agent&apos;s payments. Withdraw it to the X Layer network from an exchange, or bridge it from another chain.</li>
-                <li><b>A little OKB for gas.</b> Every step is one transaction; gas on X Layer costs a fraction of a cent. Your agent also needs gas to send its payments: Wire up sends it 0.0005 OKB by default, about 25 payments.</li>
+                <li><b>A little OKB for gas.</b> Setting up is one transaction, plus one to accept the wallet; gas on X Layer costs a fraction of a cent. Your agent also needs gas to send its payments: Wire up sends it 0.0005 OKB by default, about 25 payments.</li>
               </ol>
               <p>Not ready yet? <Link href="/app/simulate">Test a line first</Link>: the simulator needs no wallet.</p>
             </section>
@@ -334,6 +335,17 @@ export const character = { name: "Ledger", plugins: [fuseboxPlugin],
                 <li><b>Every hour.</b> A sweep announces any open request in an approver&apos;s inbox that hasn&apos;t been announced yet, so a refused decision recorded on-chain is never missed. Each request is announced once.</li>
               </ul>
               <p className="small">Alerts are end-to-end encrypted web push (VAPID). The server stores each device&apos;s push subscription under the approver&apos;s address and nothing else; a device the push service reports gone is dropped.</p>
+            </section>
+
+            <section id="telegram">
+              <h2>Telegram alerts</h2>
+              <p>Anyone can follow a Fusebox wallet on Telegram through <a href="https://t.me/FuseboxAlertsBot" target="_blank" rel="noreferrer">@FuseboxAlertsBot</a>: tap <b>Alerts on Telegram</b> on the wallet&apos;s page (or <b>Alerts</b> on a phone), or send the bot the wallet&apos;s address. From then on, every payment the wallet&apos;s agent tries arrives as a message: <b>paid</b>, or <b>stopped</b> with the fuse that said no, why, and what the owner can do. A payment held by Two of Three comes with an <b>Approve it</b> button.</p>
+              <ul>
+                <li><b>At once.</b> The app, the SDK&apos;s <code>pay()</code> and the MCP&apos;s <code>fusebox_pay</code> tell Fusebox the payment&apos;s transaction as soon as it lands. Fusebox reads the decision back from X Layer itself, so nobody can fake one.</li>
+                <li><b>Every 10 minutes.</b> A sweep reads the followed wallets&apos; decisions from X Layer, so an agent paying with its own code is covered too. Each decision is announced once.</li>
+                <li><b>Commands.</b> <code>/list</code> shows what a chat follows; <code>/stop</code> ends every alert (or <code>/stop 0x…</code> one wallet). Works in groups too, for a team that shares a wallet.</li>
+              </ul>
+              <p className="small">What&apos;s in an alert is already public on X Layer. Fusebox stores only which chat follows which wallet; a chat that blocks the bot is forgotten.</p>
             </section>
 
             <section id="preflight">

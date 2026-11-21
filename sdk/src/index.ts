@@ -306,6 +306,8 @@ export class Fusebox {
     const hash = await this.walletClient.writeContract({ ...this.W, functionName: "pay", args, gas, account: this.account, chain: this.walletClient.chain ?? xLayer });
     const r = await this.public.waitForTransactionReceipt({ hash, timeout: 120_000 });
     if (r.status !== "success") throw new FuseboxError(`The transaction reverted: ${EXPLORER}/tx/${hash}`);
+    // Telegram alerts (@FuseboxAlertsBot) for anyone following this wallet; the app reads the decision back from X Layer
+    void fetch(`${this.api}/api/telegram/notify`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ tx: hash }), signal: AbortSignal.timeout(8_000) }).catch(() => {});
     let d: { decisionId: bigint; allowed: boolean; status: readonly number[]; feePaid: bigint } | undefined;
     for (const l of r.logs) {
       if (l.address.toLowerCase() !== this.wallet.toLowerCase()) continue;

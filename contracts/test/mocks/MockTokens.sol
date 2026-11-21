@@ -2,10 +2,11 @@
 pragma solidity ^0.8.24;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20Permit} from "@openzeppelin/contracts/token/ERC20/extensions/ERC20Permit.sol";
 
-/// @notice 6-decimal stand-in for USDT0.
-contract MockUSDT0 is ERC20 {
-    constructor() ERC20("USD0 mock", "USDT0") {}
+/// @notice 6-decimal stand-in for USDT0, with EIP-2612 permit like the real one.
+contract MockUSDT0 is ERC20Permit {
+    constructor() ERC20("USD0 mock", "USDT0") ERC20Permit("USD0 mock") {}
 
     function decimals() public pure override returns (uint8) {
         return 6;

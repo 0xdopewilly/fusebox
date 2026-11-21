@@ -6,6 +6,7 @@ import { agentMode } from "./robAgent";
 import { DEMO_APIS, gate } from "./x402";
 import { PUSH_READY, subscribedApprovers } from "./push";
 import { STORE_KIND } from "./store";
+import { followedWallets, TG_READY, tg } from "./telegram";
 import index from "./deployments/mainnet-index.json";
 
 /**
@@ -84,6 +85,11 @@ export async function getStatus(origin: string): Promise<Status> {
     value: offer.v === 402 ? "issuing offers" : "not issuing", detail: offer.v === 402 ? "The demo price sheet answers 402 with a signed Fusebox offer." : `couldn't sign an offer: ${offer.e ?? "unknown"}` });
   checks.push({ key: "alerts", group: "Services", name: "Approver alerts", level: subs.e ? "warn" : subs.v === -1 ? "warn" : "ok",
     value: subs.e ? "store unreachable" : subs.v === -1 ? "not configured" : `${subs.v} approver${subs.v === 1 ? "" : "s"} subscribed`, detail: `Web push (VAPID) with subscriptions in ${STORE_KIND === "blob" ? "a private Vercel Blob store" : "the local file store"}; swept hourly.` });
+
+  const bot = TG_READY ? await Promise.all([tg<{ username: string }>("getMe", {}), followedWallets().catch(() => null)]) : null;
+  checks.push({ key: "telegram", group: "Services", name: "Telegram alerts", level: !bot ? "warn" : bot[0] ? "ok" : "down",
+    value: !bot ? "not configured" : bot[0] ? `@${bot[0].username} · ${bot[1]?.length ?? "?"} wallet${bot[1]?.length === 1 ? "" : "s"} followed` : "bot unreachable",
+    detail: "A Telegram message for every payment a followed wallet's agent tries: announced at once after app, SDK and MCP payments, swept every 10 minutes." });
 
   const level: Level = checks.some((c) => c.level === "down") ? "down" : checks.some((c) => c.level === "warn") ? "warn" : "ok";
   cached = { at: Date.now(), level, checks };

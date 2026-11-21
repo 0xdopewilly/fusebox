@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { BaseError, ContractFunctionRevertedError, createWalletClient, custom, getAddress, toHex, type Address, type EIP1193Provider, type Hash, type Hex } from "viem";
+import { BaseError, ContractFunctionRevertedError, createWalletClient, custom, getAddress, toHex, type Address, type EIP1193Provider, type Hash, type Hex, type TypedDataDefinition } from "viem";
 import { XLAYER, pub } from "@/lib/client-chain";
 import { errCode, friendlyError, isMobileUA, legacyName } from "@/lib/walletLinks";
 import { okxAppAbort, okxAppConnect, okxAppDisconnect, okxAppRestore, onOkxPending, type PairLinks } from "@/lib/okxApp";
@@ -23,6 +23,8 @@ interface Ctx {
   connect: (rdns: string) => Promise<void>; disconnect: () => void; write: (a: Omit<WriteArgs, "account" | "chain">) => Promise<Hash>;
   /** personal_sign a plain-text message with the connected account (free: no transaction) */
   sign: (message: string) => Promise<Hex>;
+  /** eth_signTypedData_v4 with the connected account, e.g. a token permit (free: no transaction) */
+  signTyped: (typed: TypedDataDefinition) => Promise<Hex>;
   /** send OKB (wei) from the connected account, e.g. gas for an agent key */
   send: (to: Address, value: bigint) => Promise<Hash>;
 }
@@ -190,6 +192,12 @@ export default function WalletProvider({ children }: { children: React.ReactNode
     if (!p || !account) throw new Error("Connect a wallet first.");
     return (await p.request({ method: "personal_sign", params: [toHex(message), account] })) as Hex;
   }, [account]);
+  const signTyped = useCallback(async (typed: TypedDataDefinition) => {
+    if (!active.current || !account) throw new Error("Connect a wallet first.");
+    await ensureChain();
+    const wc = createWalletClient({ chain: XLAYER, transport: custom(active.current) });
+    return wc.signTypedData({ ...(typed as TypedDataDefinition), account } as Parameters<typeof wc.signTypedData>[0]);
+  }, [account, ensureChain]);
   const send = useCallback(async (to: Address, value: bigint) => {
     if (!active.current || !account) throw new Error("Connect a wallet first.");
     await ensureChain();
@@ -198,6 +206,6 @@ export default function WalletProvider({ children }: { children: React.ReactNode
   }, [account, ensureChain]);
   const hasOkx = useMemo(() => wallets.some((w) => /okx|okex/i.test(w.info.rdns)), [wallets]);
   const walletName = via === OKX_APP ? "OKX Wallet app" : (wallets.find((w) => w.info.rdns === via)?.info.name ?? null);
-  const value = useMemo(() => ({ wallets, account, chainId, connecting, error, mobile, hasOkx, via, walletName, connect, disconnect, write, sign, send }), [wallets, account, chainId, connecting, error, mobile, hasOkx, via, walletName, connect, disconnect, write, sign, send]);
+  const value = useMemo(() => ({ wallets, account, chainId, connecting, error, mobile, hasOkx, via, walletName, connect, disconnect, write, sign, signTyped, send }), [wallets, account, chainId, connecting, error, mobile, hasOkx, via, walletName, connect, disconnect, write, sign, signTyped, send]);
   return <C.Provider value={value}>{children}{pair && <PairSheet links={pair.links} mobile={mobile} onCancel={cancelPair} />}{nudge && via === OKX_APP && <ApproveNudge links={nudge} mobile={mobile} />}</C.Provider>;
 }
