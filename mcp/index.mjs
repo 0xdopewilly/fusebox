@@ -144,7 +144,7 @@ async function offerOf(res) {
 }
 const excerpt = async (res) => { const t = await res.text().catch(() => ""); return t.length > 4000 ? t.slice(0, 4000) + "…" : t; };
 
-const server = new McpServer({ name: "fusebox", version: "0.6.0" });
+const server = new McpServer({ name: "fusebox", version: "0.6.1" });
 
 server.registerTool("fusebox_check", {
   title: "Check a payment against the fuses",

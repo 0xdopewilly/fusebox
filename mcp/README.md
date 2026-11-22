@@ -16,6 +16,9 @@ Every tool explains all five fuses, including the **Repeat Guard** on v2 wallets
 
 After each payment, `fusebox_pay` tells Fusebox the transaction hash, so anyone following the wallet on Telegram ([@FuseboxAlertsBot](https://t.me/FuseboxAlertsBot)) gets a message: paid, or stopped and why.
 
+**New in 0.6.1**
+- Listed in the official [MCP Registry](https://registry.modelcontextprotocol.io) as `io.github.0xdopewilly/fusebox-mcp`.
+
 **New in 0.6.0**
 - **Ready-made rules by name:** `fusebox_rules` and `fusebox_setup_link`, and `fusebox_preflight` takes `rule` names and the Repeat Guard's context.
 

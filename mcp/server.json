@@ -1,0 +1,61 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.0xdopewilly/fusebox-mcp",
+  "title": "Fusebox",
+  "description": "Agent payments on X Layer checked by TapeOut circuit fuses: check, pay, x402 fetch, ready rules.",
+  "websiteUrl": "https://fusebox-xlayer.vercel.app",
+  "repository": {
+    "url": "https://github.com/0xdopewilly/fusebox",
+    "source": "github",
+    "id": "1458449981",
+    "subfolder": "mcp"
+  },
+  "version": "0.6.1",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "fusebox-mcp",
+      "version": "0.6.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "FUSEBOX_WALLET",
+          "description": "The Fusebox wallet the agent pays from (default: Atlas, the public demo wallet)",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "FUSEBOX_AGENT_KEY",
+          "description": "The wallet's agent key; without it the server is read-only. It can only ask the wallet to pay.",
+          "isRequired": false,
+          "isSecret": true,
+          "format": "string"
+        },
+        {
+          "name": "FUSEBOX_RPC",
+          "description": "An X Layer RPC (default https://rpc.xlayer.tech)",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "FUSEBOX_APP",
+          "description": "Where approval links point (default https://fusebox-xlayer.vercel.app)",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        },
+        {
+          "name": "FUSEBOX_MAX_PRICE",
+          "description": "Default cap on what fusebox_fetch pays per x402 call, in USDT0 (default 0.10)",
+          "isRequired": false,
+          "isSecret": false,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}

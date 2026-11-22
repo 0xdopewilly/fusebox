@@ -36,6 +36,10 @@ const ADD_XLAYER = { chainId: "0xc4", chainName: "X Layer Mainnet", nativeCurren
 /** Wallets answer eth_chainId as hex, and a few as a number or a decimal string. */
 const toChain = (c: unknown) => (typeof c === "number" ? c : String(c).startsWith("0x") ? parseInt(String(c), 16) : parseInt(String(c), 10));
 const save = (v: string | null) => { try { if (v) localStorage.setItem(KEY, v); else localStorage.removeItem(KEY); } catch {} };
+/** The same wallet can announce itself under a different id after a reload (EIP-6963 vs the injected fallback). */
+const family = (rdns: string) => (/okx|okex/i.test(rdns) ? "okx" : rdns.replace(/^legacy:/, "").split(".").slice(-1)[0]);
+/** Inside a wallet's own in-app browser (OKX Wallet's dApp browser), where a site it approved before connects without a prompt. */
+const inWalletBrowser = () => typeof navigator !== "undefined" && /OKApp|OKEx/i.test(navigator.userAgent);
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 /** Browser wallets (EIP-6963 first, then any injected provider), the OKX Wallet app over OKX Connect, switched onto
@@ -50,6 +54,8 @@ export default function WalletProvider({ children }: { children: React.ReactNode
   const [via, setVia] = useState<string | null>(null);
   const [pair, setPair] = useState<{ links: PairLinks | null } | null>(null);
   const [nudge, setNudge] = useState<PairLinks | null>(null);
+  // a saved connection is being restored: the button says so, so nobody starts a second pairing over it
+  const [restoring, setRestoring] = useState(false);
   const active = useRef<EIP1193Provider | null>(null);
   const detach = useRef<() => void>(() => {});
   const pairGen = useRef(0);
@@ -99,18 +105,41 @@ export default function WalletProvider({ children }: { children: React.ReactNode
   }, []);
 
   // silent reconnect to the last wallet used
+  const restoreApp = useCallback(() => {
+    if (restored.current) return;
+    restored.current = true; setRestoring(true);
+    okxAppRestore()
+      .then(async (p) => {
+        if (p === "gone") { save(null); return; } // unpaired from the app's side: nothing left to restore
+        if (p && (await attach(p, false))) setVia(OKX_APP);
+      })
+      .catch(() => {})
+      .finally(() => { restored.current = false; setRestoring(false); });
+  }, [attach]);
   useEffect(() => {
     if (account) return;
     let saved: string | null = null; try { saved = localStorage.getItem(KEY); } catch {}
     if (!saved) return;
-    if (saved === OKX_APP) {
-      if (restored.current) return; restored.current = true;
-      okxAppRestore().then(async (p) => { if (p && (await attach(p, false))) setVia(OKX_APP); }).catch(() => {});
-      return;
-    }
-    const d = wallets.find((x) => x.info.rdns === saved);
-    if (d) attach(d.provider, false).then((ok) => { if (ok) setVia(saved); }).catch(() => {});
-  }, [wallets, account, attach]);
+    if (saved === OKX_APP) { restoreApp(); return; }
+    const d = wallets.find((x) => x.info.rdns === saved) ?? wallets.find((x) => family(x.info.rdns) === family(saved!));
+    if (!d) return;
+    attach(d.provider, false)
+      // OKX Wallet's own browser can forget a site's permission when the tab is closed; asking again for a site it
+      // approved before returns the account without a prompt
+      .then((ok) => (ok || !inWalletBrowser() ? ok : attach(d.provider, true)))
+      .then((ok) => { if (ok) { setVia(d.info.rdns); save(d.info.rdns); } })
+      .catch(() => {});
+  }, [wallets, account, attach, restoreApp]);
+  // a phone page brought back from the background, or back online, gets another go at the OKX app session
+  useEffect(() => {
+    const again = () => {
+      if (document.visibilityState !== "visible" || account) return;
+      let saved: string | null = null; try { saved = localStorage.getItem(KEY); } catch {}
+      if (saved === OKX_APP) restoreApp();
+    };
+    document.addEventListener("visibilitychange", again); window.addEventListener("online", again); window.addEventListener("pageshow", again);
+    return () => { document.removeEventListener("visibilitychange", again); window.removeEventListener("online", again); window.removeEventListener("pageshow", again); };
+  }, [account, restoreApp]);
 
   const ensureChain = useCallback(async () => {
     const p = active.current!;
@@ -206,6 +235,6 @@ export default function WalletProvider({ children }: { children: React.ReactNode
   }, [account, ensureChain]);
   const hasOkx = useMemo(() => wallets.some((w) => /okx|okex/i.test(w.info.rdns)), [wallets]);
   const walletName = via === OKX_APP ? "OKX Wallet app" : (wallets.find((w) => w.info.rdns === via)?.info.name ?? null);
-  const value = useMemo(() => ({ wallets, account, chainId, connecting, error, mobile, hasOkx, via, walletName, connect, disconnect, write, sign, signTyped, send }), [wallets, account, chainId, connecting, error, mobile, hasOkx, via, walletName, connect, disconnect, write, sign, signTyped, send]);
+  const value = useMemo(() => ({ wallets, account, chainId, connecting: connecting || (restoring && !account), error, mobile, hasOkx, via, walletName, connect, disconnect, write, sign, signTyped, send }), [wallets, account, chainId, connecting, error, mobile, hasOkx, via, walletName, connect, disconnect, write, sign, signTyped, send, restoring]);
   return <C.Provider value={value}>{children}{pair && <PairSheet links={pair.links} mobile={mobile} onCancel={cancelPair} />}{nudge && via === OKX_APP && <ApproveNudge links={nudge} mobile={mobile} />}</C.Provider>;
 }

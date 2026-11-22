@@ -92,10 +92,22 @@ export async function okxAppConnect(links: (l: PairLinks) => void): Promise<EIP1
   return wrap(u);
 }
 
-/** The session saved by an earlier pairing, if it is still live. */
-export async function okxAppRestore(): Promise<EIP1193Provider | null> {
+/** The session saved by an earlier pairing: a provider if it's live, "gone" if nothing is saved any more, null if it
+ *  couldn't be brought back this time. The SDK restores it from local storage while it starts, but on a phone that has
+ *  just reopened the page its relay socket can come up late, and the SDK then drops the session from memory (not from
+ *  storage). So a miss is retried from storage a few times before giving up. */
+export async function okxAppRestore(): Promise<EIP1193Provider | "gone" | null> {
   const u = await universal();
-  return u.connected() && accountsOf(u.session as Session).length ? wrap(u) : null;
+  const x = u as unknown as { tryToReconnect?: () => Promise<void>; getFromStore?: (k: string) => Promise<unknown> };
+  for (const wait of [0, 1200, 3000, 6000]) {
+    if (wait) {
+      await new Promise((r) => setTimeout(r, wait));
+      try { await x.tryToReconnect?.(); } catch { /* try again */ }
+    }
+    if (u.session && u.connected() && accountsOf(u.session as Session).length) return wrap(u);
+    if (!u.session && x.getFromStore && !(await x.getFromStore("connectSession").catch(() => null))) return "gone";
+  }
+  return null;
 }
 
 /** Drop a pairing nobody approved: close its relay socket (the SDK would keep re-sending the request otherwise). */

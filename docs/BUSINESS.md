@@ -25,6 +25,7 @@ These channels exist today. We haven't announced any partnerships, and none are 
     - [`fusebox-sdk`](https://www.npmjs.com/package/fusebox-sdk) (TypeScript);
     - [`fusebox-mcp`](https://www.npmjs.com/package/fusebox-mcp) (an MCP server for Claude, Cursor and other MCP clients);
     - [`fusebox-tools`](https://www.npmjs.com/package/fusebox-tools) (ready-made tools for the Vercel AI SDK, LangChain and ElizaOS).
+  - The MCP server is listed in the official [MCP Registry](https://registry.modelcontextprotocol.io) as `io.github.0xdopewilly/fusebox-mcp`.
   - Claude Code users get it with one line: `claude mcp add fusebox -- npx -y fusebox-mcp`.
 - **Try it before you sign up.** Several pages need no wallet:
   - [Try to scam it](https://fusebox-xlayer.vercel.app/app/try) runs the real on-chain `check()` of a live wallet;
