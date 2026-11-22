@@ -10,6 +10,8 @@ export interface Deployment {
   registry: Address; factory: Address; processor: Address; circuitIds: number[]; fuseIds: number[];
   atlas: Address; owner: Address; agent: Address; supplier: Address; approvers: Address[]; usdt0: Address;
   v2: { registry: Address; factory: Address; fromBlock: number; block: number; circuitIds: number[]; fuseIds: number[]; demo?: Address };
+  /** FuseboxHerald: holds circuit #15 and posts fuse alerts over TapeSend (mainnet only) */
+  herald?: { address: Address; hub: Address; circuitId: number; container: Address; crier: Address; block: number };
 }
 
 /** Which Fusebox deployment the app reads: X Layer mainnet, or the local fork rehearsal with FUSEBOX_DEPLOYMENT=fork. */

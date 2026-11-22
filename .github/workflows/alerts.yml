@@ -1,5 +1,6 @@
 # Telegram alerts (@FuseboxAlertsBot): payments made through the app, SDK or MCP are announced at once; this sweep
 # catches any other payment from a followed wallet. Every 10 minutes; each decision is announced only once.
+# The second step posts every stopped payment of every Fusebox wallet to its TapeSend inbox on X Layer (once each).
 name: Telegram alerts sweep
 on:
   schedule:
@@ -14,5 +15,10 @@ jobs:
       - name: Announce new decisions
         run: |
           curl -s --max-time 90 -w "\n%{http_code}\n" -H "Authorization: Bearer $CRON_SECRET" "https://fusebox-xlayer.vercel.app/api/telegram/sweep" || true
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+      - name: Post new stops to TapeSend
+        run: |
+          curl -s --max-time 90 -w "\n%{http_code}\n" -H "Authorization: Bearer $CRON_SECRET" "https://fusebox-xlayer.vercel.app/api/tapesend/sweep" || true
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}

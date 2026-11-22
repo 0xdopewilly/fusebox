@@ -1,6 +1,6 @@
 # Fusebox status
 
-Last updated 2026-11-15. Hackathon: X Layer TapeOut Accelerate, due 2026-12-07 23:59 UTC.
+Last updated 2026-11-22. Hackathon: X Layer TapeOut Accelerate, due 2026-12-07 23:59 UTC.
 
 Fusebox is live on X Layer mainnet (chain 196): the contracts, four TapeOut circuits, a public demo wallet,
 the site and app, the docs and an MCP server for agents. Addresses are in the [README](../README.md) and
@@ -16,8 +16,9 @@ the site and app, the docs and an MCP server for agents. Addresses are in the [R
 | Wire up a wallet | https://fusebox-xlayer.vercel.app/app/new: factory call, fuses, payees, approvers and fees, in one guided run |
 | Fuse market and designers | https://fusebox-xlayer.vercel.app/app/market and /app/designers: netlists read from TapeOut, earnings, claims, listing |
 | Docs | https://fusebox-xlayer.vercel.app/docs |
-| MCP server | [`fusebox-mcp`](https://www.npmjs.com/package/fusebox-mcp) on npm: `fusebox_check`, `fusebox_pay`, `fusebox_status` |
+| MCP server | [`fusebox-mcp`](https://www.npmjs.com/package/fusebox-mcp) on npm, 7 tools: `fusebox_check`, `fusebox_pay`, `fusebox_status`, `fusebox_preflight`, `fusebox_rules`, `fusebox_setup_link`, `fusebox_fetch` |
 | DeWEB edition | Live on X Layer in circuit #15's container (`15.2.272.tape`), served by TapeKit at https://15-2-272.tapekit.org/ (published 2026-11-21) |
+| TapeSend alerts | Live 2026-11-22: every stopped payment is posted to the wallet's TapeSend inbox on X Layer from circuit #15's container; circuit #15 is held by FuseboxHerald `0xBf385a2A9368cC08EA234FF1965B6a486a6b0b81` (Sourcify-verified), whose crier key can only post. Wallet page shows the inbox, checked against the hub. |
 
 On mainnet at the time of writing, Atlas has made 5 decisions (2 paid, 3 stopped), and its fuses have
 been checked 20 times. They earned their designer 0.02025 USDT0, and the protocol earned 0.00225 USDT0.

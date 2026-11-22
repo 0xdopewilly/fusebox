@@ -74,9 +74,9 @@
 .tbl tr { transition: background-color 0.4s; }
 .tbl tbody tr:hover { background: rgba(255, 255, 255, 0.025); }
 .tbl tr.new { background: rgba(187, 254, 47, 0.08); }
-.tbl .res, .dcard .res { font: 600 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
+.tbl .res, .dcard .res, .tsmsg .res { font: 600 11px var(--mono); letter-spacing: 0.08em; text-transform: uppercase; }
 .tbl .res.ok, .dcard .res.ok { color: var(--lime); }
-.tbl .res.no, .dcard .res.no { color: var(--red); }
+.tbl .res.no, .dcard .res.no, .tsmsg .res.no { color: var(--red); }
 .tbl .num { font-family: var(--mono); font-size: 13px; text-align: right; white-space: nowrap; }
 .tbl .memo { color: var(--soft); }
 .tbl .memo small { display: block; color: var(--dim); font: 500 10.5px var(--mono); margin-top: 4px; letter-spacing: 0.04em; }
@@ -1294,3 +1294,17 @@ html.panel-open .msticky { visibility: hidden; }
 
 /* wizard: no fuse on the line limits amounts */
 .wz-nolimit { border: 1px solid var(--red); border-left-width: 3px; color: var(--red); padding: 10px 14px; margin: 4px 0 12px; font-size: 14px; line-height: 1.5; background: rgba(255, 82, 50, 0.06); }
+
+/* on-chain alerts: the wallet's TapeSend inbox */
+.tsbox { border: 1px solid var(--hair2); padding: 20px 20px 14px; }
+.tsnote { color: var(--soft); font-size: 14px; line-height: 1.55; max-width: 78ch; margin-bottom: 14px; }
+.tsmsg { border-top: 1px solid var(--hair); }
+.tsmsg summary { display: flex; gap: 14px; align-items: center; padding: 12px 0; cursor: pointer; list-style: none; }
+.tsmsg summary::-webkit-details-marker { display: none; }
+.tsmsg summary:focus-visible { outline: 1px solid var(--lime); outline-offset: 2px; }
+.tsmsg .tssub { flex: 1; min-width: 0; color: var(--ink); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tsbody { white-space: pre-wrap; overflow-wrap: anywhere; font: 400 12.5px/1.6 var(--mono); color: var(--soft); background: rgba(255, 255, 255, 0.02); border: 1px solid var(--hair); padding: 12px 14px; margin: 0 0 10px; }
+.tsfoot { display: flex; justify-content: space-between; gap: 12px; padding-bottom: 12px; font-size: 11px; }
+.tsfoot a { color: var(--ink); }
+.tsmeta { margin-top: 10px; font-size: 11px; line-height: 1.7; }
+.tsmeta a { color: var(--soft); }

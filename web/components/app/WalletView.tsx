@@ -18,6 +18,7 @@ import { Responsive } from "./m/useMobile";
 import WalletMobile from "./m/WalletMobile";
 import Term from "./m/Term";
 import { readableMemo } from "@/lib/plain";
+import { ChainAlerts } from "./ChainAlerts";
 
 /** A number that rolls to its new value whenever it changes. */
 function Count({ value, d = 6, className }: { value: number; d?: number; className?: string }) {
@@ -212,6 +213,8 @@ export default function WalletView({ address, from }: { address?: string; from?:
         })}
         {older(cardN)}
       </div>
+
+      <ChainAlerts wallet={a.wallet} refreshKey={a.counts.blocked} />
 
       <div className="side2" data-b>
         <div><span className="m mute">Saved payees · Payee Guard lets these through after {a.fuses.find((x) => x.key === "payee-guard")?.a ?? 24} h</span>

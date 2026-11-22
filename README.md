@@ -36,6 +36,7 @@ AI agents now hold wallets and send real money, and one convincing message can m
 | FuseRegistry v2 (new wallets, the fuse market) | [`0x2583928546a614A2fD993B5C106ED9aD0E781AB6`](https://www.oklink.com/xlayer/address/0x2583928546a614A2fD993B5C106ED9aD0E781AB6) |
 | FuseboxFactory v2 | [`0xdFc9b1d715efB2bCDAd8f848A5E3b4e2c243EE9B`](https://www.oklink.com/xlayer/address/0xdFc9b1d715efB2bCDAd8f848A5E3b4e2c243EE9B) |
 | FuseboxSetup (a whole wallet in one transaction) | [`0x3B31e35bf9157413Bb50884009c415b27e3a6DA9`](https://www.oklink.com/xlayer/address/0x3B31e35bf9157413Bb50884009c415b27e3a6DA9) |
+| FuseboxHerald (holds circuit #15; posts fuse alerts over TapeSend) | [`0xBf385a2A9368cC08EA234FF1965B6a486a6b0b81`](https://www.oklink.com/xlayer/address/0xBf385a2A9368cC08EA234FF1965B6a486a6b0b81) |
 | FuseRegistry v1 (Atlas and the first wallets) | [`0x852a278322667BB86A2665a38CbC5Bfd551B20d7`](https://www.oklink.com/xlayer/address/0x852a278322667BB86A2665a38CbC5Bfd551B20d7) |
 | FuseboxFactory v1 | [`0x192C099a18ed42612b6e74f243f8dF1EE0E3E7a5`](https://www.oklink.com/xlayer/address/0x192C099a18ed42612b6e74f243f8dF1EE0E3E7a5) |
 | Atlas (demo wallet) | [`0x0Db0457715a6445D8a65F820d717a6B39Be66800`](https://www.oklink.com/xlayer/address/0x0Db0457715a6445D8a65F820d717a6B39Be66800) |
@@ -62,11 +63,14 @@ Every address is in [`deployments/xlayer-mainnet.json`](deployments/xlayer-mainn
 
 ## Built on TapeOut
 
-- **Every fuse is a TapeOut circuit.** Circuits #15–18 live on TapeOut's OrderGuard processor, and every payment calls the processor's `eval` or `step` on X Layer.
+- **Every fuse is a TapeOut circuit.** All nine (circuits #15–18, #21 and the rivals #22–25) live on TapeOut's OrderGuard processor `0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355`, and every payment calls the processor's `eval` or `step` on X Layer.
 - **TAP-02 toolchain.** [`circuits/`](circuits) builds, encodes and simulates TAP-02 netlists, and its tests pass TapeOut's official test vectors.
 - **Netlist integrity in the app.** The [fuse market](https://fusebox-xlayer.vercel.app/app/market) reads each fuse's netlist straight from its TapeOut processor and checks it against the hash the registry pinned when the fuse was listed. Fuses without a hand-drawn schematic get their real wiring drawn from those bytes.
 - **DeWEB and TapeKit.** [`deweb/`](deweb) is a version of Fusebox stored on X Layer in circuit #15's container and opened through TapeKit: **[https://15-2-272.tapekit.org/](https://15-2-272.tapekit.org/)** (`15.2.272.tape`). It has no off-chain references, and your browser reads every number, including a live "scam Atlas" `check()`, from X Layer.
   - Published on mainnet 2026-11-21: the container was opened (0.08 OKB to TapeOut), all 7 chunks stored and the name bound, and the SHA-256 read back from the chain matched (`0xdd038cb2…41ae`). The same file is also previewed at [/onchain](https://fusebox-xlayer.vercel.app/onchain).
+- **TapeSend alerts.** Every payment a Fusebox wallet's fuses stop is posted, once, to that wallet's TapeSend inbox on X Layer (endpoint `uint32(0) ‖ uint64(196) ‖ wallet` on the DeWEB hub `0xe61A…25ee`), as a public TapeSend message from circuit #15's container. The wallet page reads the inbox back from the hub and checks each message against its on-chain digest; messages from any other sender are never shown as Fusebox's.
+  - TapeSend only lets a circuit's holder send, so circuit #15 sits in [`FuseboxHerald`](contracts/src/FuseboxHerald.sol) (Sourcify-verified). The server holds only the herald's *crier* key, which can post and nothing else; the admin (a cold key) claims the fuse's designer fees, runs the DeWEB site and can take the circuit back. A leaked crier key costs spam, not the circuit. 10 fork tests against the live hub ([`HeraldFork.t.sol`](contracts/test/fork/HeraldFork.t.sol)).
+  - Posted right after a payment (the app, SDK and MCP call `/api/telegram/notify`), and by a sweep every 10 minutes for agents that pay some other way. At most 6 posts per wallet per hour; each costs about 0.000004 OKB of gas.
 
 ## Repository
 
@@ -80,7 +84,7 @@ Every address is in [`deployments/xlayer-mainnet.json`](deployments/xlayer-mainn
 | [`web/`](web) | The site and app (Next.js, GSAP, three.js, viem). They read X Layer mainnet directly. |
 | [`deweb/`](deweb) | The DeWEB edition: one self-contained page with no backend, built for circuit #15's container (`15.2.272.tape`, served by TapeKit), plus a resumable publisher. |
 | [`deployments/`](deployments) | Deployed addresses. |
-| [`docs/`](docs) | [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) (sockets, circuits, fee flow, threat model, gas), [`STATUS.md`](docs/STATUS.md) and [`tapeout-ecosystem-research.md`](docs/tapeout-ecosystem-research.md). |
+| [`docs/`](docs) | [`ARCHITECTURE.md`](docs/ARCHITECTURE.md) (sockets, circuits, fee flow, threat model, gas), [`BUSINESS.md`](docs/BUSINESS.md) (who it's for, how it earns, milestones), [`STATUS.md`](docs/STATUS.md) and [`tapeout-ecosystem-research.md`](docs/tapeout-ecosystem-research.md). |
 | [`design/`](design) | Design directions and the landing mock. |
 
 ## Run it

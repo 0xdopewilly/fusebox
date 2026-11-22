@@ -17,6 +17,7 @@ import { PageChrome } from "./chrome";
 import { MActions, MHero, MLabel, MRow, MSeg, MSheet, MStats, type Action } from "./ui";
 import Term from "./Term";
 import { feeRunway, readableMemo } from "@/lib/plain";
+import { ChainAlertsMobile } from "../ChainAlerts";
 
 const GLOSS: Record<string, string> = { "daily-cap": "A limit on spending per day", "payee-guard": "Known payees only", breaker: "Trips on a stranger", "approval-2of3": "Big payments need 2 signers" };
 const when = (t: number) => {
@@ -104,6 +105,7 @@ export default function WalletMobile({ a, fresh }: { a: Atlas; fresh: Set<number
         {shown < a.decisions.length && <button className="btn" style={{ justifyContent: "center" }} onClick={() => setShown((n) => n + 20)}>Show older · {a.decisions.length - shown} more</button>}
         {!a.decisions.length && !a.historyLoading && <p className="mnote">No payments yet. Every payment the agent tries lands here, paid or stopped.</p>}
         <MRow icon={<Glyph name="docs" size={16} />} title="Export, feed and badge" sub="CSV · JSON feed · status badge" onClick={() => setTools(true)} />
+        <ChainAlertsMobile wallet={a.wallet} refreshKey={a.counts.blocked} />
       </>}
 
       {tab === "fuses" && <>

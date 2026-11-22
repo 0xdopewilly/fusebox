@@ -27,6 +27,7 @@ const SECTIONS = [
   { id: "payment", title: "How a payment works", group: "Concepts" },
   { id: "fuses", title: "The five fuses", group: "Concepts" },
   { id: "fees", title: "Fees and budgets", group: "Concepts" },
+  { id: "business", title: "Who it's for and how it earns", group: "Concepts" },
   { id: "wallet", title: "The wallet API", group: "Build" },
   { id: "mcp", title: "MCP tools", group: "Build" },
   { id: "sdk", title: "TypeScript SDK", group: "Build" },
@@ -34,6 +35,7 @@ const SECTIONS = [
   { id: "frameworks", title: "Agent frameworks", group: "Build" },
   { id: "alerts", title: "Approver alerts", group: "Build" },
   { id: "telegram", title: "Telegram alerts", group: "Build" },
+  { id: "tapesend", title: "On-chain alerts (TapeSend)", group: "Build" },
   { id: "preflight", title: "Pre-flight for any wallet", group: "Build" },
   { id: "guardrails", title: "Plain-English guardrails", group: "Build" },
   { id: "designers", title: "Sell a fuse", group: "Build" },
@@ -216,6 +218,26 @@ export default function DocsPage() {
               </ul>
             </section>
 
+            <section id="business">
+              <h2>Who it&apos;s for and how it earns</h2>
+              <div className="tbl-w" tabIndex={0} role="region" aria-label="Who uses Fusebox table"><table>
+                <thead><tr><th>Who</th><th>Their problem</th><th>Pays or earns</th></tr></thead>
+                <tbody>
+                  <tr><td><b>Builders who give an agent money</b></td><td>An agent with a funded key can be talked into paying a scammer, overspend, or pay an invoice twice. Fuses are limits it can&apos;t argue with.</td><td>Pays check fees and gas</td></tr>
+                  <tr><td><b>Teams that let a bot spend</b></td><td>One leaked or confused key can drain the treasury. Approvers sign big payments from an inbox, and every attempt reaches phones and Telegram.</td><td>Pays check fees and gas</td></tr>
+                  <tr><td><b>API sellers (x402)</b></td><td>They need proof a payment really happened and was meant for them. The <code>fusebox</code> scheme&apos;s on-chain Decision is that proof.</td><td>Pays nothing</td></tr>
+                  <tr><td><b>Circuit designers</b></td><td>A taped-out circuit earns nothing unless an app calls it. Here every check pays, and the income follows the circuit NFT.</td><td>Earns 90% of each fee</td></tr>
+                </tbody>
+              </table></div>
+              <ul className="dots">
+                <li><b>Where the money comes from.</b> Every check pays its fuse&apos;s fee (0.0005 to 0.002 USD₮0; 0.005 for a payment checked by the five original fuses): 90% to the designer, 10% to Fusebox, capped at 20% by the contract. Today the Fusebox team holds all nine listed circuits, so it also collects the designer share until outside designers list fuses.</li>
+                <li><b>A worked example</b> (an assumption, not a measurement): an agent making 20 payments a day through the five original fuses pays 3.00 USD₮0 a month in checks, 2.70 to designers and 0.30 to Fusebox. A thousand such agents: 3,000 a month, 300 of it to Fusebox. Gas is about 0.00002 OKB a payment.</li>
+                <li><b>How people find it.</b> <code>fusebox-sdk</code>, <code>fusebox-mcp</code> and <code>fusebox-tools</code> on npm, no-wallet demos (<Link href="/app/try">Try to scam it</Link>, <Link href="/app/rob">Rob the agent</Link>), x402 sellers on the <code>fusebox</code> scheme, Fuse Studio and the market for TapeOut designers, OKX Wallet on X Layer, Telegram alerts anyone can follow, and the <a href="https://15-2-272.tapekit.org/" target="_blank" rel="noreferrer">DeWEB edition</a> on TapeKit.</li>
+                <li><b>Why people keep paying.</b> The money, payees, approvers and limits live in the wallet, and every payment goes through the fuses. The Breaker and the Repeat Guard remember past payments, so they get more useful with history. Fees are prepaid and capped per day, and a designer can&apos;t raise them without the owner&apos;s say.</li>
+              </ul>
+              <p className="small">The full write-up, with every fee, what runs on TapeOut and what doesn&apos;t, and the milestones for the next three months: <a href="https://github.com/0xdopewilly/fusebox/blob/main/docs/BUSINESS.md" target="_blank" rel="noreferrer">docs/BUSINESS.md</a>.</p>
+            </section>
+
             <section id="wallet">
               <h2>The wallet API</h2>
               <p>Pay from the agent&apos;s key, or dry-run first with <code>check</code>. ABIs are in the repo at <a href="https://github.com/0xdopewilly/fusebox/blob/main/web/lib/abi.ts" target="_blank" rel="noreferrer">web/lib/abi.ts</a>.</p>
@@ -348,6 +370,17 @@ export const character = { name: "Ledger", plugins: [fuseboxPlugin],
                 <li><b>Commands.</b> <code>/list</code> shows what a chat follows; <code>/stop</code> ends every alert (or <code>/stop 0x…</code> one wallet). Works in groups too, for a team that shares a wallet.</li>
               </ul>
               <p className="small">What&apos;s in an alert is already public on X Layer. Fusebox stores only which chat follows which wallet; a chat that blocks the bot is forgotten.</p>
+            </section>
+
+            <section id="tapesend">
+              <h2>On-chain alerts (TapeSend)</h2>
+              <p>Every payment a Fusebox wallet&apos;s fuses stop is also posted, once, to that wallet&apos;s <b>TapeSend inbox on X Layer</b>: TapeOut&apos;s DeWEB messaging layer. The message comes from the container of Fusebox&apos;s TapeOut circuit #15 and says what was tried, which fuse said no and why, and what the owner can do. Nobody has to follow anything: every wallet gets them.</p>
+              <ul>
+                <li><b>Where to read them.</b> The wallet&apos;s page shows its <b>On-chain alerts</b>, read straight from the DeWEB hub (<code>0xe61A…25ee</code>) and checked against each message&apos;s on-chain digest. Anyone can read the same inbox: the endpoint is <code>uint32(0) ‖ uint64(196) ‖ wallet</code>, and <code>GET /api/tapesend/inbox?wallet=0x…</code> returns it as JSON.</li>
+                <li><b>Who sends them.</b> TapeSend lets only a circuit&apos;s holder speak for it, so circuit #15 sits in <a href="https://repo.sourcify.dev/196/0xBf385a2A9368cC08EA234FF1965B6a486a6b0b81" target="_blank" rel="noreferrer">FuseboxHerald</a>. Fusebox&apos;s server holds only its crier key, which can post and do nothing else; a cold admin key claims the fuse&apos;s fees, runs the DeWEB site and can take the circuit back.</li>
+                <li><b>When.</b> Right after a payment made through the app, the SDK or the MCP server, and by a sweep every 10 minutes for everything else. At most 6 a wallet an hour.</li>
+              </ul>
+              <p className="small">Messages from any other TapeOut container that lands in a wallet&apos;s inbox are counted but never shown as Fusebox&apos;s. Each post costs Fusebox about 0.000004 OKB of gas; the wallet pays nothing extra.</p>
             </section>
 
             <section id="preflight">

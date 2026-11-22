@@ -72,12 +72,34 @@ export async function followedWallets(): Promise<Address[]> {
 const FUSES: Record<number, { name: string; no: string; fix: string }> = {
   1: { name: "Daily Cap", no: "it would pass today's spending cap", fix: "Wait for tomorrow (UTC), or the owner raises the cap." },
   2: { name: "Payee Guard", no: "the payee isn't saved, or is still cooling off and this is over the trial amount", fix: "Only the owner can save a payee." },
-  3: { name: "Breaker", no: "the Breaker is blown: a payment to a stranger trips it, and nothing pays until the owner resets it", fix: "The owner resets the Breaker once they've checked." },
+  3: { name: "Breaker", no: "it's blown. A payment to a stranger trips it, and nothing pays until the owner resets it", fix: "The owner resets the Breaker once they've checked." },
   4: { name: "Two of Three", no: "it's over the approval threshold and needs two of three approvers", fix: "Two approvers sign this exact payment, then the agent tries again." },
   5: { name: "Repeat Guard", no: "the same amount to the same payee already went out inside the window", fix: "If it really is a second order, the owner lets it pay once more." },
+  6: { name: "Per-Payment Cap", no: "this one payment is bigger than the owner's per-payment limit", fix: "Split it into smaller payments, or the owner raises the limit." },
+  7: { name: "Strict Payee Book", no: "the payee isn't saved, or its cooling-off isn't over (this fuse allows no trial payment)", fix: "Only the owner can save a payee; then wait out the cooling-off." },
+  8: { name: "Two-Strike Breaker", no: "a payment to a stranger is a strike, and a second stranger blows the breaker", fix: "The owner resets the breaker once they've checked." },
+  9: { name: "Lead Approver", no: "it's over the approval threshold and needs two approvals, one of them seat 1", fix: "Seat 1 and one more approver sign this exact payment, then the agent tries again." },
 };
-const nameOf = (id: number) => FUSES[id]?.name ?? `Fuse #${id}`;
+export const nameOf = (id: number) => FUSES[id]?.name ?? `Fuse #${id}`;
 const STATUS = ["pass", "blew", "failed", "untrusted"] as const;
+
+/** A decision in plain words (no markup): what was tried, which fuses said no and why, and what the owner can do. */
+export function plainStop(d: Decision): { subject: string; body: string } {
+  const usd = lc(d.token) === lc(DEPLOYMENT.usdt0);
+  const amount = `${formatUnits(d.amount, usd ? 6 : 18)} ${usd ? "USD₮0" : lc(d.token) === "0x0000000000000000000000000000000000000000" ? "OKB" : `of ${short(d.token)}`}`;
+  const who = lc(d.wallet) === lc(DEPLOYMENT.atlas) ? "Atlas (the public demo wallet)" : `wallet ${short(d.wallet)}`;
+  const said = d.fuseIds.map((id, i) => ({ id, s: STATUS[d.status[i]] ?? "failed" }));
+  const no = said.filter((x) => x.s !== "pass");
+  const yes = said.filter((x) => x.s === "pass").map((x) => nameOf(x.id));
+  const lines = [`${amount} to ${d.to} from ${who}. Nothing moved.`, ``];
+  for (const x of no) lines.push(`${nameOf(x.id)} said no${x.s === "blew" ? `: ${FUSES[x.id]?.no ?? "its rule failed"}` : x.s === "untrusted" ? ": its processor isn't trusted" : ": the circuit failed to run"}.`);
+  if (yes.length) lines.push(`${yes.join(", ")} said yes.`);
+  const fix = no.map((x) => FUSES[x.id]?.fix).filter(Boolean);
+  if (fix.length) lines.push(``, fix[0]!);
+  if (d.memo.trim()) lines.push(``, `What the agent said: "${d.memo.trim().slice(0, 140)}"`);
+  lines.push(``, `Wallet: ${APP}/app/w/${d.wallet}`, `Transaction: ${OKLINK}/tx/${d.tx}`);
+  return { subject: `Fusebox stopped payment #${d.id} (${no.map((x) => nameOf(x.id)).join(", ") || "a fuse"})`.slice(0, 200), body: lines.join("\n") };
+}
 
 export interface Decision {
   wallet: Address; id: number; to: Address; token: Address; amount: bigint; allowed: boolean; fuseIds: number[]; status: number[];
