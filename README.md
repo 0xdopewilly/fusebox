@@ -8,6 +8,7 @@ Fusebox wires an AI agent's wallet through small logic circuits taped out on [Ta
 
 | | |
 |---|---|
+| **Demo video (2:30)** | https://youtu.be/vcopkuNdhkc |
 | **Live app** | https://fusebox-xlayer.vercel.app/app · try it with no wallet: [/app/try](https://fusebox-xlayer.vercel.app/app/try) |
 | **On DeWEB** | https://15-2-272.tapekit.org/ (`15.2.272.tape`, stored in circuit #15's container, served by TapeKit) |
 | **TapeOut processor** | `0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355` (OrderGuard, X Layer chain 196) |
