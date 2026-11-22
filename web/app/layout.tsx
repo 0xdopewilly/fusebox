@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   title: "Fusebox · circuit fuses for AI agent wallets, built on TapeOut",
   description: DESC,
   openGraph: { title: "Fusebox · Your agent pays. TapeOut circuits decide.", description: DESC, url: "/", siteName: "Fusebox", images: [{ url: "/og.png", width: 1200, height: 630, alt: "Fusebox: Your agent pays. Circuits decide." }], type: "website" },
-  twitter: { card: "summary_large_image", title: "Fusebox · Your agent pays. TapeOut circuits decide.", description: DESC, images: ["/og.png"] },
+  twitter: { card: "summary_large_image", site: "@fuseboxhq", creator: "@fuseboxhq", title: "Fusebox · Your agent pays. TapeOut circuits decide.", description: DESC, images: ["/og.png"] },
 };
 export const viewport: Viewport = { themeColor: "#000000", width: "device-width", initialScale: 1 };
 

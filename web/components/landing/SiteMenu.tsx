@@ -70,7 +70,7 @@ export default function SiteMenu({ open, onClose, home = "" }: { open: boolean; 
       </div>
       <div className="sm-foot">
         <Link className="btn lime sm-cta" href="/app" onClick={onClose}><span>Open the app</span><span className="k">↗</span></Link>
-        <div className="m mute sm-meta"><span><span className="live" />Built on TapeOut · X Layer</span><a href="https://github.com/0xdopewilly/fusebox" target="_blank" rel="noreferrer">GitHub ↗</a></div>
+        <div className="m mute sm-meta"><span><span className="live" />Built on TapeOut · X Layer</span><a href="https://x.com/fuseboxhq" target="_blank" rel="noreferrer">@fuseboxhq ↗</a><a href="https://github.com/0xdopewilly/fusebox" target="_blank" rel="noreferrer">GitHub ↗</a></div>
       </div>
     </div>,
     document.body,

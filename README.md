@@ -6,6 +6,7 @@ Fusebox wires an AI agent's wallet through small logic circuits taped out on [Ta
 
 - **Live site:** https://fusebox-xlayer.vercel.app
 - **Live app:** https://fusebox-xlayer.vercel.app/app (Atlas, a real agent wallet on X Layer mainnet)
+- **On X:** [@fuseboxhq](https://x.com/fuseboxhq)
 - **For agents:** `claude mcp add fusebox -- npx -y fusebox-mcp` ([npm](https://www.npmjs.com/package/fusebox-mcp)), the TypeScript SDK `npm install fusebox-sdk viem` ([npm](https://www.npmjs.com/package/fusebox-sdk), [source](sdk)) for check, pay (checked first), pay-per-call, approve, freeze, watch and history, or ready-made tools for the Vercel AI SDK, LangChain and ElizaOS: `npm install fusebox-tools` ([source](tools)). Not on a Fusebox wallet yet? Pre-flight runs any payment through TapeOut circuits before your agent signs it from any wallet (`preflight()` in the SDK, `fusebox_preflight` in the MCP)
 - **Pay per call (x402):** agents pay for APIs over HTTP 402, and the price goes through the wallet's fuses first. Two [live demo sellers](https://fusebox-xlayer.vercel.app/app/x402) (an honest price sheet and a scam), a seller helper in the SDK and a hosted verifier for the `fusebox` scheme.
 - **Plain-English guardrails:** describe your agent in the wizard and get a proposed line of fuses with reasons and test payments, checked on TapeOut's circuits before you sign.
