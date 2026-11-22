@@ -474,7 +474,7 @@ await wallet.sendTransaction(…);`}</Code>
             </section>
 
             <footer className="docs-foot m">
-              <span className="mute">Fusebox · MIT · <a href="https://github.com/0xdopewilly/fusebox" target="_blank" rel="noreferrer">GitHub ↗</a> · <a href="https://x.com/fuseboxhq" target="_blank" rel="noreferrer">@fuseboxhq ↗</a></span>
+              <span className="mute">Fusebox · MIT · <a href="https://github.com/0xdopewilly/fusebox" target="_blank" rel="noreferrer">GitHub ↗</a> · <a href="https://youtu.be/vcopkuNdhkc" target="_blank" rel="noreferrer">Demo video ↗</a> · <a href="https://x.com/fuseboxhq" target="_blank" rel="noreferrer">@fuseboxhq ↗</a></span>
               <Link className="btn lime" href="/app"><span>Open the app</span> <span className="k">↗</span></Link>
             </footer>
           </article>
