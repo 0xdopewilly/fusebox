@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { gsap, ScrollTrigger, useGSAP, reduced } from "@/lib/gsap";
+import { useLang } from "@/lib/i18n";
 
 interface Live { decisions: number; blocked: number; fees: number; circuits: string }
 const PROCESSOR = "0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355";
@@ -11,6 +12,7 @@ export default function LiveProof() {
   const root = useRef<HTMLElement>(null);
   const [live, setLive] = useState<Live | null>(null);
   const [copied, setCopied] = useState(false);
+  const { t } = useLang();
   useEffect(() => {
     let alive = true, tries = 0;
     const load = async () => {
@@ -35,16 +37,16 @@ export default function LiveProof() {
     } });
   }, { dependencies: [!!live] });
   return (
-    <section className="liveproof" ref={root} aria-label="Live on X Layer mainnet">
+    <section className="liveproof" ref={root} aria-label={t("Live on X Layer mainnet", "X Layer 主网实时数据")}>
       <div className="wrap lp-row m">
-        <div className="lp-cell lp-head"><span className="live" />Live on X Layer mainnet</div>
-        <div className="lp-cell"><b data-n={live?.decisions ?? 0}>{live?.decisions ?? "—"}</b>fuse decisions</div>
-        <div className="lp-cell"><b data-n={live?.blocked ?? 0} className="red">{live?.blocked ?? "—"}</b>payments stopped</div>
-        <div className="lp-cell"><b data-n={live?.fees ?? 0} data-d="4">{live ? live.fees.toFixed(4) : "—"}</b>USD₮0 in fees</div>
-        <div className="lp-cell"><a href={`https://www.oklink.com/xlayer/address/${PROCESSOR}`} target="_blank" rel="noreferrer" data-cursor="TapeOut"><b className="lime">{live?.circuits || "#15 #16 #17 #18"}</b>TapeOut circuits ↗</a></div>
+        <div className="lp-cell lp-head"><span className="live" />{t("Live on X Layer mainnet", "X Layer 主网实时数据")}</div>
+        <div className="lp-cell"><b data-n={live?.decisions ?? 0}>{live?.decisions ?? "—"}</b>{t("fuse decisions", "次保险丝决策")}</div>
+        <div className="lp-cell"><b data-n={live?.blocked ?? 0} className="red">{live?.blocked ?? "—"}</b>{t("payments stopped", "笔付款被拦截")}</div>
+        <div className="lp-cell"><b data-n={live?.fees ?? 0} data-d="4">{live ? live.fees.toFixed(4) : "—"}</b>{t("USD₮0 in fees", "USD₮0 费用")}</div>
+        <div className="lp-cell"><a href={`https://www.oklink.com/xlayer/address/${PROCESSOR}`} target="_blank" rel="noreferrer" data-cursor="TapeOut"><b className="lime">{live?.circuits || "#15 #16 #17 #18"}</b>{t("TapeOut circuits ↗", "TapeOut 电路 ↗")}</a></div>
         <div className="lp-cell lp-links">
-          <a href={`https://repo.sourcify.dev/196/${REGISTRY}`} target="_blank" rel="noreferrer" data-cursor="Source">Verified on Sourcify ↗</a>
-          <button onClick={() => { navigator.clipboard?.writeText("npx -y fusebox-mcp"); setCopied(true); setTimeout(() => setCopied(false), 1400); }} data-cursor="Copy">{copied ? "Copied" : "npx -y fusebox-mcp"}</button>
+          <a href={`https://repo.sourcify.dev/196/${REGISTRY}`} target="_blank" rel="noreferrer" data-cursor={t("Source", "源码")}>{t("Verified on Sourcify ↗", "已在 Sourcify 验证 ↗")}</a>
+          <button onClick={() => { navigator.clipboard?.writeText("npx -y fusebox-mcp"); setCopied(true); setTimeout(() => setCopied(false), 1400); }} data-cursor={t("Copy", "复制")}>{copied ? t("Copied", "已复制") : "npx -y fusebox-mcp"}</button>
         </div>
       </div>
     </section>

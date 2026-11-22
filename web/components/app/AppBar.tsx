@@ -12,9 +12,12 @@ import { useWallet } from "./WalletProvider";
 import { short } from "@/lib/hooks";
 import { useChrome } from "./m/chrome";
 import { MSheet } from "./m/ui";
+import { LangSwitch, useLang } from "@/lib/i18n";
 
 const TABS = [["/app", "Start", "Start"], ["/app/try", "Try to scam it", "Try"], ["/app/studio", "Build a rule", "Build"], ["/app/market", "Fuse market", "Market"]] as const;
+const TABS_ZH: Record<string, [string, string]> = { "/app": ["开始", "开始"], "/app/try": ["试着骗它", "试骗"], "/app/studio": ["设计规则", "设计"], "/app/market": ["保险丝市场", "市场"] };
 /** everything else, one click away without crowding the bar */
+const MORE_ZH: Record<string, string> = { "/app/mine": "我的钱包", "/app/new": "创建钱包", "/app/assistant": "聊天付款", "/app/approve": "审批", "/app/designers": "出售保险丝", "/app/simulate": "线路模拟器", "/app/rob": "打劫智能体", "/app/x402": "按次付费（x402）", "/app/status": "运行状态" };
 const MORE = [["/app/mine", "My wallets"], ["/app/new", "Wire up a wallet"], ["/app/assistant", "Pay by chatting"], ["/app/approve", "Approvals"], ["/app/designers", "Sell a fuse"], ["/app/simulate", "Line simulator"], ["/app/rob", "Rob the agent"], ["/app/x402", "Pay per call (x402)"], ["/app/status", "Status"]] as const;
 
 export default function AppBar() {
@@ -32,6 +35,7 @@ export default function AppBar() {
   const { account } = useWallet();
   const chrome = useChrome();
   const [info, setInfo] = useState(false);
+  const { t: tr, zh } = useLang();
   useEffect(() => { setInfo(false); }, [path]);
   // "More" closes on a click anywhere else or on Escape
   useEffect(() => {
@@ -47,18 +51,19 @@ export default function AppBar() {
       <Link className="logo" href="/" data-cursor="Home"><Logo />FUSEBOX</Link>
       <span className="m slash">/ app</span>
       <nav className="tabs-nav m" ref={nav} aria-label="App sections">
-        {TABS.map(([h, l, sh]) => <Link key={h} href={h} className={active(h) ? "on" : ""}><span className="lg">{l}</span><span className="sh">{sh}</span></Link>)}
+        {TABS.map(([h, l, sh]) => <Link key={h} href={h} className={active(h) ? "on" : ""}><span className="lg">{zh ? TABS_ZH[h][0] : l}</span><span className="sh">{zh ? TABS_ZH[h][1] : sh}</span></Link>)}
         <span className="ink" style={{ left: 0, width: 0 }} />
       </nav>
       <div className="right m">
         <details className="more-l" key={path}>
-          <summary className="docs-l">More</summary>
-          <div className="more-menu">{MORE.map(([h, t]) => <Link key={h} href={h}>{t}</Link>)}</div>
+          <summary className="docs-l">{tr("More", "更多")}</summary>
+          <div className="more-menu">{MORE.map(([h, t]) => <Link key={h} href={h}>{zh ? MORE_ZH[h] : t}</Link>)}</div>
         </details>
-        <Link className="docs-l" href="/docs">Docs ↗</Link>
-        <a className="badge tape" href="https://tapeout.net" target="_blank" rel="noreferrer" title="Every fuse is a circuit taped out on TapeOut">Built on TapeOut ↗</a>
-        {source && <span className={`badge ${source === "mainnet" ? "main" : "warn"}`}>{source === "mainnet" ? "X Layer mainnet" : source === "fork" ? "Mainnet fork · rehearsal" : "Rehearsal snapshot"}</span>}
-        <span className="mute blk"><span className="live" />Block {block ? <Digits value={block.toLocaleString("en-US")} /> : "—"}</span>
+        <LangSwitch className="docs-l" />
+        <Link className="docs-l" href="/docs">{tr("Docs ↗", "文档 ↗")}</Link>
+        <a className="badge tape" href="https://tapeout.net" target="_blank" rel="noreferrer" title={tr("Every fuse is a circuit taped out on TapeOut", "每个保险丝都是在 TapeOut 上流片的电路")}>{tr("Built on TapeOut ↗", "基于 TapeOut ↗")}</a>
+        {source && <span className={`badge ${source === "mainnet" ? "main" : "warn"}`}>{source === "mainnet" ? tr("X Layer mainnet", "X Layer 主网") : source === "fork" ? "Mainnet fork · rehearsal" : "Rehearsal snapshot"}</span>}
+        <span className="mute blk"><span className="live" />{tr("Block", "区块")} {block ? <Digits value={block.toLocaleString("en-US")} /> : "—"}</span>
       </div>
       <span className="pg">
         {chrome?.back && <Link className="pg-back" href={chrome.back} aria-label="Back">←</Link>}

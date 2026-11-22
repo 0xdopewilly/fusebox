@@ -8,7 +8,10 @@ import AccountCard from "./AccountCard";
 import { Glyph } from "./Pixel";
 import { short } from "@/lib/hooks";
 
+import { useLang } from "@/lib/i18n";
+
 export default function Connect() {
+  const { t: tr } = useLang();
   const { account, connecting, error } = useWallet();
   const [open, setOpen] = useState(false);
   const pop = useRef<HTMLDivElement>(null);
@@ -16,8 +19,8 @@ export default function Connect() {
   useEffect(() => { const f = (e: MouseEvent) => { if (!(e.target as HTMLElement).closest?.(".connect")) setOpen(false); }; document.addEventListener("click", f); return () => document.removeEventListener("click", f); }, []);
   return (
     <div className="connect m">
-      <button className={`btn ${account ? "" : "lime"} cbtn`} onClick={() => setOpen(!open)} data-cursor={account ? "Account" : "Connect"}>
-        {account ? <><span className="live" />{short(account)}</> : connecting ? "Connecting…" : "Connect"}
+      <button className={`btn ${account ? "" : "lime"} cbtn`} onClick={() => setOpen(!open)} data-cursor={account ? tr("Account", "账户") : tr("Connect", "连接")}>
+        {account ? <><span className="live" />{short(account)}</> : connecting ? tr("Connecting…", "连接中…") : tr("Connect", "连接钱包")}
       </button>
       {open && (
         <div className={`pop${account ? " acct" : ""}`} ref={pop}>

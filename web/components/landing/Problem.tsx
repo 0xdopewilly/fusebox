@@ -2,19 +2,21 @@
 import { useRef } from "react";
 import { gsap, SplitText, ScrollTrigger, useGSAP, reduced, whenNear } from "@/lib/gsap";
 import Reg from "./Reg";
-
-const TRICKS = [
-  "New bank details: pay us here from now on",
-  "One letter off: kano-cott0n",
-  "Invoice padded to 3× the usual",
-  "Urgent: the CEO needs this today",
-  "Same invoice, sent twice",
-  "Refund to a new address",
-];
-const ROWS = [0, 4, 2, 3].map((o) => [...TRICKS.slice(o), ...TRICKS.slice(0, o)]);
+import { useLang } from "@/lib/i18n";
 
 export default function Problem() {
   const root = useRef<HTMLElement>(null);
+  const { t } = useLang();
+  const TRICKS = [
+    t("New bank details: pay us here from now on", "收款账户已变更：以后请付到这里"),
+    t("One letter off: kano-cott0n", "差一个字母：kano-cott0n"),
+    t("Invoice padded to 3× the usual", "发票金额虚高到平时的 3 倍"),
+    t("Urgent: the CEO needs this today", "急：CEO 今天就要"),
+    t("Same invoice, sent twice", "同一张发票，发了两次"),
+    t("Refund to a new address", "退款到一个新地址"),
+  ];
+  const ROWS = [0, 4, 2, 3].map((o) => [...TRICKS.slice(o), ...TRICKS.slice(0, o)]);
+  const note = t("→ A fuse doesn't. It runs on X Layer, in the same call as the payment.", "→ 保险丝不会。它在 X Layer 上运行，和付款在同一次调用里。");
   useGSAP((_, contextSafe) => {
     // below the fold: set this section up only as it nears the viewport, so hydration stays light
     let undo: void | (() => void);
@@ -52,12 +54,12 @@ export default function Problem() {
   return (
     <section className="problem reg" ref={root} id="problem">
       <Reg />
-      <div className="wrap sh"><div className="m lime" data-scr>[02]</div><div className="m mute" data-scr>The problem</div><div className="m mute" style={{ gridColumn: "5 / 7" }} data-scr>Six tricks real invoice fraud uses</div></div>
+      <div className="wrap sh"><div className="m lime" data-scr>[02]</div><div className="m mute" data-scr>{t("The problem", "问题所在")}</div><div className="m mute" style={{ gridColumn: "5 / 7" }} data-scr>{t("Six tricks real invoice fraud uses", "真实发票诈骗常用的六种手法")}</div></div>
       <div className="ticks">
         {ROWS.slice(0, 2).map((r, i) => <Row key={i} items={r} dim={i === 1} />)}
       </div>
-      <h2 className="disp state">Your agent says<br />&ldquo;sure thing, boss&rdquo;<br />to every one of these.</h2>
-      <p className="state-note" data-text="→ A fuse doesn't. It runs on X Layer, in the same call as the payment.">→ A fuse doesn&apos;t. It runs on X Layer, in the same call as the payment.</p>
+      <h2 className="disp state">{t(<>Your agent says<br />&ldquo;sure thing, boss&rdquo;<br />to every one of these.</>, <>对这里的每一招，<br />你的智能体都会说<br />“好嘞，老板”。</>)}</h2>
+      <p className="state-note" data-text={note}>{note}</p>
       <div className="ticks">
         {ROWS.slice(2).map((r, i) => <Row key={i} items={r} dim={i === 0} />)}
       </div>
@@ -66,9 +68,10 @@ export default function Problem() {
 }
 
 function Row({ items, dim }: { items: string[]; dim?: boolean }) {
+  const { t } = useLang();
   const set = (k: string) => (
     <div className="set" key={k} aria-hidden={k === "b"}>
-      {items.map((t) => <span className="chip-t" key={t} data-cursor="Blocked">{t}<span className="no">Blocked</span></span>)}
+      {items.map((it) => <span className="chip-t" key={it} data-cursor={t("Blocked", "已拦截")}>{it}<span className="no">{t("Blocked", "已拦截")}</span></span>)}
     </div>
   );
   return <div className={`row${dim ? " dimrow" : ""}`}>{set("a")}{set("b")}</div>;

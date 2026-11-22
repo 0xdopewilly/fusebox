@@ -20,9 +20,9 @@
   --lime: #bbfe2f;
   --lime-ink: #0c1400;
   --red: #ff5232;
-  --display: "Fusebox Tug Display", var(--f-display), system-ui, sans-serif;
-  --sans: "Fusebox Tug Sans", var(--f-sans), system-ui, sans-serif;
-  --mono: "Fusebox Tug Mono", var(--f-mono), ui-monospace, monospace;
+  --display: "Fusebox Tug Display", var(--f-display), var(--f-cjk), system-ui, sans-serif;
+  --sans: "Fusebox Tug Sans", var(--f-sans), var(--f-cjk), system-ui, sans-serif;
+  --mono: "Fusebox Tug Mono", var(--f-mono), var(--f-cjk), ui-monospace, monospace;
   --pad: 32px;
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-io: cubic-bezier(0.76, 0, 0.24, 1);
@@ -113,8 +113,10 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .navlink:hover span + span { transform: translateY(0); }
 .top nav .btn { height: 36px; margin-left: 8px; }
 .top nav .btn { flex: none; }
-@media (max-width: 1400px) { .top nav { gap: 14px; } .top nav .navlink[href="#designers"] { display: none; } }
-@media (max-width: 1100px) { .top nav .navlink[href="#fuses"] { display: none; } }
+@media (max-width: 1400px) { .top nav { gap: 14px; } }
+@media (max-width: 1500px) { .top nav .navlink[href="#designers"] { display: none; } }
+@media (max-width: 1300px) { .top nav .navlink[href="#fuses"] { display: none; } }
+@media (max-width: 1220px) { .top nav .navlink[href="#tapeout"] { display: none; } }
 
 /* ---------- hero ---------- */
 .hero { height: max(1000px, 100svh); position: relative; overflow: hidden; border-bottom: 1px solid var(--hair); }
@@ -609,3 +611,39 @@ p a:not(.btn), li a:not(.btn), .docs-foot .mute a { text-decoration: underline; 
 .flood .studio-lead b { color: #050800; }
 .flood .studio-lead a { color: #050800; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; white-space: nowrap; }
 @media (max-width: 900px) { .flood .studio-lead { margin: 22px 0 8px; font-size: 16px; } }
+
+/* Chinese: the brand faces have no CJK glyphs, so Chinese falls back to the system's best sans, set a touch looser. */
+:lang(zh) { --cjk: var(--f-cjk), "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", "Source Han Sans SC", sans-serif; }
+:lang(zh) body { font-family: var(--sans), var(--cjk); }
+:lang(zh) .disp, :lang(zh) h1, :lang(zh) h2, :lang(zh) h3 { font-family: var(--display), var(--cjk); letter-spacing: 0; line-height: 1.12; }
+:lang(zh) .m { font-family: var(--mono), var(--cjk); letter-spacing: 0.04em; }
+.langsw { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; flex-shrink: 0; }
+.langsw button { background: none; border: 0; color: var(--mute, #8a8a85); font: inherit; letter-spacing: inherit; cursor: pointer; padding: 4px 2px; }
+.langsw button[aria-pressed="true"] { color: var(--ink, #f2f2ee); }
+.langsw button:hover { color: var(--lime, #bbfe2f); }
+.langsw span { color: var(--hair3, #3a3a37); }
+
+/* [07] Fuse Studio: need a circuit? (ink, four steps) */
+.studio-sec { position: relative; z-index: 4; background: var(--bg); border-top: 1px solid var(--hair2); }
+.studio-sec .sh { border-bottom: 1px solid var(--hair2); padding-bottom: 22px; }
+.studio-sec .body { display: grid; grid-template-columns: repeat(6, 1fr); padding-top: 72px; padding-bottom: 110px; }
+.studio-sec h2 { grid-column: 1 / 6; font-size: clamp(44px, 6vw, 96px); }
+.studio-sec .lead { grid-column: 1 / 4; margin-top: 30px; max-width: 48ch; font-size: 17px; line-height: 1.6; color: var(--soft); }
+.studio-sec .sp-cta { grid-column: 4 / 7; align-self: end; display: flex; gap: 14px; flex-wrap: wrap; padding-left: 14px; }
+.studio-sec .steps { grid-column: 1 / 7; display: grid; grid-template-columns: repeat(4, 1fr); margin-top: 72px; border-top: 1px solid var(--hair2); }
+.studio-sec .steps > div { padding: 26px 24px 0 0; }
+.studio-sec .steps > div + div { padding-left: 20px; border-left: 1px solid var(--hair); }
+.studio-sec .steps .n { color: var(--lime); }
+.studio-sec .steps b { display: block; font-family: var(--display); font-weight: 800; font-stretch: 104%; font-size: 30px; letter-spacing: -0.02em; line-height: 1.05; margin: 16px 0 10px; text-transform: uppercase; color: var(--ink); }
+.studio-sec .steps p { font-size: 14.5px; line-height: 1.55; color: var(--soft); }
+@media (max-width: 900px) {
+  .studio-sec .body { display: block; padding-top: 44px; padding-bottom: 72px; }
+  .studio-sec .lead { margin-top: 22px; font-size: 16px; }
+  .studio-sec .sp-cta { padding: 26px 0 0; }
+  .studio-sec .steps { grid-template-columns: 1fr 1fr; gap: 28px 0; margin-top: 44px; }
+  .studio-sec .steps > div:nth-child(3) { padding-left: 0; border-left: 0; }
+  .studio-sec .steps b { font-size: 24px; }
+}
+.navlang { margin: 0 6px 0 4px; }
+@media (max-width: 1100px) { .navlang { display: none; } }
+.top nav .navlink { flex-shrink: 0; white-space: nowrap; }

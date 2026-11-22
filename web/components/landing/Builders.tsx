@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import { gsap, ScrollTrigger, useGSAP, reduced, whenNear } from "@/lib/gsap";
 import Reg from "./Reg";
+import { useLang } from "@/lib/i18n";
 
 type Seg = [string, string?];
 const TABS: { id: string; lines: Seg[][]; out: [string, string][] }[] = [
@@ -53,6 +54,7 @@ export default function Builders() {
   const [tab, setTab] = useState(0);
   const typed = useRef<gsap.core.Timeline | null>(null);
   const seen = useRef(false);
+  const { t } = useLang();
 
   const type = (fast = false) => {
     const el = root.current!;
@@ -99,36 +101,36 @@ export default function Builders() {
     if (seen.current && !reduced()) type(true);
   }, { dependencies: [tab] });
 
-  const t = TABS[tab];
+  const cur = TABS[tab];
   return (
     <section className="dev reg" ref={root} id="build">
       <Reg />
-      <div className="wrap sh"><div className="m lime" data-scr>[08]</div><div className="m mute" data-scr>For agent builders</div></div>
+      <div className="wrap sh"><div className="m lime" data-scr>[09]</div><div className="m mute" data-scr>{t("For agent builders", "面向智能体开发者")}</div></div>
       <div className="wrap body">
         <div className="left">
-          <h2 className="disp">One call before <span className="lime">every</span> payment.</h2>
+          <h2 className="disp">{t(<>One call before <span className="lime">every</span> payment.</>, <><span className="lime">每一笔</span>付款前，只需一次调用。</>)}</h2>
           <ul>
-            <li>The agent&apos;s key can only move money through the fuses.</li>
-            <li>Dry-run any payment with check() and see which fuse would blow.</li>
-            <li>Freeze from the agent, an approver or you. Only you can reset.</li>
-            <li>Works with any agent that can sign an X Layer transaction.</li>
+            <li>{t("The agent's key can only move money through the fuses.", "智能体的密钥只能经由保险丝动用资金。")}</li>
+            <li>{t("Dry-run any payment with check() and see which fuse would blow.", "用 check() 预演任意一笔付款，看看哪个保险丝会熔断。")}</li>
+            <li>{t("Freeze from the agent, an approver or you. Only you can reset.", "智能体、审批人或你本人都能冻结。只有你能重置。")}</li>
+            <li>{t("Works with any agent that can sign an X Layer transaction.", "适用于任何能签署 X Layer 交易的智能体。")}</li>
           </ul>
         </div>
         <div className="code">
           <div className="tabs m">
-            {TABS.map((x, i) => <button key={x.id} className={i === tab ? "on" : ""} onClick={() => setTab(i)} data-cursor="Switch">{x.id}</button>)}
+            {TABS.map((x, i) => <button key={x.id} className={i === tab ? "on" : ""} onClick={() => setTab(i)} data-cursor={t("Switch", "切换")}>{x.id}</button>)}
             <span className="ink" />
           </div>
-          <pre key={t.id}>
-            {t.lines.map((segs, i) => (
+          <pre key={cur.id}>
+            {cur.lines.map((segs, i) => (
               <span className="ln" key={i}>
                 <span className="t">{segs.map(([txt, c], k) => <span key={k} className={c}>{txt}</span>)}</span>
                 <span className="caret" style={{ display: "none" }} />
               </span>
             ))}
           </pre>
-          <div className="out m" key={`o-${t.id}`}>
-            {t.out.map(([k, v]) => <div key={k + v}><span className="mute">{k}</span> <span dangerouslySetInnerHTML={{ __html: v }} /></div>)}
+          <div className="out m" key={`o-${cur.id}`}>
+            {cur.out.map(([k, v]) => <div key={k + v}><span className="mute">{k}</span> <span dangerouslySetInnerHTML={{ __html: v }} /></div>)}
           </div>
         </div>
       </div>

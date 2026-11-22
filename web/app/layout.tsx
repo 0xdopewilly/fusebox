@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, Geist, Geist_Mono } from "next/font/google";
+import { LangProvider } from "@/lib/i18n";
+import { Archivo, Geist, Geist_Mono, Noto_Sans_SC } from "next/font/google";
 import "lenis/dist/lenis.css";
 import "./globals.css";
 import SmoothScroll from "@/components/fx/SmoothScroll";
@@ -9,6 +10,8 @@ import Cursor from "@/components/fx/Cursor";
 const display = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--f-display", display: "swap" });
 const sans = Geist({ subsets: ["latin"], variable: "--f-sans", display: "swap" });
 const mono = Geist_Mono({ subsets: ["latin"], variable: "--f-mono", display: "swap" });
+// Chinese (the 中文 switch): Google slices it by character range, so English pages download none of it
+const cjk = Noto_Sans_SC({ weight: ["400", "500", "700", "900"], subsets: ["latin"], variable: "--f-cjk", display: "swap", preload: false });
 
 const DESC = "Built on TapeOut and X Layer: Fusebox wires an AI agent's wallet through small logic circuits taped out on TapeOut. A payment reaches the payee only if every fuse holds, and each fuse that checks it pays its designer.";
 export const metadata: Metadata = {
@@ -22,15 +25,17 @@ export const viewport: Viewport = { themeColor: "#000000", width: "device-width"
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning className={`${display.variable} ${sans.variable} ${mono.variable}`}>
+    <html lang="en" suppressHydrationWarning className={`${display.variable} ${sans.variable} ${mono.variable} ${cjk.variable}`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js');try{if(sessionStorage.getItem('fx-intro')||matchMedia('(max-width: 700px)').matches)document.documentElement.dataset.intro='skip'}catch(e){}" }} />
       </head>
       <body>
         <a className="skip" href="#main">Skip to content</a>
-        <SmoothScroll />
-        <Cursor />
-        {children}
+        <LangProvider>
+          <SmoothScroll />
+          <Cursor />
+          {children}
+        </LangProvider>
       </body>
     </html>
   );

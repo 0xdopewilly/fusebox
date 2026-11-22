@@ -2,38 +2,36 @@
 import { useRef } from "react";
 import { gsap, useGSAP, reduced, whenNear } from "@/lib/gsap";
 import Reg from "./Reg";
+import { useLang } from "@/lib/i18n";
 
 const Y = 70, X0 = 8, X1 = 872, FW = 126, NODE = 110;
 const GAP = (X1 - X0 - NODE * 2 - FW * 4) / 5;
 const XS = [0, 1, 2, 3].map((i) => X0 + NODE + GAP * (i + 1) + FW * i);
 const BREAK = XS[1] + FW / 2;
-const FUSES = [
-  { name: "Daily Cap", meta: "108 gates · 283k gas", end: "Held", fee: 0.001, bad: false },
-  { name: "Payee Guard", meta: "79 gates · 211k gas", end: "Blew", fee: 0.001, bad: true },
-  { name: "Breaker", meta: "11 gates · 50k gas", end: "Latched", fee: 0.0005, bad: true },
-  { name: "Two of Three", meta: "46 gates · 132k gas", end: "Held", fee: 0.002, bad: false },
-];
-const STEPS = [
-  ["The agent asks to pay", "Payee, amount and a one-line reason. That's all it gets to say."],
-  ["Each fuse checks it on X Layer", "Every fuse is a circuit of 11 to 108 logic gates, taped out on TapeOut. All of them run in the same call, and each answers yes or no."],
-  ["One no stops the payment", "The wallet records which fuse said no and why. A blown Breaker stays blown until you reset it."],
-  ["The designers are paid", "Each fuse that decided earns its fee in USD₮0, the no's included."],
+type T = ReturnType<typeof useLang>["t"];
+const fuses = (t: T) => [
+  { name: "Daily Cap", meta: t("108 gates · 283k gas", "108 个门 · 283k gas"), end: t("Held", "通过"), fee: 0.001, bad: false },
+  { name: "Payee Guard", meta: t("79 gates · 211k gas", "79 个门 · 211k gas"), end: t("Blew", "熔断"), fee: 0.001, bad: true },
+  { name: "Breaker", meta: t("11 gates · 50k gas", "11 个门 · 50k gas"), end: t("Latched", "锁定"), fee: 0.0005, bad: true },
+  { name: "Two of Three", meta: t("46 gates · 132k gas", "46 个门 · 132k gas"), end: t("Held", "通过"), fee: 0.002, bad: false },
 ];
 const zig = (x: number) => `M${x + 22} ${Y}h12l5-9 7 18 7-18 7 18 7-18 5 9h${FW - 44 - 12 - 43}`;
 
 function Wire() {
+  const { t } = useLang();
+  const FUSES = fuses(t);
   return (
-    <svg viewBox="0 0 880 170" aria-label="The payment line: agent, four fuses in series, payee">
+    <svg viewBox="0 0 880 170" aria-label={t("The payment line: agent, four fuses in series, payee", "付款线路：智能体、四个串联的保险丝、收款方")}>
       <line x1={X0 + NODE} y1={Y} x2={X1 - NODE} y2={Y} stroke="#2e2e2c" strokeWidth="2.5" strokeDasharray="6 5" className="dash" />
       <line x1={X0 + NODE} y1={Y} x2={BREAK - 9} y2={Y} stroke="#bbfe2f" strokeWidth="2.5" className="current" />
       <g>
         <rect x={X0} y={Y - 28} width={NODE} height="56" fill="#0b0b0b" stroke="rgba(255,255,255,.2)" />
         <text x={X0 + 12} y={Y - 5} fill="#f2f2ee" fontFamily="var(--f-display)" fontWeight="800" fontSize="15">ATLAS</text>
-        <text x={X0 + 12} y={Y + 14} fill="#8d8d89" fontFamily="var(--f-mono)" fontSize="10" letterSpacing=".6">AGENT KEY</text>
+        <text x={X0 + 12} y={Y + 14} fill="#8d8d89" fontFamily="var(--f-mono)" fontSize="10" letterSpacing=".6">{t("AGENT KEY", "智能体密钥")}</text>
         <rect x={X1 - NODE} y={Y - 28} width={NODE} height="56" fill="#0b0b0b" stroke="rgba(255,255,255,.2)" className="payee-box" />
-        <text x={X1 - NODE + 12} y={Y - 5} fill="#f2f2ee" fontFamily="var(--f-display)" fontWeight="800" fontSize="15">PAYEE</text>
+        <text x={X1 - NODE + 12} y={Y - 5} fill="#f2f2ee" fontFamily="var(--f-display)" fontWeight="800" fontSize="15">{t("PAYEE", "收款方")}</text>
         <text x={X1 - NODE + 12} y={Y + 14} fill="#8d8d89" fontFamily="var(--f-mono)" fontSize="10" letterSpacing=".6">0x9f3e…c41a</text>
-        <text x={X1 - NODE + 6} y={Y + 48} fill="#8d8d89" fontFamily="var(--f-mono)" fontSize="10" letterSpacing=".6" className="recv">0.000000 RECEIVED</text>
+        <text x={X1 - NODE + 6} y={Y + 48} fill="#8d8d89" fontFamily="var(--f-mono)" fontSize="10" letterSpacing=".6" className="recv">{t("0.000000 RECEIVED", "0.000000 已到账")}</text>
       </g>
       {FUSES.map((f, i) => {
         const x = XS[i], cx = x + FW / 2, c = f.bad ? "#ff5232" : "#bbfe2f";
@@ -55,13 +53,13 @@ function Wire() {
               </g>
             )}
             <text x={x} y={Y + 50} fill="#f2f2ee" fontFamily="var(--f-display)" fontWeight="800" fontSize="14">{f.name.toUpperCase()}</text>
-            <text x={x} y={Y + 68} fill="#80807c" fontFamily="var(--f-mono)" fontWeight="600" fontSize="10.5" letterSpacing=".8" className="st" data-end={f.end.toUpperCase()} data-c={c}>WAITING</text>
+            <text x={x} y={Y + 68} fill="#80807c" fontFamily="var(--f-mono)" fontWeight="600" fontSize="10.5" letterSpacing=".8" className="st" data-end={f.end.toUpperCase()} data-c={c}>{t("WAITING", "等待中")}</text>
             <text x={x} y={Y + 86} fill="#8d8d89" fontFamily="var(--f-mono)" fontSize="10" letterSpacing=".4">{f.meta.toUpperCase()}</text>
             <rect x={cx - 4} y={Y + 96} width="8" height="8" fill="#bbfe2f" className="packet" opacity="0" />
           </g>
         );
       })}
-      <text x={BREAK - 62} y={Y - 44} fill="#ff5232" fontFamily="var(--f-mono)" fontWeight="600" fontSize="10.5" letterSpacing=".8" className="why" opacity="0">✕ NOT A SAVED PAYEE</text>
+      <text x={BREAK - 62} y={Y - 44} fill="#ff5232" fontFamily="var(--f-mono)" fontWeight="600" fontSize="10.5" letterSpacing=".8" className="why" opacity="0">{t("✕ NOT A SAVED PAYEE", "✕ 不是已保存的收款方")}</text>
       <rect x={X0 + NODE - 5} y={Y - 5} width="10" height="10" fill="#fff" className="pulse" style={{ filter: "drop-shadow(0 0 6px #bbfe2f) drop-shadow(0 0 14px #bbfe2f)" }} />
     </svg>
   );
@@ -69,6 +67,14 @@ function Wire() {
 
 export default function How() {
   const root = useRef<HTMLElement>(null);
+  const { t } = useLang();
+  const FUSES = fuses(t);
+  const STEPS = [
+    [t("The agent asks to pay", "智能体发起付款"), t("Payee, amount and a one-line reason. That's all it gets to say.", "收款方、金额和一句理由。它能说的就这些。")],
+    [t("Each fuse checks it on X Layer", "每个保险丝在 X Layer 上检查"), t("Every fuse is a circuit of 11 to 108 logic gates, taped out on TapeOut. All of them run in the same call, and each answers yes or no.", "每个保险丝都是一个由 11 到 108 个逻辑门组成、在 TapeOut 上流片的电路。它们在同一次调用中全部运行，各自回答“是”或“否”。")],
+    [t("One no stops the payment", "一个“否”就拦下付款"), t("The wallet records which fuse said no and why. A blown Breaker stays blown until you reset it.", "钱包会记录是哪个保险丝说了“否”，以及原因。Breaker 一旦熔断，就会保持熔断，直到你重置。")],
+    [t("The designers are paid", "设计者获得报酬"), t("Each fuse that decided earns its fee in USD₮0, the no's included.", "每个做出决策的保险丝都以 USD₮0 赚取费用，说“否”的也算。")],
+  ];
   useGSAP((_, contextSafe) => {
     // below the fold: set this section up only as it nears the viewport, so hydration stays light
     let undo: void | (() => void);
@@ -87,8 +93,8 @@ export default function How() {
       };
       const st = (i: number) => q<SVGTextElement>(`.fz-${i} .st`);
       // fuse statuses are a pure function of the timeline's time, so scrubbing backwards undoes them
-      const WAIT = ["WAITING", "#80807c"], CHECK = ["CHECKING", "#f2f2ee"], HELD = ["HELD", "#bbfe2f"], BAD = (w: string) => [w, "#ff5232"];
-      const SCHEDULE: [number, number, string[]][] = [[1.05, 1.33, HELD], [1.35, 1.63, BAD("BLEW")], [1.35, 2.11, BAD("LATCHED")], [1.35, 1.88, HELD]];
+      const WAIT = [t("WAITING", "等待中"), "#80807c"], CHECK = [t("CHECKING", "检查中"), "#f2f2ee"], HELD = [t("HELD", "通过"), "#bbfe2f"], BAD = (w: string) => [w, "#ff5232"];
+      const SCHEDULE: [number, number, string[]][] = [[1.05, 1.33, HELD], [1.35, 1.63, BAD(t("BLEW", "熔断"))], [1.35, 2.11, BAD(t("LATCHED", "锁定"))], [1.35, 1.88, HELD]];
       const renderStatus = (t: number) => SCHEDULE.forEach(([a, b, end], i) => {
         const [txt, col] = t < a ? WAIT : t < b ? CHECK : end;
         if (st(i).textContent !== txt) { st(i).textContent = txt; st(i).setAttribute("fill", col); }
@@ -108,7 +114,7 @@ export default function How() {
       tl.addLabel("s1", 0)
         .to(amount, { duration: 0.45, scrambleText: { text: "2.500000 USD₮0", chars: "0123456789", speed: 0.4 } }, 0.05)
         .to(to, { duration: 0.4, scrambleText: { text: "0x9f3e…c41a", chars: "0123456789abcdef", speed: 0.4 } }, 0.25)
-        .to(memo, { duration: 0.5, text: { value: "“Urgent refund for a customer, per support ticket”" } }, 0.4)
+        .to(memo, { duration: 0.5, text: { value: t("“Urgent refund for a customer, per support ticket”", "“客服工单要求：紧急为客户退款”") } }, 0.4)
         .to(q(".pulse"), { autoAlpha: 1, duration: 0.1 }, 0.9);
       // 2 · current runs, fuses check
       tl.addLabel("s2", 1)
@@ -166,10 +172,10 @@ export default function How() {
   return (
     <section className="how reg" ref={root} id="how">
       <Reg />
-      <div className="wrap sh"><div className="m lime" data-scr>[03]</div><div className="m mute" data-scr>How it works</div></div>
+      <div className="wrap sh"><div className="m lime" data-scr>[03]</div><div className="m mute" data-scr>{t("How it works", "工作原理")}</div></div>
       <div className="wrap body">
         <div className="left">
-          <h2 className="disp">One no, and <span className="lime">nothing moves.</span></h2>
+          <h2 className="disp">{t(<>One no, and <span className="lime">nothing moves.</span></>, <>一票否决，<span className="lime">分文不动。</span></>)}</h2>
           <ol className="steps">
             {STEPS.map(([h, p], i) => (
               <li key={h}><span className="bar" /><span className="n">0{i + 1}</span><h3>{h}</h3><div className="p"><p>{p}</p></div></li>
@@ -178,17 +184,17 @@ export default function How() {
         </div>
         <div className="right">
           <div className="panel">
-            <div className="ph m"><span className="mute">Payment request · wallet Atlas</span><span className="mute">14:02:07 UTC</span></div>
+            <div className="ph m"><span className="mute">{t("Payment request · wallet Atlas", "付款请求 · 钱包 Atlas")}</span><span className="mute">14:02:07 UTC</span></div>
             <div className="req m mute">
-              <div>Pay<b data-f="amount">&nbsp;</b></div>
-              <div>To<b data-f="to">&nbsp;</b></div>
-              <div>Memo<div className="memo" data-f="memo" /></div>
+              <div>{t("Pay", "支付")}<b data-f="amount">&nbsp;</b></div>
+              <div>{t("To", "收款方")}<b data-f="to">&nbsp;</b></div>
+              <div>{t("Memo", "备注")}<div className="memo" data-f="memo" /></div>
             </div>
-            <div className="wireline" tabIndex={0} role="region" aria-label="The payment line, from the agent through four fuses to the payee"><Wire /></div>
+            <div className="wireline" tabIndex={0} role="region" aria-label={t("The payment line, from the agent through four fuses to the payee", "付款线路：从智能体出发，经过四个保险丝，到达收款方")}><Wire /></div>
             <div className="payouts m mute">
-              {FUSES.map((f) => <div key={f.name}>{f.name} designer<b>+0.000000</b></div>)}
+              {FUSES.map((f) => <div key={f.name}>{t(<>{f.name} designer</>, <>{f.name} 设计者</>)}<b>+0.000000</b></div>)}
             </div>
-            <div className="verdict m"><span className="v">Stopped at Payee Guard. Nothing moved.</span><span className="mute">4 checks · <span data-f="total">0.000000</span> USD₮0 to designers</span></div>
+            <div className="verdict m"><span className="v">{t("Stopped at Payee Guard. Nothing moved.", "在 Payee Guard 处被拦截，分文未动。")}</span><span className="mute">{t(<>4 checks · <span data-f="total">0.000000</span> USD₮0 to designers</>, <>4 次检查 · <span data-f="total">0.000000</span> USD₮0 付给设计者</>)}</span></div>
           </div>
         </div>
       </div>

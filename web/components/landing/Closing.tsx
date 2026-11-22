@@ -2,6 +2,7 @@
 import { useRef } from "react";
 import { gsap, SplitText, useGSAP, reduced, whenNear } from "@/lib/gsap";
 import Reg from "./Reg";
+import { useLang } from "@/lib/i18n";
 
 /** Falling truth-table bits; the ones near the pointer light up lime. */
 function startRain(canvas: HTMLCanvasElement, host: HTMLElement) {
@@ -48,6 +49,7 @@ function startRain(canvas: HTMLCanvasElement, host: HTMLElement) {
 
 export default function Closing() {
   const root = useRef<HTMLElement>(null);
+  const { t } = useLang();
   useGSAP((_, contextSafe) => {
     // below the fold: set this section up only as it nears the viewport, so hydration stays light
     let undo: void | (() => void);
@@ -75,22 +77,22 @@ export default function Closing() {
     <section className="cta reg" ref={root}>
       <Reg />
       <div className="wrap">
-        <div className="m" style={{ marginBottom: 34 }}><span className="lime" data-scr>[09]</span> <span className="mute" data-scr>Get started</span></div>
-        <h2 className="disp" aria-label="Wire it up"><span className="txt" aria-hidden="true">Wire it up</span><span className="dot" aria-hidden="true" /></h2>
+        <div className="m" style={{ marginBottom: 34 }}><span className="lime" data-scr>[10]</span> <span className="mute" data-scr>{t("Get started", "开始使用")}</span></div>
+        <h2 className="disp" aria-label={t("Wire it up", "立即接入")}><span className="txt" aria-hidden="true">{t("Wire it up", "立即接入")}</span><span className="dot" aria-hidden="true" /></h2>
         <div className="row2">
-          <p>Give your agent a wallet with fuses on X Layer, or tape out a fuse of your own and earn from every decision it makes.</p>
+          <p>{t("Give your agent a wallet with fuses on X Layer, or tape out a fuse of your own and earn from every decision it makes.", "在 X Layer 上给你的智能体配一个带保险丝的钱包，或者流片一个你自己的保险丝，从它做出的每次决策中赚取收入。")}</p>
           <div className="ctas">
-            <a className="btn lime" href="/app" data-cursor="Enter"><span className="roll"><span>Open the app</span><span aria-hidden="true">Open the app</span></span> <span className="k">→</span></a>
-            <a className="btn" href="/docs" data-cursor="Read"><span className="roll"><span>Read the docs</span><span aria-hidden="true">Read the docs</span></span></a>
+            <a className="btn lime" href="/app" data-cursor={t("Enter", "进入")}><span className="roll"><span>{t("Open the app", "打开应用")}</span><span aria-hidden="true">{t("Open the app", "打开应用")}</span></span> <span className="k">→</span></a>
+            <a className="btn" href="/docs" data-cursor={t("Read", "阅读")}><span className="roll"><span>{t("Read the docs", "阅读文档")}</span><span aria-hidden="true">{t("Read the docs", "阅读文档")}</span></span></a>
           </div>
         </div>
       </div>
       <canvas className="rain" aria-hidden="true" />
       <div className="foot m mute">
-        <div>Built on<a href="https://tapeout.net" target="_blank" rel="noreferrer">TapeOut ↗</a><a href="https://x.com/TapeOutWorld" target="_blank" rel="noreferrer">@TapeOutWorld ↗</a><a href="https://www.okx.com/xlayer" target="_blank" rel="noreferrer">X Layer ↗</a></div>
-        <div>Product<a href="/app">Open the app</a><a href="/app/market">Fuse market</a><a href="#designers">Designers</a><a href="https://youtu.be/vcopkuNdhkc" target="_blank" rel="noreferrer">Watch the demo ↗</a><a href="https://x.com/fuseboxhq" target="_blank" rel="noreferrer">@fuseboxhq ↗</a></div>
-        <div>Developers<a href="/docs">Docs</a><a href="https://github.com/0xdopewilly/fusebox" target="_blank" rel="noreferrer">GitHub</a><a href="/onchain">DeWEB edition</a><a href="/docs#contracts">Contracts</a><a href="/app/status">Status</a></div>
-        <div>Proof<a href="https://www.oklink.com/xlayer/address/0x0Db0457715a6445D8a65F820d717a6B39Be66800" target="_blank" rel="noreferrer">Atlas wallet ↗</a><a href="https://www.oklink.com/xlayer/address/0x2583928546a614A2fD993B5C106ED9aD0E781AB6" target="_blank" rel="noreferrer">Fuse registry ↗</a><a href="https://www.oklink.com/xlayer/address/0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355" target="_blank" rel="noreferrer">TapeOut circuits ↗</a></div>
+        <div>{t("Built on", "构建于")}<a href="https://tapeout.net" target="_blank" rel="noreferrer">TapeOut ↗</a><a href="https://x.com/TapeOutWorld" target="_blank" rel="noreferrer">@TapeOutWorld ↗</a><a href="https://www.okx.com/xlayer" target="_blank" rel="noreferrer">X Layer ↗</a></div>
+        <div>{t("Product", "产品")}<a href="/app">{t("Open the app", "打开应用")}</a><a href="/app/market">{t("Fuse market", "Fuse Market 保险丝市场")}</a><a href="#designers">{t("Designers", "设计者")}</a><a href="https://youtu.be/vcopkuNdhkc" target="_blank" rel="noreferrer">{t("Watch the demo ↗", "观看演示 ↗")}</a><a href="https://x.com/fuseboxhq" target="_blank" rel="noreferrer">@fuseboxhq ↗</a></div>
+        <div>{t("Developers", "开发者")}<a href="/docs">{t("Docs", "文档")}</a><a href="https://github.com/0xdopewilly/fusebox" target="_blank" rel="noreferrer">GitHub</a><a href="/onchain">{t("DeWEB edition", "DeWEB 版")}</a><a href="/docs#contracts">{t("Contracts", "合约")}</a><a href="/app/status">{t("Status", "状态")}</a></div>
+        <div>{t("Proof", "链上证明")}<a href="https://www.oklink.com/xlayer/address/0x0Db0457715a6445D8a65F820d717a6B39Be66800" target="_blank" rel="noreferrer">{t("Atlas wallet ↗", "Atlas 钱包 ↗")}</a><a href="https://www.oklink.com/xlayer/address/0x2583928546a614A2fD993B5C106ED9aD0E781AB6" target="_blank" rel="noreferrer">{t("Fuse registry ↗", "保险丝注册表 ↗")}</a><a href="https://www.oklink.com/xlayer/address/0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355" target="_blank" rel="noreferrer">{t("TapeOut circuits ↗", "TapeOut 电路 ↗")}</a></div>
       </div>
       <div className="bigword" aria-hidden="true">Fusebox</div>
       <div className="word-hot" aria-hidden="true">Fusebox</div>

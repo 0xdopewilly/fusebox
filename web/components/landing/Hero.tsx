@@ -2,16 +2,17 @@
 import { useRef } from "react";
 import { gsap, SplitText, ScrollTrigger, useGSAP, introDone, reduced } from "@/lib/gsap";
 import type { FuseScene } from "./FuseScene";
-
-const TAGS = [
-  { id: "fil", title: "Filament", sub: "a TapeOut NAND circuit", dx: -40, dy: -128 },
-  { id: "cap", title: "End cap", sub: "X Layer · chain 196", dx: -120, dy: 118 },
-  { id: "blow", title: "Blows on", sub: "a stranger payee", dx: 70, dy: 150 },
-];
+import { useLang } from "@/lib/i18n";
 
 export default function Hero() {
   const root = useRef<HTMLElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
+  const { t } = useLang();
+  const TAGS = [
+    { id: "fil", title: t("Filament", "熔丝"), sub: t("a TapeOut NAND circuit", "一个 TapeOut NAND 电路"), dx: -40, dy: -128 },
+    { id: "cap", title: t("End cap", "端帽"), sub: t("X Layer · chain 196", "X Layer · 链 196"), dx: -120, dy: 118 },
+    { id: "blow", title: t("Blows on", "熔断条件"), sub: t("a stranger payee", "陌生收款方"), dx: 70, dy: 150 },
+  ];
 
   useGSAP(() => {
     const el = root.current!;
@@ -82,7 +83,7 @@ export default function Hero() {
       reveal.v = 1.01;
     } else if (narrow) {
       tl.from(document.querySelectorAll(".grid i"), { scaleY: 0, duration: 1.4, stagger: 0.06, ease: "wire" }, 0)
-        .from(el.querySelector(".eyebrow"), { scrambleText: { text: "[01] Guardrails that run on X Layer, not on trust", chars: "01", speed: 0.5 }, duration: 1.2 }, 0.1)
+        .from(el.querySelector(".eyebrow"), { scrambleText: { text: t("[01] Guardrails that run on X Layer, not on trust", "[01] 护栏跑在 X Layer 上，而不是靠信任"), chars: "01", speed: 0.5 }, duration: 1.2 }, 0.1)
         .from(h1, { y: 18, duration: 0.9, ease: "snap" }, 0.1)
         .to(h1.querySelector(".lime"), { opacity: 0.25, duration: 0.05, repeat: 5, yoyo: true, ease: "none" }, 0.6)
         .from(el.querySelector(".sub p"), { y: 14, duration: 0.9 }, 0.25)
@@ -101,7 +102,7 @@ export default function Hero() {
       const circuits = Array.from(h1.querySelectorAll(".lime .char"));
       const brackets = circuits.filter((c) => c.textContent === "[" || c.textContent === "]");
       tl.from(document.querySelectorAll(".grid i"), { scaleY: 0, duration: 1.4, stagger: 0.06, ease: "wire" }, 0)
-        .from(el.querySelector(".eyebrow"), { scrambleText: { text: "[01] Guardrails that run on X Layer, not on trust", chars: "01", speed: 0.5 }, duration: 1.2 }, 0.1)
+        .from(el.querySelector(".eyebrow"), { scrambleText: { text: t("[01] Guardrails that run on X Layer, not on trust", "[01] 护栏跑在 X Layer 上，而不是靠信任"), chars: "01", speed: 0.5 }, duration: 1.2 }, 0.1)
         .from(lines.chars, { yPercent: 115, duration: 1.1, stagger: 0.016, ease: "snap" }, 0.15)
         .from(brackets[0], { x: -70, duration: 0.9, ease: "back.out(2.2)" }, 0.6)
         .from(brackets[1], { x: 70, duration: 0.9, ease: "back.out(2.2)" }, 0.6)
@@ -145,30 +146,35 @@ export default function Hero() {
   return (
     <section className="hero" ref={root} id="top">
       <div className="wrap copy" data-in>
-        <div className="m eyebrow"><span className="lime">[01]</span> Built on <a className="lime" href="https://tapeout.net" target="_blank" rel="noreferrer">TapeOut</a> · live on X Layer</div>
-        <h1 className="disp">Your agent pays.<br /><span className="lime">[Circuits]</span> decide.</h1>
+        <div className="m eyebrow"><span className="lime">[01]</span> {t("Built on", "基于")} <a className="lime" href="https://tapeout.net" target="_blank" rel="noreferrer">TapeOut</a>{t(" · live on X Layer", " 构建 · 已在 X Layer 上线")}</div>
+        <h1 className="disp">{t(<>Your agent pays.<br /><span className="lime">[Circuits]</span> decide.</>, <>你的智能体付款。<br /><span className="lime">[电路]</span> 说了算。</>)}</h1>
         <div className="sub">
-          <p>Fusebox wires an AI agent&apos;s wallet through small logic circuits taped out on TapeOut. Every payment runs them on X Layer in the same transaction: it reaches the payee only if every fuse holds, and each fuse that checks it pays its designer.</p>
+          {/* zh has no spaces at all: SplitText splits words on spaces into inline-blocks, and a long CJK run between two
+              spaces would push the lines apart (so "on X Layer" reads 链上 here; the eyebrow above names X Layer) */}
+          <p>{t(
+            "Fusebox wires an AI agent's wallet through small logic circuits taped out on TapeOut. Every payment runs them on X Layer in the same transaction: it reaches the payee only if every fuse holds, and each fuse that checks it pays its designer.",
+            "Fusebox把AI智能体的钱包接入一组在TapeOut上流片的小型逻辑电路。每笔付款都在同一笔链上交易里运行这些电路：只有每个保险丝都通过，钱才会到达收款方；每个检查它的保险丝都会向自己的设计者付费。",
+          )}</p>
         </div>
         <div className="ctas">
-          <a className="btn lime" href="/app/new" data-cursor="Enter"><span className="roll"><span>Wire up a wallet</span><span aria-hidden="true">Wire up a wallet</span></span> <span className="k">→</span></a>
-          <a className="btn line" href="/app/studio" data-cursor="Build"><span className="roll"><span>Build a rule, no code</span><span aria-hidden="true">Build a rule, no code</span></span> <span className="k">→</span></a>
+          <a className="btn lime" href="/app/new" data-cursor={t("Enter", "进入")}><span className="roll"><span>{t("Wire up a wallet", "搭建一个钱包")}</span><span aria-hidden="true">{t("Wire up a wallet", "搭建一个钱包")}</span></span> <span className="k">→</span></a>
+          <a className="btn line" href="/app/studio" data-cursor={t("Build", "搭建")}><span className="roll"><span>{t("Build a rule, no code", "零代码搭建规则")}</span><span aria-hidden="true">{t("Build a rule, no code", "零代码搭建规则")}</span></span> <span className="k">→</span></a>
         </div>
-        <div className="lockup m"><span className="mute">Built on</span><a href="https://tapeout.net" target="_blank" rel="noreferrer"><i aria-hidden="true" />TapeOut</a><span className="x" aria-hidden="true">×</span><a href="https://www.okx.com/xlayer" target="_blank" rel="noreferrer"><i aria-hidden="true" />X Layer</a></div>
+        <div className="lockup m"><span className="mute">{t("Built on", "基于")}</span><a href="https://tapeout.net" target="_blank" rel="noreferrer"><i aria-hidden="true" />TapeOut</a><span className="x" aria-hidden="true">×</span><a href="https://www.okx.com/xlayer" target="_blank" rel="noreferrer"><i aria-hidden="true" />X Layer</a></div>
       </div>
       <div className="fusewrap">
-        <canvas className="fuse" ref={canvas} data-cursor="Blow it" aria-label="A 3D glass fuse. Click it to blow it." />
+        <canvas className="fuse" ref={canvas} data-cursor={t("Blow it", "熔断它")} aria-label={t("A 3D glass fuse. Click it to blow it.", "一个 3D 玻璃保险丝。点击它，让它熔断。")} />
         <svg className="leaders" aria-hidden="true" />
-        {TAGS.map((t) => (
-          <div className="tag" data-tag={t.id} key={t.id}><div className="box">{t.title}<em>{t.sub}</em></div></div>
+        {TAGS.map((tg) => (
+          <div className="tag" data-tag={tg.id} key={tg.id}><div className="box">{tg.title}<em>{tg.sub}</em></div></div>
         ))}
       </div>
-      <div className="hint m">Click the fuse to blow it</div>
+      <div className="hint m">{t("Click the fuse to blow it", "点击保险丝，让它熔断")}</div>
       <div className="facts m mute" data-in>
-        <div><b data-v="5">5</b>TapeOut circuits on one line</div>
-        <div><b data-v="246">246</b>logic gates, taped out on TapeOut</div>
-        <div><b data-v="1">1</b>call per payment</div>
-        <div><b data-v="0.005" data-dec="3">0.005</b>USD₮0 per fully checked payment</div>
+        <div><b data-v="5">5</b>{t("TapeOut circuits on one line", "个 TapeOut 电路，串在一条线路上")}</div>
+        <div><b data-v="246">246</b>{t("logic gates, taped out on TapeOut", "个逻辑门，在 TapeOut 上流片")}</div>
+        <div><b data-v="1">1</b>{t("call per payment", "次调用完成一笔付款")}</div>
+        <div><b data-v="0.005" data-dec="3">0.005</b>{t("USD₮0 per fully checked payment", "USD₮0，一笔付款完整检查的费用")}</div>
       </div>
       <div className="bigword" aria-hidden="true">Fusebox</div>
       <div className="flash" />

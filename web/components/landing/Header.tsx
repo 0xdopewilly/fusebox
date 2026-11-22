@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { gsap, useGSAP, introDone } from "@/lib/gsap";
 import Digits from "@/components/fx/Digits";
 import SiteMenu from "./SiteMenu";
+import { LangSwitch, useLang } from "@/lib/i18n";
 
 function useBlock() {
   const [block, setBlock] = useState<number | null>(null);
@@ -42,6 +43,7 @@ export default function Header() {
   const block = useBlock();
   const [menu, setMenu] = useState(false);
   const closeMenu = useCallback(() => setMenu(false), []);
+  const { t } = useLang();
 
   useGSAP(() => {
     const el = ref.current!;
@@ -69,17 +71,18 @@ export default function Header() {
   return (
     <header className="wrap cols top" ref={ref}>
       <a className="logo" href="#" data-h data-cursor="Top"><Logo />FUSEBOX<sup>®</sup></a>
-      <div className="tcol m mute" data-h><span className="scr">Circuit fuses</span><br /><span className="scr">for AI agent wallets</span></div>
-      <div className="tcol m mute" data-h><span className="scr">X Layer · chain 196</span><br /><span className="scr">Taped out on TapeOut</span></div>
-      <div className="tcol m mute" data-h><span className="live" />Block {block ? <Digits value={b} /> : <span style={{ color: "#f2f2ee" }}>{b}</span>}<br />X Layer mainnet · live</div>
-      <nav className="m" style={{ gridColumn: "5 / 7" }} data-h aria-label="Site">
-        <NavLink href="#how" label="How" />
+      <div className="tcol m mute" data-h><span className="scr">{t("Circuit fuses", "电路保险丝")}</span><br /><span className="scr">{t("for AI agent wallets", "守护 AI 智能体钱包")}</span></div>
+      <div className="tcol m mute" data-h><span className="scr">{t("X Layer · chain 196", "X Layer · 链 196")}</span><br /><span className="scr">{t("Taped out on TapeOut", "在 TapeOut 上流片")}</span></div>
+      <div className="tcol m mute" data-h><span className="live" />{t("Block", "区块")} {block ? <Digits value={b} /> : <span style={{ color: "#f2f2ee" }}>{b}</span>}<br />{t("X Layer mainnet · live", "X Layer 主网 · 运行中")}</div>
+      <nav className="m" style={{ gridColumn: "5 / 7" }} data-h aria-label={t("Site", "网站")}>
+        <NavLink href="#how" label={t("How", "原理")} />
         <NavLink href="#tapeout" label="TapeOut" />
-        <NavLink href="#fuses" label="Fuses" />
-        <NavLink href="#designers" label="Designers" />
-        <NavLink href="/docs" label="Docs" />
-        <a className="btn lime" href="/app" data-cursor="Enter"><span className="roll"><span>Open app</span><span aria-hidden="true">Open app</span></span> <span className="k">↗</span></a>
-        <button className="menu-btn m" onClick={() => setMenu(true)} aria-label="Open the menu" aria-expanded={menu}><span>Menu</span><i /><i /></button>
+        <NavLink href="#fuses" label={t("Fuses", "保险丝")} />
+        <NavLink href="#designers" label={t("Designers", "设计者")} />
+        <NavLink href="/docs" label={t("Docs", "文档")} />
+        <LangSwitch className="navlang" />
+        <a className="btn lime" href="/app" data-cursor="Enter"><span className="roll"><span>{t("Open app", "打开应用")}</span><span aria-hidden="true">{t("Open app", "打开应用")}</span></span> <span className="k">↗</span></a>
+        <button className="menu-btn m" onClick={() => setMenu(true)} aria-label={t("Open the menu", "打开菜单")} aria-expanded={menu}><span>{t("Menu", "菜单")}</span><i /><i /></button>
       </nav>
       <SiteMenu open={menu} onClose={closeMenu} />
     </header>

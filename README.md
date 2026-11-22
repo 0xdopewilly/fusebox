@@ -1,5 +1,7 @@
 # Fusebox
 
+**English** · [中文](README.zh.md)
+
 **Your agent pays. Circuits decide.**
 
 Fusebox wires an AI agent's wallet through small logic circuits taped out on [TapeOut](https://tapeout.net) on X Layer. A payment reaches the payee only if every fuse on the line holds, and every fuse that checks a payment pays its designer, the no's included.

@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useLang } from "@/lib/i18n";
 import { gsap, useGSAP, reduced } from "@/lib/gsap";
 
 export type WireStatus = "idle" | "checking" | "pass" | "blew" | "latched";
@@ -8,6 +9,7 @@ export interface WireFuse { name: string; meta: string }
 const LABEL: Record<WireStatus, [string, string]> = {
   idle: ["WAITING", "#80807c"], checking: ["CHECKING", "#f2f2ee"], pass: ["HOLDS", "#bbfe2f"], blew: ["BLEW", "#ff5232"], latched: ["BLOWN", "#ff5232"],
 };
+const LABEL_ZH: Record<WireStatus, string> = { idle: "等待中", checking: "检查中", pass: "放行", blew: "熔断", latched: "已熔断" };
 const FW = 126; // cartridge length along the wire
 
 /** Geometry for one orientation: where each fuse sits along the wire axis, and how the SVG is framed. */
@@ -65,6 +67,7 @@ export default function LineWire({
 }) {
   const ref = useRef<SVGSVGElement>(null);
   const narrow = useNarrow(), n = Math.max(1, fuses.length);
+  const { zh } = useLang();
   const g = narrow ? V(n) : H(n);
   const [shown, setShown] = useState<WireStatus[]>(live ?? fuses.map(() => "idle"));
   const [current, setCurrent] = useState<number>(-1); // position along the wire where current stops; -1 = none
@@ -109,25 +112,26 @@ export default function LineWire({
       {g.vertical ? (
         <>
           <rect x="8" y="8" width="344" height="56" fill="#0b0b0b" stroke="rgba(255,255,255,.2)" />
-          <text x="20" y="31" fill="#f2f2ee" fontFamily="var(--f-display)" fontWeight="800" fontSize="15">ATLAS</text>
-          <text x="20" y="50" fill="#8d8d89" fontFamily="var(--f-mono)" fontSize="10" letterSpacing=".6">AGENT KEY</text>
+          <text x="20" y="31" fill="#f2f2ee" fontFamily="var(--display)" fontWeight="800" fontSize="15">ATLAS</text>
+          <text x="20" y="50" fill="#8d8d89" fontFamily="var(--mono)" fontSize="10" letterSpacing=".6">{zh ? "智能体密钥" : "AGENT KEY"}</text>
           <rect x="8" y={g.end} width="344" height="56" fill="#0b0b0b" stroke={payeeLit ? "#bbfe2f" : "rgba(255,255,255,.2)"} />
-          <text x="20" y={g.end + 23} fill="#f2f2ee" fontFamily="var(--f-display)" fontWeight="800" fontSize="15">{payee}</text>
-          <text x="20" y={g.end + 42} fill="#8d8d89" fontFamily="var(--f-mono)" fontSize="10" letterSpacing=".6">{payeeSub}</text>
+          <text x="20" y={g.end + 23} fill="#f2f2ee" fontFamily="var(--display)" fontWeight="800" fontSize="15">{payee}</text>
+          <text x="20" y={g.end + 42} fill="#8d8d89" fontFamily="var(--mono)" fontSize="10" letterSpacing=".6">{payeeSub}</text>
         </>
       ) : (
         <>
           <rect x="8" y={C - 28} width="110" height="56" fill="#0b0b0b" stroke="rgba(255,255,255,.2)" />
-          <text x="20" y={C - 5} fill="#f2f2ee" fontFamily="var(--f-display)" fontWeight="800" fontSize="15">ATLAS</text>
-          <text x="20" y={C + 14} fill="#8d8d89" fontFamily="var(--f-mono)" fontSize="10" letterSpacing=".6">AGENT KEY</text>
+          <text x="20" y={C - 5} fill="#f2f2ee" fontFamily="var(--display)" fontWeight="800" fontSize="15">ATLAS</text>
+          <text x="20" y={C + 14} fill="#8d8d89" fontFamily="var(--mono)" fontSize="10" letterSpacing=".6">{zh ? "智能体密钥" : "AGENT KEY"}</text>
           <rect x={g.end} y={C - 28} width="110" height="56" fill="#0b0b0b" stroke={payeeLit ? "#bbfe2f" : "rgba(255,255,255,.2)"} />
-          <text x={g.end + 12} y={C - 5} fill="#f2f2ee" fontFamily="var(--f-display)" fontWeight="800" fontSize="15">{payee}</text>
-          <text x={g.end + 12} y={C + 14} fill="#8d8d89" fontFamily="var(--f-mono)" fontSize="10" letterSpacing=".6">{payeeSub}</text>
+          <text x={g.end + 12} y={C - 5} fill="#f2f2ee" fontFamily="var(--display)" fontWeight="800" fontSize="15">{payee}</text>
+          <text x={g.end + 12} y={C + 14} fill="#8d8d89" fontFamily="var(--mono)" fontSize="10" letterSpacing=".6">{payeeSub}</text>
         </>
       )}
       {fuses.map((f, i) => {
         const p = g.pos[i], st = shown[i] ?? "idle";
-        const [lab, col] = LABEL[st];
+        const [labEn, col] = LABEL[st];
+        const lab = zh ? LABEL_ZH[st] : labEn;
         const tx = g.vertical ? 104 : p, ty = g.vertical ? p + FW / 2 - 14 : C + 50;
         return (
           <g key={i} className={`fz-${i}${onSelect ? " fz-hit" : ""}${selected === i ? " sel" : ""}`} onClick={() => onSelect?.(i)} data-cursor={onSelect ? "Inspect" : undefined}>
@@ -135,9 +139,9 @@ export default function LineWire({
             {g.vertical
               ? <g transform={`rotate(90 ${C} ${p + FW / 2})`}><Cartridge x={C - FW / 2} y={p + FW / 2} st={st} cx={C} /></g>
               : <Cartridge x={p} y={C} st={st} cx={p + FW / 2} />}
-            <text x={tx} y={ty} fill="#f2f2ee" fontFamily="var(--f-display)" fontWeight="800" fontSize="14">{f.name.toUpperCase()}</text>
-            <text x={tx} y={ty + 18} fill={col} fontFamily="var(--f-mono)" fontWeight="600" fontSize="10.5" letterSpacing=".8">{lab}</text>
-            {f.meta && <text x={tx} y={ty + 36} fill="#8d8d89" fontFamily="var(--f-mono)" fontSize="10" letterSpacing=".4">{f.meta.toUpperCase()}</text>}
+            <text x={tx} y={ty} fill="#f2f2ee" fontFamily="var(--display)" fontWeight="800" fontSize="14">{f.name.toUpperCase()}</text>
+            <text x={tx} y={ty + 18} fill={col} fontFamily="var(--mono)" fontWeight="600" fontSize="10.5" letterSpacing=".8">{lab}</text>
+            {f.meta && <text x={tx} y={ty + 36} fill="#8d8d89" fontFamily="var(--mono)" fontSize="10" letterSpacing=".4">{f.meta.toUpperCase()}</text>}
           </g>
         );
       })}

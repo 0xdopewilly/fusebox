@@ -1,6 +1,7 @@
 "use client";
 import { useRef } from "react";
 import { gsap, useGSAP, reduced } from "@/lib/gsap";
+import { useLang } from "@/lib/i18n";
 
 /**
  * Once per session: a lime wire draws across the black screen, the gate count runs up,
@@ -8,6 +9,7 @@ import { gsap, useGSAP, reduced } from "@/lib/gsap";
  */
 export default function Intro() {
   const ref = useRef<HTMLDivElement>(null);
+  const { t } = useLang();
   useGSAP(() => {
     const root = ref.current!;
     const html = document.documentElement;
@@ -43,7 +45,7 @@ export default function Intro() {
       <div className="glyph">
         <svg width="72" height="34" viewBox="0 0 30 14"><rect x=".5" y="1.5" width="6" height="11" fill="#f2f2ee" /><rect x="23.5" y="1.5" width="6" height="11" fill="#f2f2ee" /><rect x="6.5" y="3.5" width="17" height="7" fill="#000" stroke="#f2f2ee" /><path d="M6.5 7h4.5l1.6-2.6 2 5.2 1.6-2.6h7.3" fill="none" stroke="#bbfe2f" strokeWidth="1.4" /></svg>
       </div>
-      <div className="count m"><b style={{ color: "#f2f2ee", fontWeight: 500 }}>000</b> gates · taping out</div>
+      <div className="count m"><b style={{ color: "#f2f2ee", fontWeight: 500 }}>000</b>{t(" gates · taping out", " 个门 · 流片中")}</div>
     </div>
   );
 }
