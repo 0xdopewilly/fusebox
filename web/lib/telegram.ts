@@ -173,3 +173,32 @@ export const sweepState = {
   get: () => getJson<{ block: number }>("tg/sweep.json"),
   set: (block: number) => putJson("tg/sweep.json", { block, at: Date.now() }),
 };
+
+// ---- new wallets ---------------------------------------------------------------------------------------
+// tg/new/<chat>.json: chats that asked (/newwallets) to hear about every Fusebox wallet as it's created. A wallet's
+// creation is public on X Layer; this is how a builder meets a tester the moment they show up.
+
+export async function watchNew(chat: number): Promise<boolean> {
+  if (await getJson(`tg/new/${chat}.json`)) { await remove(`tg/new/${chat}.json`); return false; }
+  await putJson(`tg/new/${chat}.json`, { chat, at: Date.now() });
+  return true;
+}
+async function newWatchers(): Promise<number[]> {
+  return (await listKeys("tg/new/")).map((k) => Number(k.split("/").pop()!.replace(/\.json$/, ""))).filter(Number.isFinite);
+}
+
+/** Tell every /newwallets chat about a wallet a Fusebox factory just made, once. */
+export async function announceNewWallet(w: { wallet: Address; owner: Address; tx: Hash; version: string }): Promise<number> {
+  if (!TG_READY) return 0;
+  const chats = await newWatchers();
+  if (!chats.length) return 0;
+  if (!(await putOnce(`tg/newsent/${lc(w.wallet)}.json`, { tx: w.tx, at: Date.now() }))) return 0;
+  const team = lc(w.owner) === lc(DEPLOYMENT.owner);
+  const text = [
+    `🆕 <b>New Fusebox wallet</b> (${w.version})`,
+    `<code>${short(w.wallet)}</code>, owned by <code>${short(w.owner)}</code>`,
+    team ? `A Fusebox team wallet.` : `<b>A new owner.</b> Say hi: they just wired an agent through the fuses.`,
+  ].join("\n");
+  const out = await Promise.all(chats.map((c) => say(c, text, [[{ text: "Open the wallet", url: `${APP}/app/w/${w.wallet}` }, { text: "Transaction", url: `${OKLINK}/tx/${w.tx}` }]])));
+  return out.filter(Boolean).length;
+}

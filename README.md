@@ -4,6 +4,21 @@
 
 Fusebox wires an AI agent's wallet through small logic circuits taped out on [TapeOut](https://tapeout.net) on X Layer. A payment reaches the payee only if every fuse on the line holds, and every fuse that checks a payment pays its designer, the no's included.
 
+## For judges (X Layer TapeOut Accelerate)
+
+| | |
+|---|---|
+| **Live app** | https://fusebox-xlayer.vercel.app/app · try it with no wallet: [/app/try](https://fusebox-xlayer.vercel.app/app/try) |
+| **On DeWEB** | https://15-2-272.tapekit.org/ (`15.2.272.tape`, stored in circuit #15's container, served by TapeKit) |
+| **TapeOut processor** | `0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355` (OrderGuard, X Layer chain 196) |
+| **Circuit IDs** | 15, 16, 17, 18, 21 (fuses 1–5) · 22, 23, 24, 25 (rival fuses 6–9) |
+| **TapeOut features used** | Circuits: every payment calls the processor's `eval`/`step` on X Layer, in the same transaction. **DeWEB + TapeKit**: the on-chain edition. **TapeSend**: every stopped payment is posted to the wallet's inbox from circuit #15. |
+| **Business** | [docs/BUSINESS.md](docs/BUSINESS.md): who it's for, how we reach them, how it earns (90% of every check fee to the circuit's designer), why they keep paying |
+| **Usage, live** | [/app/status](https://fusebox-xlayer.vercel.app/app/status) (Usage on mainnet): wallets, payments checked, circuit evaluations, fees paid to designers, on-chain alerts |
+| **Assurance** | Contracts verified on Sourcify; invariant suite, mutation tests and a complete Payee Guard proof in [docs/ASSURANCE.md](docs/ASSURANCE.md) |
+| **Built during the event** | First commit 2026-11-13; all of Fusebox is event work |
+| **Follow** | [@fuseboxhq](https://x.com/fuseboxhq) |
+
 - **Live site:** https://fusebox-xlayer.vercel.app
 - **Live app:** https://fusebox-xlayer.vercel.app/app (Atlas, a real agent wallet on X Layer mainnet)
 - **On X:** [@fuseboxhq](https://x.com/fuseboxhq)

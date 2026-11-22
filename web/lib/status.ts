@@ -1,6 +1,8 @@
 import "server-only";
+import { formatUnits, parseAbi, type Address } from "viem";
 import { client, DEPLOYMENT, RPCS, VERSIONS } from "./chain";
-import { fuseRegistryAbi } from "./abi";
+import { fuseboxWalletAbi, fuseRegistryAbi } from "./abi";
+import { HERALD, tsState } from "./tapesend";
 import { getAtlas } from "./atlas";
 import { agentMode } from "./robAgent";
 import { DEMO_APIS, gate } from "./x402";
@@ -31,10 +33,36 @@ async function rpcHead(url: string): Promise<number> {
   return parseInt(j.result, 16);
 }
 
+/** Real use on mainnet, all read from X Layer: wallets (and how many have an owner other than the Fusebox deployer),
+ *  payments checked, TapeOut circuit evaluations, fees paid to designers, and stops posted over TapeSend. */
+async function usage() {
+  const st = await tsState.get().catch(() => null);
+  const wallets = [...new Set([DEPLOYMENT.atlas, ...((index as { wallets?: string[] }).wallets ?? []), ...(st?.wallets ?? [])].map((w) => w.toLowerCase()))] as Address[];
+  const [owners, counts] = await Promise.all([
+    Promise.all(wallets.map((w) => client.readContract({ address: w, abi: fuseboxWalletAbi, functionName: "owner" }) as Promise<Address>)),
+    Promise.all(wallets.map((w) => client.readContract({ address: w, abi: fuseboxWalletAbi, functionName: "decisionCount" }) as Promise<bigint>)),
+  ]);
+  let earned = 0n, evals = 0n;
+  for (const v of VERSIONS) {
+    const n = Number(await client.readContract({ address: v.registry, abi: fuseRegistryAbi, functionName: "fuseCount" }));
+    const ids = Array.from({ length: n }, (_, i) => BigInt(i + 1));
+    const [e, d] = await Promise.all([
+      Promise.all(ids.map((id) => client.readContract({ address: v.registry, abi: fuseRegistryAbi, functionName: "lifetimeEarned", args: [id] }) as Promise<bigint>)),
+      Promise.all(ids.map((id) => client.readContract({ address: v.registry, abi: fuseRegistryAbi, functionName: "decisions", args: [id] }) as Promise<bigint>)),
+    ]);
+    earned += e.reduce((a, b) => a + b, 0n); evals += d.reduce((a, b) => a + BigInt(b), 0n);
+  }
+  const posts = HERALD ? Number(await client.readContract({ address: HERALD.hub, abi: parseAbi(["function outboxCount(address) view returns (uint256)"]), functionName: "outboxCount", args: [HERALD.container] })) : 0;
+  return {
+    wallets: wallets.length, outside: owners.filter((o) => o.toLowerCase() !== DEPLOYMENT.owner.toLowerCase()).length,
+    payments: counts.reduce((a, b) => a + BigInt(b), 0n), evals, earned: formatUnits(earned, 6), posts,
+  };
+}
+
 let cached: Status | null = null;
 export async function getStatus(origin: string): Promise<Status> {
   if (cached && Date.now() - cached.at < 30_000) return cached;
-  const [rpcs, atlas, trusted, offer, subs, near] = await Promise.all([
+  const [rpcs, atlas, trusted, offer, subs, near, use] = await Promise.all([
     Promise.all(RPCS.map((u) => timed(() => rpcHead(u), 6000).then((r) => ({ u, ...r })))),
     timed(() => getAtlas(), 20_000),
     // both registries (v1 runs Atlas, v2 the new wallets) must still trust TapeOut's processor
@@ -46,6 +74,7 @@ export async function getStatus(origin: string): Promise<Status> {
       const r = await fetch(`${process.env.NEARAI_BASE_URL || "https://cloud-api.near.ai/v1"}/models`, { headers: { authorization: `Bearer ${process.env.NEARAI_API_KEY}` }, cache: "no-store" });
       return r.status;
     }),
+    timed(() => usage(), 15_000),
   ]);
 
   const checks: Check[] = [];
@@ -91,7 +120,19 @@ export async function getStatus(origin: string): Promise<Status> {
     value: !bot ? "not configured" : bot[0] ? `@${bot[0].username} · ${bot[1]?.length ?? "?"} wallet${bot[1]?.length === 1 ? "" : "s"} followed` : "bot unreachable",
     detail: "A Telegram message for every payment a followed wallet's agent tries: announced at once after app, SDK and MCP payments, swept every 10 minutes." });
 
+  // real use: informational, so these rows never change the banner
+  const u = use.v;
+  const usageRows: Check[] = [
+    { key: "use-wallets", group: "Usage on mainnet", name: "Fusebox wallets", level: "ok", value: u ? `${u.wallets} · ${u.outside} outside` : "unknown",
+      detail: u ? `Every wallet the two factories made, read from X Layer; "outside" means an owner other than the Fusebox deployer.` : `couldn't read: ${use.e}` },
+    { key: "use-payments", group: "Usage on mainnet", name: "Payments checked", level: "ok", value: u ? `${u.payments}` : "unknown",
+      detail: u ? `${u.evals} TapeOut circuit evaluations in total: every fuse on a wallet's line checks every payment, paid or stopped.` : "" },
+    { key: "use-designers", group: "Usage on mainnet", name: "Paid to circuit designers", level: "ok", value: u ? `${Number(u.earned).toFixed(4)} USD₮0` : "unknown",
+      detail: "Lifetime check fees the registries owe or paid to fuse designers (90% of every fee), across all fuses." },
+    { key: "use-tapesend", group: "Usage on mainnet", name: "On-chain alerts", level: "ok", value: u ? `${u.posts} posted` : "unknown",
+      detail: "Stopped payments posted to wallets' TapeSend inboxes by circuit #15's container (FuseboxHerald)." },
+  ];
   const level: Level = checks.some((c) => c.level === "down") ? "down" : checks.some((c) => c.level === "warn") ? "warn" : "ok";
-  cached = { at: Date.now(), level, checks };
+  cached = { at: Date.now(), level, checks: [...checks, ...usageRows] };
   return cached;
 }

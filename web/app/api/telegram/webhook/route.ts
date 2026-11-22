@@ -1,6 +1,6 @@
 import { getAddress, isAddress, parseUnits, type Address } from "viem";
 import { getWallet, isFuseboxWallet, STATUS } from "@/lib/atlas";
-import { APP, follow, following, messageFor, say, TG_READY, TG_SECRET, unfollow, type Decision } from "@/lib/telegram";
+import { APP, follow, following, messageFor, say, TG_READY, TG_SECRET, unfollow, watchNew, type Decision } from "@/lib/telegram";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
@@ -13,6 +13,7 @@ const HELP = [
   "<b>Follow a wallet:</b> open it on fusebox-xlayer.vercel.app and tap <i>Alerts on Telegram</i>, or send its address here.",
   "/list: the wallets you follow",
   "/stop: stop all alerts (or <code>/stop 0x…</code> for one wallet)",
+  "/newwallets: a message whenever anyone creates a Fusebox wallet (send it again to stop)",
 ].join("\n");
 
 /** Telegram calls this for every message to @FuseboxAlertsBot (the secret header proves it's Telegram). */
@@ -45,6 +46,10 @@ async function handle(chat: number, text: string) {
     const ws = await following(chat);
     for (const w of ws) await unfollow(chat, w);
     return say(chat, ws.length ? `Stopped alerts for ${ws.length} wallet${ws.length === 1 ? "" : "s"}. Send an address any time to start again.` : "You weren't following any wallet.");
+  }
+  if (cmd === "/newwallets") {
+    const on = await watchNew(chat);
+    return say(chat, on ? "🆕 You'll get a message here whenever anyone creates a Fusebox wallet on X Layer, within about 10 minutes. Send /newwallets again to stop." : "Stopped new-wallet messages. Send /newwallets to start again.");
   }
   if (isAddress(text, { strict: false })) return followWallet(chat, text);
   return say(chat, HELP);
