@@ -647,3 +647,4 @@ p a:not(.btn), li a:not(.btn), .docs-foot .mute a { text-decoration: underline; 
 .navlang { margin: 0 6px 0 4px; }
 @media (max-width: 1100px) { .navlang { display: none; } }
 .top nav .navlink { flex-shrink: 0; white-space: nowrap; }
+@media (max-width: 420px) { .sitebar .sitelang { display: none; } }

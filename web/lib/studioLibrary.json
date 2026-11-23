@@ -3,6 +3,8 @@
   "id": "daily-budget",
   "name": "Daily budget",
   "when": "An agent with a daily allowance. Once today's spending reaches the cap, it waits for tomorrow.",
+  "nameZh": "每日预算",
+  "whenZh": "给有每日额度的智能体。今天的支出达到上限后，就等到明天。",
   "fuse": 1,
   "rule": {
    "socket": 1,
@@ -21,6 +23,8 @@
   "id": "budget-ceiling",
   "name": "Budget with a ceiling",
   "when": "A daily budget, and no single payment above 100 USD₮0 even if someone raises the cap.",
+  "nameZh": "带封顶的预算",
+  "whenZh": "每日预算；即使有人调高限额，单笔付款也不超过 100 USD₮0。",
   "rule": {
    "socket": 1,
    "groups": [
@@ -49,6 +53,8 @@
   "id": "no-big-tickets",
   "name": "Spread it out",
   "when": "One payment can't eat more than half of the day's budget, so a single bad call can't empty it.",
+  "nameZh": "分散支出",
+  "whenZh": "单笔付款不能超过当天预算的一半，一次错误决定掏不空它。",
   "rule": {
    "socket": 1,
    "groups": [
@@ -77,6 +83,8 @@
   "id": "payee-book-trial",
   "name": "Payee book with a trial",
   "when": "Saved payees only. A payee saved today can get a small test payment, not the full invoice.",
+  "nameZh": "带试付的收款簿",
+  "whenZh": "只付给已保存的收款方。今天刚保存的收款方只能收到一小笔试付，而不是整张发票。",
   "fuse": 2,
   "rule": {
    "socket": 2,
@@ -116,6 +124,8 @@
   "id": "strict-payees",
   "name": "Strict payee book",
   "when": "Nothing goes to a payee until its cooling-off is over. No test payments.",
+  "nameZh": "严格收款簿",
+  "whenZh": "冷静期结束前，不向收款方付任何款。不允许试付。",
   "rule": {
    "socket": 2,
    "groups": [
@@ -144,6 +154,8 @@
   "id": "small-new-big-old",
   "name": "Trust grows with time",
   "when": "Small payments to any saved payee; anything over 10 USD₮0 only to payees saved at least a week ago.",
+  "nameZh": "信任随时间增长",
+  "whenZh": "小额付款可付给任何已保存的收款方；超过 10 USD₮0 的只付给至少一周前保存的收款方。",
   "rule": {
    "socket": 2,
    "groups": [
@@ -182,6 +194,8 @@
   "id": "zero-tolerance",
   "name": "Zero tolerance",
   "when": "The first payment to a stranger blows the breaker. Everything stops until you reset it.",
+  "nameZh": "零容忍",
+  "whenZh": "第一笔付给陌生地址的付款就让 Breaker 熔断。在你重置之前，一切付款都停止。",
   "fuse": 3,
   "rule": {
    "socket": 3,
@@ -193,6 +207,8 @@
   "id": "one-typo",
   "name": "One mistake allowed",
   "when": "A first payment to a stranger is refused and counted. A second one blows the breaker.",
+  "nameZh": "允许一次失误",
+  "whenZh": "第一笔付给陌生地址的付款被拒绝并计数。第二笔会让 Breaker 熔断。",
   "rule": {
    "socket": 3,
    "groups": [],
@@ -203,6 +219,8 @@
   "id": "two-of-three",
   "name": "Two of three sign big ones",
   "when": "Payments up to the threshold go through; above it, two of three approvers sign that exact payment.",
+  "nameZh": "大额三签二",
+  "whenZh": "阈值以内的付款直接通过；超过阈值，需要三位审批人中的两位为这笔付款本身签名。",
   "fuse": 4,
   "rule": {
    "socket": 4,
@@ -238,6 +256,8 @@
   "id": "lead-approver",
   "name": "Lead approver",
   "when": "Above the threshold, the lead approver (seat 1) and one other must sign.",
+  "nameZh": "主审批人",
+  "whenZh": "超过阈值时，必须由主审批人（席位 1）和另一位审批人签名。",
   "rule": {
    "socket": 4,
    "groups": [
@@ -276,6 +296,8 @@
   "id": "approvals-ceiling",
   "name": "Approvals with a ceiling",
   "when": "Two of three sign above the threshold, and nothing over 200 USD₮0 goes out, signed or not.",
+  "nameZh": "带封顶的审批",
+  "whenZh": "超过阈值需三签二；超过 200 USD₮0 的付款一律不付，无论是否签名。",
   "rule": {
    "socket": 4,
    "groups": [
@@ -314,6 +336,8 @@
   "id": "no-double-pay",
   "name": "No double payments",
   "when": "The same payment (payee and amount) twice inside the window is stopped, unless you clear it once.",
+  "nameZh": "不重复付款",
+  "whenZh": "窗口期内同一笔付款（同一收款方、同一金额）第二次会被拦截，除非你放行一次。",
   "fuse": 5,
   "rule": {
    "socket": 5,
@@ -343,6 +367,8 @@
   "id": "never-repeat",
   "name": "Never twice",
   "when": "A repeat inside the window is always stopped. No override, not even by you.",
+  "nameZh": "绝不付两次",
+  "whenZh": "窗口期内的重复付款一律拦截。不可放行，你自己也不行。",
   "rule": {
    "socket": 5,
    "groups": [

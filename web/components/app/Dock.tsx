@@ -8,10 +8,13 @@ import { useWallet } from "./WalletProvider";
 import ConnectChoices from "./ConnectChoices";
 import AccountCard from "./AccountCard";
 import { Glyph, type GlyphName } from "./Pixel";
+import { useLang } from "@/lib/i18n";
+import { errZh } from "@/lib/errZh";
 
 /** Phones only: a fuse strip in the thumb zone. Each section is a cartridge whose filament lights when you're on it;
  *  the fifth key opens the panel (wallet, every other page, network). Desktop keeps the top bar. */
 const TABS = [["/app", "Start"], ["/app/try", "Try"], ["/app/studio", "Build"], ["/app/market", "Market"]] as const;
+const TABS_ZH: Record<string, string> = { "/app": "开始", "/app/try": "试一试", "/app/studio": "设计", "/app/market": "市场" };
 const GO: readonly [string, string, GlyphName][] = [
   ["/app/assistant", "Assistant", "rob"],
   ["/app/mine", "My wallets", "mine"],
@@ -22,7 +25,12 @@ const GO: readonly [string, string, GlyphName][] = [
   ["/app/rob", "Rob the agent", "rob"],
   ["/app/x402", "Pay per call", "x402"],
 ];
+const GO_ZH: Record<string, string> = {
+  "/app/assistant": "助手", "/app/mine": "我的钱包", "/app/new": "搭建一个钱包", "/app/approve": "审批",
+  "/app/designers": "出售保险丝", "/app/simulate": "线路模拟器", "/app/rob": "打劫智能体", "/app/x402": "按次付费",
+};
 const MORE = [["/app/status", "Status"], ["/docs", "Docs"], ["/onchain", "DeWEB edition"], ["/", "Fusebox home"]] as const;
+const MORE_ZH: Record<string, string> = { "/app/status": "状态", "/docs": "文档", "/onchain": "DeWEB 版", "/": "Fusebox 首页" };
 
 export const openPanel = () => window.dispatchEvent(new Event("fusebox:panel"));
 
@@ -40,6 +48,7 @@ function Cartridge({ on }: { on: boolean }) {
 export default function Dock() {
   const path = usePathname() || "/app";
   const { account, connecting, error } = useWallet();
+  const { t, zh } = useLang();
   const block = useBlock();
   const [open, setOpen] = useState(false);
   const sheet = useRef<HTMLDivElement>(null);
@@ -83,44 +92,44 @@ export default function Dock() {
 
   return (
     <>
-      <nav className="dock m" aria-label="App sections">
+      <nav className="dock m" aria-label={t("App sections", "应用分区")}>
         {TABS.map(([h, label]) => (
           <Link key={h} href={h} className={`dk${active(h) ? " on" : ""}`} aria-current={active(h) ? "page" : undefined}>
-            <Cartridge on={active(h)} /><span>{label}</span>
+            <Cartridge on={active(h)} /><span>{zh ? TABS_ZH[h] ?? label : label}</span>
           </Link>
         ))}
-        <button className={`dk more${open ? " on" : ""}`} onClick={() => (open ? close() : setOpen(true))} aria-expanded={open} aria-label="Open the panel">
+        <button className={`dk more${open ? " on" : ""}`} onClick={() => (open ? close() : setOpen(true))} aria-expanded={open} aria-label={t("Open the panel", "打开面板")}>
           <svg width="34" height="16" viewBox="0 0 34 16" aria-hidden="true" className="cart"><rect x="10.5" y="1.5" width="13" height="13" className="glass" /><path d="M13 5.5h8M13 8h8M13 10.5h5" className="fil on" /></svg>
-          <span>{account ? short(account).slice(0, 6) : "Panel"}</span>
+          <span>{account ? short(account).slice(0, 6) : t("Panel", "面板")}</span>
           {account && <i className="dot-on" />}
         </button>
       </nav>
 
       {open && (
         <div className="pl-shade" ref={shade} onClick={close}>
-          <div className="pl-sheet" ref={sheet} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Fusebox panel">
+          <div className="pl-sheet" ref={sheet} onClick={(e) => e.stopPropagation()} role="dialog" aria-label={t("Fusebox panel", "Fusebox 面板")}>
             <div className="pl-grab" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}><i /></div>
             {account ? <AccountCard /> : (
               <>
-                <div className="pl-head m"><span className="lime">Fusebox panel</span><span className="mute"><span className="live" />Block {block ? block.toLocaleString("en-US") : "…"} · chain 196</span></div>
+                <div className="pl-head m"><span className="lime">{t("Fusebox panel", "Fusebox 面板")}</span><span className="mute"><span className="live" />{t(<>Block {block ? block.toLocaleString("en-US") : "…"} · chain 196</>, <>区块 {block ? block.toLocaleString("en-US") : "…"} · 链 196</>)}</span></div>
                 <div className="pl-acct">
-                  <div className="who"><span className="m mute">{connecting ? "Connecting…" : "Connect a wallet"}</span><b>To own wallets, approve and sell fuses</b></div>
+                  <div className="who"><span className="m mute">{connecting ? t("Connecting…", "连接中…") : t("Connect a wallet", "连接钱包")}</span><b>{t("To own wallets, approve and sell fuses", "用来拥有钱包、审批付款和出售保险丝")}</b></div>
                   <div className="wl"><ConnectChoices variant="sheet" cta="" /></div>
                 </div>
               </>
             )}
-            {error && <p className="m pl-err" role="alert">{error}</p>}
-            <div className="pl-lbl m"><span>Go to</span><span>{String(GO.length).padStart(2, "0")}</span></div>
-            <nav className="pl-grid" aria-label="Fusebox pages">
-              {GO.map(([h, t, g]) => (
+            {error && <p className="m pl-err" role="alert">{zh ? errZh(error) : error}</p>}
+            <div className="pl-lbl m"><span>{t("Go to", "前往")}</span><span>{String(GO.length).padStart(2, "0")}</span></div>
+            <nav className="pl-grid" aria-label={t("Fusebox pages", "Fusebox 页面")}>
+              {GO.map(([h, label, g]) => (
                 <Link key={h} href={h} className={`pl-tile${path.startsWith(h) ? " on" : ""}`} aria-current={path.startsWith(h) ? "page" : undefined} onClick={close}>
-                  <Glyph name={g} size={18} /><b>{t}</b>
+                  <Glyph name={g} size={18} /><b>{zh ? GO_ZH[h] ?? label : label}</b>
                   {h === "/app/mine" && counts.wallets != null && <span className="cnt m">{counts.wallets}</span>}
-                  {h === "/app/approve" && !!counts.waiting && <span className="cnt m lime">{counts.waiting} waiting</span>}
+                  {h === "/app/approve" && !!counts.waiting && <span className="cnt m lime">{t(`${counts.waiting} waiting`, `${counts.waiting} 待处理`)}</span>}
                 </Link>
               ))}
             </nav>
-            <div className="pl-more m">{MORE.map(([h, t]) => <Link key={h} href={h} onClick={close}>{t}</Link>)}</div>
+            <div className="pl-more m">{MORE.map(([h, label]) => <Link key={h} href={h} onClick={close}>{zh ? MORE_ZH[h] ?? label : label}</Link>)}</div>
           </div>
         </div>
       )}

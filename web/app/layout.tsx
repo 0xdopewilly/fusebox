@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { LangProvider } from "@/lib/i18n";
+import { LangProvider, T } from "@/lib/i18n";
 import { Archivo, Geist, Geist_Mono, Noto_Sans_SC } from "next/font/google";
 import "lenis/dist/lenis.css";
 import "./globals.css";
@@ -30,8 +30,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script dangerouslySetInnerHTML={{ __html: "document.documentElement.classList.add('js');try{if(sessionStorage.getItem('fx-intro')||matchMedia('(max-width: 700px)').matches)document.documentElement.dataset.intro='skip'}catch(e){}" }} />
       </head>
       <body>
-        <a className="skip" href="#main">Skip to content</a>
         <LangProvider>
+          <a className="skip" href="#main"><T en="Skip to content" zh="跳到正文" /></a>
           <SmoothScroll />
           <Cursor />
           {children}

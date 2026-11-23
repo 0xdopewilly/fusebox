@@ -15,6 +15,9 @@ export interface Template {
   name: string;
   /** who reaches for it, in plain words */
   when: string;
+  /** 简体中文 for the card (display only; the listing name and the rule stay as above) */
+  nameZh?: string;
+  whenZh?: string;
   /** the live v2 fuse with exactly this circuit, if there is one */
   fuse?: number;
   rule: Rule;

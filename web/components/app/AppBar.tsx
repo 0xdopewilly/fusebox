@@ -46,11 +46,13 @@ export default function AppBar() {
   // phones show the page's name in the bar; the sections live in the dock at the bottom
   const title = path === "/app" ? "Fusebox" : path?.startsWith("/app/w/") ? "Wallet" : path?.startsWith("/app/try") ? "Try to scam it" : path?.startsWith("/app/market") ? "Fuse market" : path?.startsWith("/app/fuse/") ? "Fuse" : path?.startsWith("/app/simulate") ? "Line simulator" : path?.startsWith("/app/rob") ? "Rob the agent" : path?.startsWith("/app/x402") ? "Pay per call" : path?.startsWith("/app/status") ? "Status" : path?.startsWith("/app/studio") ? "Fuse Studio"
     : path?.startsWith("/app/designers") ? "Sell a fuse" : path?.startsWith("/app/approve") ? "Approvals" : path?.startsWith("/app/new") ? "Wire up a wallet" : path?.startsWith("/app/mine") ? "My wallets" : "App";
+  const TITLE_ZH: Record<string, string> = { Wallet: "钱包", "Try to scam it": "试着骗它", "Fuse market": "保险丝市场", Fuse: "保险丝", "Line simulator": "线路模拟器", "Rob the agent": "打劫智能体", "Pay per call": "按次付费", "Sell a fuse": "出售保险丝", Approvals: "审批", "Wire up a wallet": "搭建钱包", "My wallets": "我的钱包", App: "应用", Status: "运行状态", Assistant: "助手", "Fuse Studio": "Fuse Studio", "Your first payment": "第一笔付款" };
+  const pageTitle = zh ? TITLE_ZH[title] ?? title : title;
   return (
     <header className={`appbar${chrome?.back ? " has-back" : ""}`}>
       <Link className="logo" href="/" data-cursor="Home"><Logo />FUSEBOX</Link>
       <span className="m slash">/ app</span>
-      <nav className="tabs-nav m" ref={nav} aria-label="App sections">
+      <nav className="tabs-nav m" ref={nav} aria-label={tr("App sections", "应用分区")}>
         {TABS.map(([h, l, sh]) => <Link key={h} href={h} className={active(h) ? "on" : ""}><span className="lg">{zh ? TABS_ZH[h][0] : l}</span><span className="sh">{zh ? TABS_ZH[h][1] : sh}</span></Link>)}
         <span className="ink" style={{ left: 0, width: 0 }} />
       </nav>
@@ -67,11 +69,11 @@ export default function AppBar() {
       </div>
       <span className="pg">
         {chrome?.back && <Link className="pg-back" href={chrome.back} aria-label="Back">←</Link>}
-        <span className="pg-tt">{chrome ? <h1 className="pg-t disp">{chrome.title ?? title}</h1> : <span className="pg-t disp">{title}</span>}{chrome?.sub && <span className="pg-sub m">{chrome.sub}</span>}</span>
+        <span className="pg-tt">{chrome ? <h1 className="pg-t disp">{chrome.title ?? pageTitle}</h1> : <span className="pg-t disp">{pageTitle}</span>}{chrome?.sub && <span className="pg-sub m">{chrome.sub}</span>}</span>
       </span>
-      {chrome?.info && <button className="pg-i" onClick={() => setInfo(true)} aria-label="About this screen">i</button>}
-      {chrome?.info && <MSheet open={info} onClose={() => setInfo(false)} title={chrome.title ?? title}><div className="ms-info">{chrome.info}</div></MSheet>}
-      <button className={`chip-acct m${account ? " on" : ""}`} onClick={openPanel} aria-label={account ? "Account and pages" : "Connect a wallet"}>{account ? <><span className="live" />{short(account)}</> : "Connect"}</button>
+      {chrome?.info && <button className="pg-i" onClick={() => setInfo(true)} aria-label={tr("About this screen", "关于此页面")}>i</button>}
+      {chrome?.info && <MSheet open={info} onClose={() => setInfo(false)} title={chrome.title ?? pageTitle}><div className="ms-info">{chrome.info}</div></MSheet>}
+      <button className={`chip-acct m${account ? " on" : ""}`} onClick={openPanel} aria-label={account ? tr("Account and pages", "账户与页面") : tr("Connect a wallet", "连接钱包")}>{account ? <><span className="live" />{short(account)}</> : tr("Connect", "连接")}</button>
       <Connect />
     </header>
   );

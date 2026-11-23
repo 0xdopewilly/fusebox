@@ -5,6 +5,8 @@ import { fuseboxWalletAbi } from "@/lib/abi";
 import { pub } from "@/lib/client-chain";
 import { short } from "@/lib/hooks";
 import { txError } from "@/lib/txError";
+import { errZh } from "@/lib/errZh";
+import { useLang } from "@/lib/i18n";
 import { useWallet } from "./WalletProvider";
 
 /** Wallets this browser set up (Wire up keeps a list), to look for a handover still waiting. */
@@ -22,6 +24,7 @@ const setUpHere = (): Address[] => {
  */
 export default function AcceptOwnership({ wallet, onDone, style }: { wallet?: string; onDone?: () => void; style?: CSSProperties }) {
   const { account, write } = useWallet();
+  const { t, zh } = useLang();
   const [waiting, setWaiting] = useState<Address[]>([]);
   const [busy, setBusy] = useState<Address | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -50,13 +53,13 @@ export default function AcceptOwnership({ wallet, onDone, style }: { wallet?: st
       {waiting.map((w) => (
         <div key={w} className="handover-row">
           <div>
-            <div className="m lime">Waiting for you</div>
-            <p>Wallet <span className="m">{short(w)}</span> is being handed to you. It becomes yours, and only yours, once you accept it.</p>
+            <div className="m lime">{t("Waiting for you", "等你接受")}</div>
+            <p>{t(<>Wallet <span className="m">{short(w)}</span> is being handed to you. It becomes yours, and only yours, once you accept it.</>, <>钱包 <span className="m">{short(w)}</span> 正在移交给你。你接受之后，它就归你一人所有。</>)}</p>
           </div>
-          <button className="btn lime" disabled={!!busy} onClick={() => accept(w)}>{busy === w ? "Accepting…" : "Make it yours"} <span className="k">→</span></button>
+          <button className="btn lime" disabled={!!busy} onClick={() => accept(w)}>{busy === w ? t("Accepting…", "接受中…") : t("Make it yours", "接受钱包")} <span className="k">→</span></button>
         </div>
       ))}
-      {err && <p className="m red" style={{ marginTop: 8 }}>{err}</p>}
+      {err && <p className="m red" style={{ marginTop: 8 }}>{zh ? errZh(err) : err}</p>}
     </div>
   );
 }

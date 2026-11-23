@@ -77,23 +77,31 @@ export function readRules(text: string): Proposal {
   const thrM = t.match(new RegExp(String.raw`[\s\S]*(?:over|above|more than|bigger than|larger than|exceeding)\s*${num}[^.]{0,60}?(?:approv|sign|me and|both of us|two of|2 of|partner|co-?sign|my ok|my okay)`)) ?? t.match(new RegExp(String.raw`(?:approv|sign)[^.]{0,60}(?:over|above|more than)\s*${num}`));
   const coolM = t.match(/(\d+)\s*(hours?|days?)[^.]{0,40}(?:new|cool|wait)/) ?? t.match(/(?:new|cool|wait)[^.]{0,40}?(\d+)\s*(hours?|days?)/);
   const trialM = t.match(new RegExp(String.raw`(?:test|trial|small first)\s*(?:payment|amount)?\s*(?:of|up to)?\s*${num}`));
-  const anyone = /(refund|customers?|anyone|new people|strangers are fine|many different)/.test(t);
-  const known = /(supplier|vendor|known|saved|regular|same people|only pay|approved list|our contractors?|payroll)/.test(t);
-  const cap = capM ? Math.min(254, Math.max(1, Math.ceil(money(capM[1])))) : anyone ? 100 : 50;
+  // the same, written in Chinese
+  const zh = /[\u4e00-\u9fff]/.test(text);
+  const zn = String.raw`\$?\s*(\d[\d,]*(?:\.\d+)?)\s*(?:美元|美金|刀|块|usd[t₮]?0?|usdc)?`;
+  const capZ = zh ? (t.match(new RegExp(String.raw`(?:每天|每日|一天)(?:的)?(?:限额|上限|预算|最多)?[^\d。，,]{0,10}?${zn}`)) ?? t.match(new RegExp(String.raw`${zn}\s*(?:每天|每日|一天)`))) : null;
+  const thrZ = zh ? t.match(new RegExp(String.raw`[\s\S]*(?:超过|高于|大于|多于)\s*${zn}[^。]{0,30}?(?:批准|审批|签|同意|确认)`)) : null;
+  const coolZ = zh ? (t.match(/(\d+)\s*(小时|天)[^。]{0,20}?(?:新|冷静|等)/) ?? t.match(/(?:新|冷静|等)[^。]{0,20}?(\d+)\s*(小时|天)/)) : null;
+  const trialZ = zh ? t.match(new RegExp(String.raw`(?:试付|测试|小额首付|先付)[^\d。]{0,6}${zn}`)) : null;
+  const anyone = /(refund|customers?|anyone|new people|strangers are fine|many different)/.test(t) || (zh && /(退款|客户|任何人|新的人|陌生人也可以|很多不同)/.test(t));
+  const known = /(supplier|vendor|known|saved|regular|same people|only pay|approved list|our contractors?|payroll)/.test(t) || (zh && /(供应商|已知|保存|固定|只付|只能付|白名单|承包商|工资)/.test(t));
+  const capX = capM ?? capZ, thrX = thrM ?? thrZ, coolX = coolM ?? coolZ, trialX = trialM ?? trialZ;
+  const cap = capX ? Math.min(254, Math.max(1, Math.ceil(money(capX[1])))) : anyone ? 100 : 50;
   const payeeOn = known || !anyone;
-  const cool = coolM ? Math.min(255, Number(coolM[1]) * (coolM[2].startsWith("day") ? 24 : 1)) : 24;
-  const trial = trialM ? Math.min(254, Math.ceil(money(trialM[1]))) : 2;
-  const thr = thrM ? Math.min(254, Math.ceil(money(thrM[1]))) : null;
+  const cool = coolX ? Math.min(255, Number(coolX[1]) * (/^(day|天)/.test(coolX[2]) ? 24 : 1)) : 24;
+  const trial = trialX ? Math.min(254, Math.ceil(money(trialX[1]))) : 2;
+  const thr = thrX ? Math.min(254, Math.ceil(money(thrX[1]))) : null;
   const found = (text.match(/0x[0-9a-fA-F]{40}/g) ?? []);
   const line: Line = { dailyCap: { on: true, cap }, payeeGuard: { on: payeeOn, coolingHours: cool, trial }, breaker: { on: payeeOn }, twoOfThree: { on: thr !== null, threshold: thr ?? 20 } };
   const tests: TestPayment[] = [
     // small amounts first, so the cap test at the end is the only one today's running total can stop
-    { memo: "A normal payment to a saved payee", to: "saved", amount: String(Math.max(1, Math.min(5, Math.floor(Math.min(cap, thr ?? cap) / 4)))), approvals: 0, expect: "pass" },
-    ...(payeeOn ? [{ memo: "\"New bank details\" from someone you never saved", to: "stranger" as const, amount: "2", approvals: 0, expect: "stop" as const }] : []),
-    ...(thr !== null && thr < cap ? [{ memo: `Over ${thr}: no signatures yet`, to: "saved" as const, amount: String(thr + 1), approvals: 0, expect: "stop" as const }, { memo: `Over ${thr}: two approvers signed`, to: "saved" as const, amount: String(thr + 1), approvals: 2, expect: "pass" as const }] : []),
-    { memo: "Past today's cap", to: "saved", amount: String(Math.min(254, cap + 1)), approvals: 2, expect: "stop" },
+    { memo: zh ? "付给已保存收款方的一笔正常付款" : "A normal payment to a saved payee", to: "saved", amount: String(Math.max(1, Math.min(5, Math.floor(Math.min(cap, thr ?? cap) / 4)))), approvals: 0, expect: "pass" },
+    ...(payeeOn ? [{ memo: zh ? "陌生人发来的“新银行账户”" : "\"New bank details\" from someone you never saved", to: "stranger" as const, amount: "2", approvals: 0, expect: "stop" as const }] : []),
+    ...(thr !== null && thr < cap ? [{ memo: zh ? `超过 ${thr}：还没有签名` : `Over ${thr}: no signatures yet`, to: "saved" as const, amount: String(thr + 1), approvals: 0, expect: "stop" as const }, { memo: zh ? `超过 ${thr}：两位审批人已签名` : `Over ${thr}: two approvers signed`, to: "saved" as const, amount: String(thr + 1), approvals: 2, expect: "pass" as const }] : []),
+    { memo: zh ? "超过今日限额" : "Past today's cap", to: "saved", amount: String(Math.min(254, cap + 1)), approvals: 2, expect: "stop" },
   ];
-  return normalise({ line, tests, payees: found, summary: "Read from your description by Fusebox's rule reader: check the numbers before you sign." }, "rules");
+  return normalise({ line, tests, payees: found, summary: zh ? "由 Fusebox 的规则读取器从你的描述中读出：签名前请核对数字。" : "Read from your description by Fusebox's rule reader: check the numbers before you sign." }, "rules");
 }
 
 // ---------------------------------------------------------------- Claude Haiku 5.5 on NEAR AI Cloud
@@ -103,7 +111,7 @@ const SYSTEM = `You set up spending guardrails for an AI agent's Fusebox wallet 
 - payeeGuard: only payees saved in the wallet's payee book; a newly saved payee may receive at most trial USD₮0 until coolingHours have passed (coolingHours 0-255, trial 0-254). Turn it off only if the agent must pay people it has never paid (refunds, payouts to new customers).
 - breaker: a payment to a stranger (not in the payee book) blows it, and nothing pays until the owner resets it. Use it with payeeGuard for agents that should only ever pay known parties.
 - twoOfThree: payments above threshold USD₮0 need two of three human approvers (threshold 0-254).
-All amounts are whole USD₮0. Read the owner's description and call propose_line once. Pick sensible values for anything they didn't say, explain each fuse in one short plain sentence addressed to the owner ("you"), list any 0x payee or approver addresses they gave, and add 3 to 5 test payments that show the line working, including at least one it should stop. Be conservative with money.`;
+All amounts are whole USD₮0. Read the owner's description and call propose_line once. Pick sensible values for anything they didn't say, explain each fuse in one short plain sentence addressed to the owner ("you"), list any 0x payee or approver addresses they gave, and add 3 to 5 test payments that show the line working, including at least one it should stop. Be conservative with money. Write the reasons, test memos and summary in the language the owner wrote in (Simplified Chinese if they wrote Chinese).`;
 const TOOL = {
   type: "function", function: {
     name: "propose_line", description: "Propose the wallet's line of fuses, with reasons and test payments.",

@@ -4,6 +4,7 @@ import { keccak256, type Address, type Hex } from "viem";
 import { tapeoutProcessorAbi } from "@/lib/abi";
 import { pub } from "@/lib/client-chain";
 import { decodeNetlist, OP_LATCH, OP_NAND, type NetEl } from "@/lib/tap02";
+import { useLang } from "@/lib/i18n";
 
 /** Reads a fuse's netlist straight from its TapeOut processor and checks it against the hash the registry pinned at listing.
  *  With `draw`, it also renders the real wiring as an arc diagram (used for fuses without a hand-laid schematic). */
@@ -11,6 +12,7 @@ export default function ChainNetlist({ processor, circuitId, nIn, pinned, draw }
   const [st, setSt] = useState<{ bytes: number; nand: number; latch: number; ok: boolean } | null>(null);
   const [err, setErr] = useState(false);
   const cv = useRef<HTMLCanvasElement>(null);
+  const { t } = useLang();
   useEffect(() => {
     let live = true;
     pub.readContract({ address: processor, abi: tapeoutProcessorAbi, functionName: "netlist", args: [BigInt(circuitId)] })
@@ -25,11 +27,11 @@ export default function ChainNetlist({ processor, circuitId, nIn, pinned, draw }
   }, [processor, circuitId, nIn, pinned, draw]);
   return (
     <>
-      {draw && <canvas ref={cv} style={{ width: "100%", height: 118, display: "block" }} aria-label={`Netlist of circuit #${circuitId}, read from TapeOut`} />}
-      <div className="m" style={{ marginTop: 8, color: "var(--dim)" }} title="Read from the TapeOut processor and compared with the hash Fusebox's registry pinned when the fuse was listed">
-        {err ? "Netlist: couldn't read TapeOut just now"
-          : !st ? "Reading the netlist from TapeOut…"
-          : <>{st.latch ? `${st.nand} NAND + ${st.latch} LATCH` : `${st.nand} NAND`} · {st.bytes} bytes read from TapeOut · <span style={{ color: st.ok ? "var(--lime)" : "var(--red)", whiteSpace: "nowrap" }}>{st.ok ? "✓ matches registry" : "✗ differs from registry"}</span></>}
+      {draw && <canvas ref={cv} style={{ width: "100%", height: 118, display: "block" }} aria-label={t(`Netlist of circuit #${circuitId}, read from TapeOut`, `电路 #${circuitId} 的网表，读取自 TapeOut`)} />}
+      <div className="m" style={{ marginTop: 8, color: "var(--dim)" }} title={t("Read from the TapeOut processor and compared with the hash Fusebox's registry pinned when the fuse was listed", "从 TapeOut 处理器读取，并与保险丝上架时 Fusebox 注册表锁定的哈希比对")}>
+        {err ? t("Netlist: couldn't read TapeOut just now", "网表：暂时无法读取 TapeOut")
+          : !st ? t("Reading the netlist from TapeOut…", "正在从 TapeOut 读取网表…")
+          : <>{st.latch ? `${st.nand} NAND + ${st.latch} LATCH` : `${st.nand} NAND`} · {t(`${st.bytes} bytes read from TapeOut`, `从 TapeOut 读取 ${st.bytes} 字节`)} · <span style={{ color: st.ok ? "var(--lime)" : "var(--red)", whiteSpace: "nowrap" }}>{st.ok ? t("✓ matches registry", "✓ 与注册表一致") : t("✗ differs from registry", "✗ 与注册表不符")}</span></>}
       </div>
     </>
   );

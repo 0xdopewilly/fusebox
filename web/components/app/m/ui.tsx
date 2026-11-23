@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { gsap, reduced } from "@/lib/gsap";
 import { Glyph, type GlyphName } from "../Pixel";
+import { useLang } from "@/lib/i18n";
 
 /* The phone app's building blocks: sheets, segmented tabs, list rows, the lime hero card, quick actions, chips,
    stat strips and the pinned action bar. Styles live in app.css under "phone app". */
@@ -12,6 +13,7 @@ import { Glyph, type GlyphName } from "../Pixel";
 export function MSheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title?: string; children: React.ReactNode }) {
   const sheet = useRef<HTMLDivElement>(null);
   const shade = useRef<HTMLDivElement>(null);
+  const { t } = useLang();
   const [mounted, setMounted] = useState(false);
   useEffect(() => { setMounted(true); }, []);
   // Parents re-render often (the app bar on every block) and pass a fresh onClose each time. Keeping it in a ref keeps
@@ -48,9 +50,9 @@ export function MSheet({ open, onClose, title, children }: { open: boolean; onCl
   if (!open || !mounted) return null;
   return createPortal(
     <div className="ms-shade" ref={shade} onClick={close}>
-      <div className="ms" ref={sheet} role="dialog" aria-modal="true" aria-label={title ?? "Details"} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
+      <div className="ms" ref={sheet} role="dialog" aria-modal="true" aria-label={title ?? t("Details", "详情")} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
         <div className="ms-grab" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}><i /></div>
-        {title && <div className="ms-h"><b>{title}</b><button className="ms-x m" onClick={close} aria-label="Close">Close</button></div>}
+        {title && <div className="ms-h"><b>{title}</b><button className="ms-x m" onClick={close} aria-label={t("Close", "关闭")}>{t("Close", "关闭")}</button></div>}
         <div className="ms-body">{children}</div>
       </div>
     </div>,

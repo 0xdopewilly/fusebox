@@ -1,9 +1,12 @@
+"use client";
 import type { FuseLayout } from "@/lib/fuses";
+import { useLang } from "@/lib/i18n";
 
 const W = 520, H = 118, PAD = 6;
 
 /** The fuse's real netlist: inputs on the left, one square per gate placed by logic depth, wires as curves. */
 export default function Netlist({ f }: { f: FuseLayout }) {
+  const { zh } = useLang();
   const cols: Record<number, number[]> = {};
   f.layout.forEach((g, i) => (cols[g.d] ||= []).push(i));
   const pos: Record<number, [number, number]> = {};
@@ -20,7 +23,7 @@ export default function Netlist({ f }: { f: FuseLayout }) {
     });
   });
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-label={`${f.title} netlist, ${f.gates} gates`}>
+    <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" aria-label={zh ? `${f.title} 网表，${f.gates} 个门` : `${f.title} netlist, ${f.gates} gates`}>
       <g fill="none" stroke="rgba(187,254,47,.18)" strokeWidth=".8">
         {wires.map((w, i) => <path key={i} d={w.d} data-depth={w.depth} className="wire" />)}
       </g>

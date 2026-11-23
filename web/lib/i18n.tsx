@@ -45,6 +45,13 @@ export function LangKeyed({ children }: { children: React.ReactNode }) {
   return <Fragment key={lang}>{children}</Fragment>;
 }
 
+/** For server-rendered pages (docs): both versions are rendered on the server, the visitor's language is shown.
+ *  `<T en={<p>Hello</p>} zh={<p>你好</p>} />` */
+export function T({ en, zh }: { en: React.ReactNode; zh: React.ReactNode }) {
+  const { lang } = useLang();
+  return <>{lang === "zh" ? zh : en}</>;
+}
+
 /** EN / 中文 */
 export function LangSwitch({ className = "" }: { className?: string }) {
   const { lang, setLang } = useLang();

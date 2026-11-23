@@ -105,7 +105,7 @@ export default function LineWire({
   const payeeLit = current >= g.end - 1;
 
   return (
-    <svg ref={ref} viewBox={g.vb} role="img" aria-label={`The payment line: agent, ${fuses.length === 1 ? "one fuse" : `${fuses.length} fuses in series`}, payee`} className={g.vertical ? "vert" : ""}>
+    <svg ref={ref} viewBox={g.vb} role="img" aria-label={zh ? `付款线路：智能体、${fuses.length === 1 ? "一个保险丝" : `${fuses.length} 个串联的保险丝`}、收款方` : `The payment line: agent, ${fuses.length === 1 ? "one fuse" : `${fuses.length} fuses in series`}, payee`} className={g.vertical ? "vert" : ""}>
       {line(g.start, g.end, { stroke: "#2e2e2c", strokeWidth: 2.5, strokeDasharray: "6 5" })}
       {current > 0 && line(g.start, current, { stroke: "#bbfe2f", strokeWidth: 2.5 })}
       {current > 0 && line(g.start, current, { stroke: "#ffffff", strokeWidth: 2.5, className: "flow", opacity: 0.85 })}

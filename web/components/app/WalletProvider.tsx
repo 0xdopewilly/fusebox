@@ -5,6 +5,7 @@ import { XLAYER, pub } from "@/lib/client-chain";
 import { errCode, friendlyError, isMobileUA, legacyName } from "@/lib/walletLinks";
 import { okxAppAbort, okxAppConnect, okxAppDisconnect, okxAppRestore, onOkxPending, type PairLinks } from "@/lib/okxApp";
 import PairSheet, { ApproveNudge } from "./PairSheet";
+import { useLang } from "@/lib/i18n";
 
 interface Info { uuid: string; name: string; icon: string; rdns: string }
 interface Detail { info: Info; provider: EIP1193Provider }
@@ -61,6 +62,7 @@ export default function WalletProvider({ children }: { children: React.ReactNode
   const pairGen = useRef(0);
   const stopPair = useRef<() => void>(() => {});
   const restored = useRef(false);
+  const { t: tr } = useLang();
 
   useEffect(() => { setMobile(isMobileUA()); onOkxPending(setNudge); return () => onOkxPending(null); }, []);
 
@@ -234,7 +236,7 @@ export default function WalletProvider({ children }: { children: React.ReactNode
     return wc.sendTransaction({ account, to, value, chain: XLAYER });
   }, [account, ensureChain]);
   const hasOkx = useMemo(() => wallets.some((w) => /okx|okex/i.test(w.info.rdns)), [wallets]);
-  const walletName = via === OKX_APP ? "OKX Wallet app" : (wallets.find((w) => w.info.rdns === via)?.info.name ?? null);
+  const walletName = via === OKX_APP ? tr("OKX Wallet app", "OKX Wallet App") : (wallets.find((w) => w.info.rdns === via)?.info.name ?? null);
   const value = useMemo(() => ({ wallets, account, chainId, connecting: connecting || (restoring && !account), error, mobile, hasOkx, via, walletName, connect, disconnect, write, sign, signTyped, send }), [wallets, account, chainId, connecting, error, mobile, hasOkx, via, walletName, connect, disconnect, write, sign, signTyped, send, restoring]);
   return <C.Provider value={value}>{children}{pair && <PairSheet links={pair.links} mobile={mobile} onCancel={cancelPair} />}{nudge && via === OKX_APP && <ApproveNudge links={nudge} mobile={mobile} />}</C.Provider>;
 }
