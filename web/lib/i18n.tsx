@@ -14,7 +14,7 @@ const KEY = "fusebox:lang";
 function preferred(): Lang {
   try {
     const q = new URLSearchParams(location.search).get("lang");
-    if (q === "zh" || q === "en") return q;
+    if (q === "zh" || q === "en") { localStorage.setItem(KEY, q); return q; } // a shared ?lang= link sticks for the visit
     const s = localStorage.getItem(KEY);
     if (s === "zh" || s === "en") return s;
   } catch { /* storage blocked */ }
