@@ -30,17 +30,30 @@ AI 智能体已经能持有资金：付发票、付退款、按调用付 API。�
 
 常见的做法是放在服务器上的策略引擎（你得信任它），或者每笔都要人工签名的多签（太慢）。Fusebox 的规则是电路，在付款的同一笔交易里于链上执行：没有任何服务器能让付款蒙混过关，也没有提示词能说服它。
 
-## 保险丝
+## 保险丝：5 个插槽，9 个电路
+
+**插槽（socket）**就是一种规则：它规定了钱包要告诉电路什么，以及所有者的设置是什么意思。Fusebox 定义了 5 个插槽，为某个插槽流片的任何电路都可以作为保险丝上架。**目前有 9 个保险丝在线：**Fusebox 的 5 个原始保险丝（每个插槽一个），以及在 1–4 号插槽上与它们竞争的 4 个竞争设计。钱包所有者自行选择安装哪一个。9 个全部是 X Layer 上 OrderGuard 处理器（`0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355`）里的 TapeOut 电路。
+
+**5 个原始保险丝（保险丝 1–5）**
 
 | 保险丝 | 电路 | 检查什么 |
 |---|---|---|
-| Daily Cap | #15 | 每个 UTC 日的付款总额不超过上限 |
-| Payee Guard | #16 | 只付给已保存的收款方；新收款方在冷静期内只能收小额试付 |
-| Breaker | #17 | 一笔付给陌生地址的付款就会让它熔断，直到所有者复位（带记忆位） |
-| Two of Three | #18 | 超过阈值的大额付款，需要三位审批人中的两位签名 |
-| Repeat Guard | #21 | 同一收款方、同一金额在时间窗口内再次付款会被拦截：同一张发票只付一次 |
+| [Daily Cap](https://fusebox-xlayer.vercel.app/app/fuse/1?lang=zh) | #15 | 每个 UTC 日的付款总额不超过上限 |
+| [Payee Guard](https://fusebox-xlayer.vercel.app/app/fuse/2?lang=zh) | #16 | 只付给已保存的收款方；新收款方在冷静期内只能收小额试付 |
+| [Breaker](https://fusebox-xlayer.vercel.app/app/fuse/3?lang=zh) | #17 | 一笔付给陌生地址的付款就会让它熔断，直到所有者重置（带记忆位） |
+| [Two of Three](https://fusebox-xlayer.vercel.app/app/fuse/4?lang=zh) | #18 | 超过阈值的大额付款，需要三位审批人中的两位签名 |
+| [Repeat Guard](https://fusebox-xlayer.vercel.app/app/fuse/5?lang=zh) | #21 | 同一收款方、同一金额在时间窗口内再次付款会被拦截：同一张发票只付一次 |
 
-另有四个竞争设计（保险丝 6–9：Per-Payment Cap、Strict Payee Book、Two-Strike Breaker、Lead Approver）已在市场上线。
+**4 个竞争设计（保险丝 6–9）**：同样的插槽，不同的策略。由 Fusebox 团队流片，用来展示同一插槽上的设计竞争；外部设计者也可以用同样的方式上架自己的设计。
+
+| 保险丝 | 插槽 | 电路 | 检查什么 |
+|---|---|---|---|
+| [Per-Payment Cap](https://fusebox-xlayer.vercel.app/app/fuse/6?lang=zh) | Daily Cap | #22 | 无论来多少张发票，单笔付款都不能超过上限 |
+| [Strict Payee Book](https://fusebox-xlayer.vercel.app/app/fuse/7?lang=zh) | Payee Guard | #23 | 新保存的收款方在冷静期结束前什么都收不到，连试付也没有 |
+| [Two-Strike Breaker](https://fusebox-xlayer.vercel.app/app/fuse/8?lang=zh) | Breaker | #24 | 一个可疑收款方可能是笔误，两个就是规律：第一次被拒绝，第二次让它熔断 |
+| [Lead Approver](https://fusebox-xlayer.vercel.app/app/fuse/9?lang=zh) | Two of Three | #25 | 超过阈值时需要两人签名，且其中一人必须是 1 号席位 |
+
+**自己核验。**每个保险丝的页面都实时读取 X Layer：从 TapeOut 处理器读取网表（并与注册表上架时锁定的哈希比对）、门数、决策次数和收益，并附有 OKLink 上的[处理器](https://www.oklink.com/x-layer/evm/address/0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355)和[电路 NFT 合集](https://www.oklink.com/x-layer/evm/token/0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355)链接。在 [tapeout.net](https://tapeout.net) 上：切换到 X Layer，打开 Processors，再进入 OrderGuard 和对应的电路编号。
 
 ## 给开发者
 

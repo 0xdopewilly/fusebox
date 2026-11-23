@@ -13,7 +13,7 @@ export default function OnTapeOut() {
   /** Where the fuses come from: every Fusebox fuse is a circuit taped out on TapeOut and evaluated by TapeOut on X Layer. */
   const STEPS: [string, string, string][] = [
     [t("Designed", "设计"), t("A logic circuit", "一个逻辑电路"), t("A fuse is a TAP-02 netlist: NAND gates, plus latches for memory. Design one with TapeOut's toolchain, or build it from rules in Fuse Studio.", "保险丝就是一份 TAP-02 网表：NAND 门，外加用于记忆的锁存器。可以用 TapeOut 的工具链设计，也可以在 Fuse Studio 里用规则搭建。")],
-    [t("Taped out", "流片"), t("On TapeOut", "在 TapeOut 上"), t("Minted gate by gate and taped out on TapeOut's processor on X Layer. The designer gets the circuit NFT. Fusebox's five are circuits #15 to #18 and #21.", "逐个门铸造，并在 TapeOut 部署于 X Layer 的处理器上流片。设计者获得电路 NFT。Fusebox 的五个保险丝是 #15 至 #18 号和 #21 号电路。")],
+    [t("Taped out", "流片"), t("On TapeOut", "在 TapeOut 上"), t("Minted gate by gate and taped out on TapeOut's processor on X Layer. The designer gets the circuit NFT. Fusebox's five originals are circuits #15 to #18 and #21; four rival designs are #22 to #25.", "逐个门铸造，并在 TapeOut 部署于 X Layer 的处理器上流片。设计者获得电路 NFT。Fusebox 的 5 个原始保险丝是 #15 至 #18 号和 #21 号电路；4 个竞争设计是 #22 至 #25 号。")],
     [t("Evaluated", "求值"), t("By TapeOut, on X Layer", "由 TapeOut 在 X Layer 上执行"), t("Every payment calls TapeOut's eval and step for each fuse, in the same transaction. A latch keeps its state on-chain between payments.", "每笔付款都会在同一笔交易中，为每个保险丝调用 TapeOut 的 eval 和 step。锁存器在两次付款之间把状态保存在链上。")],
     [t("Paid", "支付"), t("To the circuit's owner", "付给电路所有者"), t("Every check pays whoever holds the circuit NFT, in USD₮0. Sell the NFT and the income goes with it.", "每次检查都以 USD₮0 付给电路 NFT 的持有者。卖掉 NFT，收入也随之转走。")],
   ];

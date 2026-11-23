@@ -8,6 +8,7 @@ import { metaSource } from "@/lib/fuseMeta";
 import { short, fmt, OKLINK } from "@/lib/hooks";
 import Netlist from "@/components/landing/Netlist";
 import ChainNetlist from "./ChainNetlist";
+import VerifyLinks from "./VerifyLinks";
 import MarketInstall from "./MarketInstall";
 import Loading from "./Loading";
 import { Responsive } from "./m/useMobile";
@@ -94,6 +95,7 @@ export default function FuseView({ id }: { id: number }) {
             {meta?.source && <><span>{t("Source", "源码")}</span><span><a href={meta.source} target="_blank" rel="noreferrer">{t("code ↗", "代码 ↗")}</a></span></>}
             <span>{t("Revenue split", "收入分成")}</span><span>{t(`${100 - data.protocolBps / 100}% designer · ${data.protocolBps / 100}% Fusebox`, `设计者 ${100 - data.protocolBps / 100}% · Fusebox ${data.protocolBps / 100}%`)}</span>
           </div>
+          <VerifyLinks processor={f.processor} circuitId={f.circuitId} fuseId={f.fuseId} />
         </div>
       </section>
       <div className="fv-back m"><Link className="lime" href="/app/market">{t("← Every fuse", "← 所有保险丝")}</Link>{f.onAtlas ? <> · <Link className="lime" href={ATLAS_PATH}>{t("Running on Atlas →", "在 Atlas 上运行 →")}</Link></> : null}</div>

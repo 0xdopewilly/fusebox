@@ -59,10 +59,10 @@ export default function Fuses() {
       <div className="wrap sh"><div className="m lime" data-scr>[05]</div><div className="m mute" data-scr>{t("The fuses", "保险丝")}</div></div>
       <div className="wrap">
         <div className="head">
-          <h2 className="disp">{t(<>Five TapeOut circuits.<br /><span className="lime">[246]</span> gates.<br />All on&#8209;chain.</>, <>五个 TapeOut 电路。<br /><span className="lime">[246]</span> 个门。<br />全部上链。</>)}</h2>
+          <h2 className="disp">{t(<>Five sockets.<br /><span className="lime">[9]</span> circuits.<br />All on&#8209;chain.</>, <>5 个插槽。<br /><span className="lime">[9]</span> 个电路。<br />全部上链。</>)}</h2>
           <p>{t(
-            "Each fuse is a real NAND circuit taped out on TapeOut, with its own circuit NFT, gate count and gas cost. The pictures below are their actual netlists, one square per gate, laid out by logic depth. Hover one to send a signal through it.",
-            "每个保险丝都是在 TapeOut 上流片的真实 NAND 电路，有自己的电路 NFT、门数量和 gas 成本。下面的图就是它们真实的网表：每个方块是一个门，按逻辑深度排布。把鼠标移到任意一个上，就能让信号从中穿过。",
+            "A socket is one kind of rule. Below are Fusebox's five originals, one per socket, 246 gates in all; four rival designs (circuits #22–25) compete with them on the same sockets in the market. Each is a real NAND circuit taped out on TapeOut, with its own circuit NFT, gate count and gas cost. The pictures are their actual netlists, one square per gate, laid out by logic depth. Hover one to send a signal through it.",
+            "一个插槽就是一种规则。下面是 Fusebox 的 5 个原始保险丝，每个插槽一个，共 246 个门；另有 4 个竞争设计（#22–25 号电路）在市场上与它们争夺同样的插槽。每个都是在 TapeOut 上流片的真实 NAND 电路，有自己的电路 NFT、门数量和 gas 成本。下面的图就是它们真实的网表：每个方块是一个门，按逻辑深度排布。把鼠标移到任意一个上，就能让信号从中穿过。",
           )}</p>
         </div>
         <div>

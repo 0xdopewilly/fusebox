@@ -54,10 +54,11 @@ After each payment, `pay` tells Fusebox its transaction hash, so anyone followin
 ([@FuseboxAlertsBot](https://t.me/FuseboxAlertsBot)) gets a message: paid, or stopped and why. Fusebox reads the decision
 back from X Layer itself; nothing else is sent.
 
-## Five fuses
+## Five sockets, nine fuses
 
-Wallets made since Nov 20 (v2, `ADDRESSES.factory`) can install five fuses: Daily Cap, Payee Guard, Breaker,
-Two of Three and the **Repeat Guard**, which stops the same amount to the same payee inside the owner's window, so an
+Wallets made since Nov 20 (v2, `ADDRESSES.factory`) can install any of the nine listed fuses: the five originals (Daily
+Cap, Payee Guard, Breaker, Two of Three and the **Repeat Guard**) and four rival designs for the first four sockets
+(Per-Payment Cap, Strict Payee Book, Two-Strike Breaker, Lead Approver). The Repeat Guard stops the same amount to the same payee inside the owner's window, so an
 invoice sent twice is paid once. `check` and `pay` explain it like any other fuse:
 
 ```
@@ -65,7 +66,7 @@ Stopped: Repeat Guard (the same amount to this payee already went out in the las
 repeat). Nothing would move.
 ```
 
-Older wallets, Atlas included, keep their four fuses and keep working: a wallet always reads its own registry.
+Older wallets, Atlas included, keep their first four originals and keep working: a wallet always reads its own registry.
 
 ## Follow the wallet
 

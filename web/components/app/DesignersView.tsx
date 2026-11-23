@@ -10,13 +10,13 @@ import { useLang } from "@/lib/i18n";
 
 const STEPS = [
   ["Design the circuit", "Write it as NAND gates (plus LATCH bits if it needs memory) with the Fusebox toolchain, which builds, simulates and exhaustively tests TAP-02 netlists. It reads one socket: the payment's inputs, laid out bit by bit."],
-  ["Tape it out on TapeOut", "Mint one transistor per gate on an X Layer processor and call tapeout(). You get the circuit NFT. Our four fuses cost about 0.03 OKB in total."],
+  ["Tape it out on TapeOut", "Mint one transistor per gate on an X Layer processor and call tapeout(). You get the circuit NFT. Our first four fuses cost about 0.03 OKB in total."],
   ["List it in the registry", "registry.list(processor, circuitId, socket, netlistHash, fee, uri). The registry checks the processor's code, the gate budget and the netlist hash, then wallets can install it."],
   ["Earn on every decision", "Each time a wallet's payment runs through your fuse, you earn your fee in USD₮0, the no's included. Claim with claim(fuseId, to). Sell the NFT and the income moves with it."],
 ];
 const STEPS_ZH = [
   ["设计电路", "用 NAND 门写出它（需要记忆时再加 LATCH 位），借助 Fusebox 工具链：它可以构建、模拟并穷举测试 TAP-02 网表。电路读取一个插槽：付款的各项输入，逐位排列。"],
-  ["在 TapeOut 上流片", "在 X Layer 的处理器上为每个门铸造一个晶体管，然后调用 tapeout()。你会得到电路 NFT。我们的四个保险丝总共花了约 0.03 OKB。"],
+  ["在 TapeOut 上流片", "在 X Layer 的处理器上为每个门铸造一个晶体管，然后调用 tapeout()。你会得到电路 NFT。我们最初的四个保险丝总共花了约 0.03 OKB。"],
   ["在注册表中上架", "registry.list(processor, circuitId, socket, netlistHash, fee, uri)。注册表会检查处理器的代码、门数预算和网表哈希，之后钱包就可以安装它。"],
   ["每次决策都有收益", "每当钱包的付款经过你的保险丝，你就以 USD₮0 赚取费用，拒绝的也算。用 claim(fuseId, to) 领取。卖掉 NFT，收入也随之转移。"],
 ];

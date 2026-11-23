@@ -35,7 +35,7 @@ export default function SiteMenu({ open, onClose, home = "" }: { open: boolean; 
   }, [open]);
   if (!open) return null;
 
-  const SECTIONS = [["#how", t("How it works", "工作原理"), t("One call, four fuses, one verdict", "一次调用，四个保险丝，一个结论")], ["#tapeout", t("Built on TapeOut", "基于 TapeOut 构建"), t("Every fuse is a TapeOut circuit on X Layer", "每个保险丝都是 X Layer 上的 TapeOut 电路")], ["#fuses", t("The fuses", "保险丝"), t("Four circuits taped out on TapeOut", "在 TapeOut 上流片的四个电路")], ["#who", t("Who it's for", "适用对象"), t("And how Fusebox earns", "以及 Fusebox 如何盈利")],
+  const SECTIONS = [["#how", t("How it works", "工作原理"), t("One call, every fuse, one verdict", "一次调用，每个保险丝，一个结论")], ["#tapeout", t("Built on TapeOut", "基于 TapeOut 构建"), t("Every fuse is a TapeOut circuit on X Layer", "每个保险丝都是 X Layer 上的 TapeOut 电路")], ["#fuses", t("The fuses", "保险丝"), t("5 sockets, 9 circuits on TapeOut", "5 个插槽，9 个 TapeOut 电路")], ["#who", t("Who it's for", "适用对象"), t("And how Fusebox earns", "以及 Fusebox 如何盈利")],
     ["#designers", t("For designers", "面向设计者"), t("Sell a fuse, earn on every decision", "出售保险丝，每次决策都有收入")], ["#build", t("For builders", "面向开发者"), t("One call before every payment", "每笔付款前，只需一次调用")]] as const;
   const PAGES = [["/docs", t("Docs", "文档")], ["/app/market", t("Fuse market", "Fuse Market 保险丝市场")], ["/app/try", t("Try to scam it", "试着骗它")], ["/app/rob", t("Rob the agent", "打劫智能体")], ["/app/x402", t("Pay per call", "按次付费")], ["/onchain", t("DeWEB edition", "DeWEB 版")]] as const;
 

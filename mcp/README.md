@@ -14,7 +14,7 @@ MCP tools for an AI agent that pays through a [Fusebox](https://fusebox-xlayer.v
 | `fusebox_setup_link` | Turns ready-made rule names and limits into a link that opens Fusebox's wallet setup with those fuses on and filled in. The owner connects and signs; nothing is sent from the server. |
 | `fusebox_fetch` | Fetches a URL. If it asks for payment over x402 (a `fusebox` offer on X Layer), the price is paid through the fuses only if they all allow it, then the response comes back. `max_price` caps what it pays (0.10 USDT0 when not set; `FUSEBOX_MAX_PRICE` changes the default), it only fetches public hosts (`FUSEBOX_ALLOW_PRIVATE_URLS=1` for local tests), and the proof it sends back is signed by the agent key so nobody else can redeem the payment; `dry_run` only reports the price and the fuses' answer. |
 
-Every tool explains all five fuses, including the **Repeat Guard** on v2 wallets (the same invoice sent twice is paid once).
+Every tool explains all five kinds of fuse (the five sockets), whichever of the nine listed designs a wallet runs on them, including the **Repeat Guard** on v2 wallets (the same invoice sent twice is paid once).
 
 After each payment, `fusebox_pay` tells Fusebox the transaction hash, so anyone following the wallet on Telegram ([@FuseboxAlertsBot](https://t.me/FuseboxAlertsBot)) gets a message: paid, or stopped and why.
 

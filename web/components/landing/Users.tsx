@@ -8,7 +8,7 @@ export default function Users() {
   const root = useRef<HTMLElement>(null);
   const { t } = useLang();
   const WHO = [
-    { k: "A", h: t("Teams with payment agents", "使用付款智能体的团队"), p: t("Invoice and AP agents, procurement bots, payout runs. The agent keeps its speed, and the fuses keep it inside the owner's rules. Set up in three taps.", "发票与应付账款智能体、采购机器人、批量付款。智能体照样快，保险丝让它始终守在所有者的规则之内。点三下即可设置完成。"), b: "0.005", s: t("USD₮0 for a payment checked by all five fuses", "USD₮0，一笔付款经全部五个保险丝检查的费用") },
+    { k: "A", h: t("Teams with payment agents", "使用付款智能体的团队"), p: t("Invoice and AP agents, procurement bots, payout runs. The agent keeps its speed, and the fuses keep it inside the owner's rules. Set up in three taps.", "发票与应付账款智能体、采购机器人、批量付款。智能体照样快，保险丝让它始终守在所有者的规则之内。点三下即可设置完成。"), b: "0.005", s: t("USD₮0 for a payment checked by all five originals", "USD₮0，一笔付款经全部 5 个原始保险丝检查的费用") },
     { k: "B", h: t("Agent platforms and wallets", "智能体平台与钱包"), p: t("Give every user's agent a wallet with fuses: one factory call on X Layer, or one line of MCP for Claude, Cursor and any MCP client.", "给每位用户的智能体配一个带保险丝的钱包：在 X Layer 上调用一次工厂合约，或为 Claude、Cursor 及任何 MCP 客户端加一行 MCP 配置。"), b: t("1 line", "1 行"), s: "npx -y fusebox-mcp" },
     { k: "C", h: t("Circuit designers", "电路设计者"), p: t("Build a rule without code in Fuse Studio, checked against your rule before it ships, or bring your own NAND circuit. Tape it out on TapeOut and list it: every wallet that installs it pays you on every decision.", "在 Fuse Studio 里零代码搭建规则，上线前先对照你的规则完成验证；也可以带上你自己的 NAND 电路。在 TapeOut 上流片并上架：每个安装它的钱包，每次决策都会付费给你。"), b: "90%", s: t("of each fee, paid to the circuit NFT", "每笔费用中付给电路 NFT 的份额") },
   ];

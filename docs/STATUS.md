@@ -2,7 +2,8 @@
 
 Last updated 2026-11-22. Hackathon: X Layer TapeOut Accelerate, due 2026-12-07 23:59 UTC.
 
-Fusebox is live on X Layer mainnet (chain 196): the contracts, four TapeOut circuits, a public demo wallet,
+Fusebox is live on X Layer mainnet (chain 196): the contracts, nine TapeOut circuits listed as fuses (five originals, one per socket, and four rival designs
+for the same sockets), a public demo wallet,
 the site and app, the docs and an MCP server for agents. Addresses are in the [README](../README.md) and
 [`deployments/xlayer-mainnet.json`](../deployments/xlayer-mainnet.json).
 

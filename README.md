@@ -65,15 +65,32 @@ AI agents now hold wallets and send real money, and one convincing message can m
 
 Every address is in [`deployments/xlayer-mainnet.json`](deployments/xlayer-mainnet.json). **Setting up a wallet takes three taps:** a free USD₮0 permit signature, one `FuseboxSetup.setUpWallet` transaction that creates the wallet, splices in its fuses, saves payees, seats approvers, prepays fees, funds it and sends the agent gas, then `acceptOwnership()`. The first one on mainnet, [`0x63d5…48fa`](https://fusebox-xlayer.vercel.app/app/w/0x63d5033569101B320A088680629cF0E10b3E48fa), took 5.02M gas (about 0.0001 OKB) for all five fuses. **Telegram alerts:** follow any wallet through [@FuseboxAlertsBot](https://t.me/FuseboxAlertsBot) and every payment its agent tries arrives as a message, paid or stopped and why. v2 (Nov 20) stores socket pinouts as data and adds the Repeat Guard; v1 (Nov 15) keeps running Atlas unchanged. See [docs/V2-REPEAT-GUARD.md](docs/V2-REPEAT-GUARD.md). The first v2 wallet, [`0x6292…577c`](https://fusebox-xlayer.vercel.app/app/w/0x6292Ea57a1d50c74A5E918CfDC4Dc1Dbf87a577c), had its agent send the same invoice twice on mainnet: the first payment went through and the Repeat Guard [stopped the second](https://www.oklink.com/xlayer/tx/0x502bd9f3fe577c7a74f0c43696003559f95d2cff3929f45a5e88ec678baf22ad).
 
-## The five fuses
+## The fuses: 5 sockets, 9 circuits
 
-| Fuse | Circuit | What it does | Fee / check |
+A **socket** is one kind of rule: it fixes what the wallet tells the circuit and what the owner's settings mean. Fusebox defines five sockets, and any circuit taped out for one can be listed as a fuse. **Nine fuses are live:** Fusebox's five originals, one per socket, and four rival designs that compete with them on sockets 1 to 4. A wallet owner picks which design to install. All nine are TapeOut circuits on the OrderGuard processor `0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355` on X Layer.
+
+**The five originals (fuses 1 to 5)**
+
+| Fuse | TapeOut circuit | What it does | Fee / check |
 |---|---|---|---|
-| Daily Cap | 24 inputs · 108 NAND | No more than the owner's cap in a UTC day, however the agent is asked. | 0.001 USDT0 |
-| Payee Guard | 33 inputs · 79 NAND | Saved payees only; a new payee gets a small trial amount until its cooling-off ends. | 0.001 USDT0 |
-| Breaker | 4 inputs · 10 NAND + 1 LATCH | Trips on a payment to a stranger and stays blown until the owner resets it. | 0.0005 USDT0 |
-| Two of Three | 19 inputs · 46 NAND | Above a threshold, two of three approvers must sign that exact payment. | 0.002 USDT0 |
-| Repeat Guard (v2) | 2 inputs · 2 NAND | The same invoice sent twice gets paid once: the same amount to the same payee inside the owner's window is stopped, unless the owner clears one repeat. | 0.0005 USDT0 |
+| [Daily Cap](https://fusebox-xlayer.vercel.app/app/fuse/1) | #15 · 24 inputs · 108 NAND | No more than the owner's cap in a UTC day, however the agent is asked. | 0.001 USDT0 |
+| [Payee Guard](https://fusebox-xlayer.vercel.app/app/fuse/2) | #16 · 33 inputs · 79 NAND | Saved payees only; a new payee gets a small trial amount until its cooling-off ends. | 0.001 USDT0 |
+| [Breaker](https://fusebox-xlayer.vercel.app/app/fuse/3) | #17 · 4 inputs · 10 NAND + 1 LATCH | Trips on a payment to a stranger and stays blown until the owner resets it. | 0.0005 USDT0 |
+| [Two of Three](https://fusebox-xlayer.vercel.app/app/fuse/4) | #18 · 19 inputs · 46 NAND | Above a threshold, two of three approvers must sign that exact payment. | 0.002 USDT0 |
+| [Repeat Guard](https://fusebox-xlayer.vercel.app/app/fuse/5) (v2) | #21 · 2 inputs · 2 NAND | The same invoice sent twice gets paid once: the same amount to the same payee inside the owner's window is stopped, unless the owner clears one repeat. | 0.0005 USDT0 |
+
+**The four rivals (fuses 6 to 9)**, same sockets, different policies. The Fusebox team taped them out to show designs competing on one socket; outside designers can list their own the same way.
+
+| Fuse | Socket | TapeOut circuit | What it does | Fee / check |
+|---|---|---|---|---|
+| [Per-Payment Cap](https://fusebox-xlayer.vercel.app/app/fuse/6) | Daily Cap | #22 · 24 inputs · 37 NAND | However many invoices arrive, no single payment can be bigger than the cap. | 0.001 USDT0 |
+| [Strict Payee Book](https://fusebox-xlayer.vercel.app/app/fuse/7) | Payee Guard | #23 · 33 inputs · 39 NAND | A newly saved payee gets nothing, not even a test payment, until its cooling-off is over. | 0.001 USDT0 |
+| [Two-Strike Breaker](https://fusebox-xlayer.vercel.app/app/fuse/8) | Breaker | #24 · 4 inputs · 16 NAND + 2 LATCH | One odd payee is a typo; two is a pattern. The first is refused, the second blows the breaker. | 0.0005 USDT0 |
+| [Lead Approver](https://fusebox-xlayer.vercel.app/app/fuse/9) | Two of Three | #25 · 19 inputs · 43 NAND | Above the threshold, two must sign and one of them must be seat 1. | 0.002 USDT0 |
+
+**Check them yourself.** Each fuse's page reads it live from X Layer: its netlist from the TapeOut processor (checked against the hash the registry pinned at listing), gates, decisions and earnings, with links to [the processor](https://www.oklink.com/x-layer/evm/address/0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355) and [the circuit-NFT collection](https://www.oklink.com/x-layer/evm/token/0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355) on OKLink. On [tapeout.net](https://tapeout.net): switch to X Layer, open Processors, then OrderGuard and the circuit number.
+
+The Atlas demo wallet (made with v1) runs the first four originals; its v2 twin, which *Try to scam it* checks against, runs all five.
 
 ## How a payment works
 

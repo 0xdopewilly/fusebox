@@ -10,9 +10,9 @@ import { T } from "@/lib/i18n";
 
 export const metadata: Metadata = {
   title: "Docs · Fusebox",
-  description: "How Fusebox works: wallets for AI agents whose payments must pass logic circuits taped out on TapeOut. Quickstart, the five fuses, the wallet API, MCP tools, selling a fuse, and every contract on X Layer.",
-  openGraph: { title: "Fusebox docs · Build with Fusebox", description: "Quickstart, the five fuses, the wallet API, MCP tools, selling a fuse, and every contract on X Layer.", url: "/docs" },
-  twitter: { title: "Fusebox docs · Build with Fusebox", description: "Quickstart, the five fuses, the wallet API, MCP tools, selling a fuse, and every contract on X Layer." },
+  description: "How Fusebox works: wallets for AI agents whose payments must pass logic circuits taped out on TapeOut. Quickstart, the fuses (5 sockets, 9 circuits), the wallet API, MCP tools, selling a fuse, and every contract on X Layer.",
+  openGraph: { title: "Fusebox docs · Build with Fusebox", description: "Quickstart, the fuses (5 sockets, 9 circuits), the wallet API, MCP tools, selling a fuse, and every contract on X Layer.", url: "/docs" },
+  twitter: { title: "Fusebox docs · Build with Fusebox", description: "Quickstart, the fuses (5 sockets, 9 circuits), the wallet API, MCP tools, selling a fuse, and every contract on X Layer." },
 };
 
 const OKLINK = "https://www.oklink.com/xlayer";
@@ -30,7 +30,7 @@ const SECTIONS = [
   { id: "first", title: "Your first payment", titleZh: "你的第一笔付款", ...START },
   { id: "assistant", title: "The Fusebox assistant", titleZh: "Fusebox 助手", ...START },
   { id: "payment", title: "How a payment works", titleZh: "一笔付款如何执行", ...CONCEPTS },
-  { id: "fuses", title: "The five fuses", titleZh: "五个保险丝", ...CONCEPTS },
+  { id: "fuses", title: "The fuses: 5 sockets, 9 circuits", titleZh: "保险丝：5 个插槽，9 个电路", ...CONCEPTS },
   { id: "fees", title: "Fees and budgets", titleZh: "费用与预算", ...CONCEPTS },
   { id: "business", title: "Who it's for and how it earns", titleZh: "面向谁，如何盈利", ...CONCEPTS },
   { id: "wallet", title: "The wallet API", titleZh: "钱包 API", ...BUILD },
@@ -306,9 +306,11 @@ export default function DocsPage() {
             <section id="fuses">
               <H2 id="fuses" />
               <p><T en={<>A <b>socket</b> is the contract between the wallet and a circuit: the wallet derives the bits, the circuit decides. Bits are packed least-significant first (TAP-02 §5). Amounts are rounded up to the install&apos;s unit and saturate at 255, while owner limits stop at 254, so a saturated amount can never pass.</>} zh={<><b>插槽（socket）</b>是钱包与电路之间的约定：钱包推导出比特位，电路做出决策。比特位按最低有效位在前的顺序打包（TAP-02 §5）。金额按安装时设定的单位向上取整，并在 255 处饱和；而所有者设定的限额最高只到 254，因此饱和的金额永远无法通过。</>} /></p>
+              <p><T en={<>Fusebox defines <b>five sockets</b>, one per kind of rule, and <b>nine fuses</b> are live on them: the five originals below (fuses 1–5, one per socket) and four rival designs (fuses 6–9) that compete with them on sockets 1–4. A wallet owner picks which design to install. All nine are TapeOut circuits on the OrderGuard processor, and each has a <Link href="/app/market">page</Link> that reads it live from X Layer.</>} zh={<>Fusebox 定义了 <b>5 个插槽</b>，每个插槽对应一种规则；目前有 <b>9 个保险丝</b>在线：下面的 5 个原始保险丝（保险丝 1–5，每个插槽一个），以及在 1–4 号插槽上与它们竞争的 4 个竞争设计（保险丝 6–9）。钱包所有者自行选择安装哪一个。9 个全部是 OrderGuard 处理器上的 TapeOut 电路，每个都有一个实时读取 X Layer 的<Link href="/app/market">页面</Link>。</>} /></p>
+              <h3><T en="The five originals" zh="5 个原始保险丝" /></h3>
               <T
                 en={
-                  <div className="tbl-w" tabIndex={0} role="region" aria-label="The five fuses table"><table>
+                  <div className="tbl-w" tabIndex={0} role="region" aria-label="The five original fuses"><table>
                     <thead><tr><th>Fuse</th><th>Circuit</th><th>Inputs</th><th>Says no when</th><th>Fee</th></tr></thead>
                     <tbody>
                       <tr><td><b>Daily Cap</b></td><td>#15 · 108 NAND</td><td>24: amount, spent today, cap</td><td>The payment would pass today&apos;s cap (UTC day)</td><td>0.001</td></tr>
@@ -320,7 +322,7 @@ export default function DocsPage() {
                   </table></div>
                 }
                 zh={
-                  <div className="tbl-w" tabIndex={0} role="region" aria-label="五个保险丝一览表"><table>
+                  <div className="tbl-w" tabIndex={0} role="region" aria-label="五个原始保险丝"><table>
                     <thead><tr><th>保险丝</th><th>电路</th><th>输入</th><th>何时说“否”</th><th>费用</th></tr></thead>
                     <tbody>
                       <tr><td><b>Daily Cap</b></td><td>#15 · 108 NAND</td><td>24：金额、今日已支出、上限</td><td>这笔付款会超出今日上限（按 UTC 日计）</td><td>0.001</td></tr>
@@ -333,6 +335,32 @@ export default function DocsPage() {
                 }
               />
               <p className="small"><T en={<>Fees are in USD₮0 per check; a payment checked by the first four costs 0.0045, all five 0.005. Every netlist is on TapeOut&apos;s processor, and the <Link href="/app/market">fuse market</Link> checks each one against the hash the registry pinned at listing.</>} zh={<>费用以 USD₮0 计，按每次检查收取；经前四个保险丝检查的一笔付款花费 0.0045，五个全部检查则为 0.005。每份网表都存储在 TapeOut 的处理器上，<Link href="/app/market">保险丝市场</Link>会将每份网表与注册表在上架时锁定的哈希进行比对。</>} /></p>
+              <h3><T en="The four rivals" zh="4 个竞争设计" /></h3>
+              <T
+                en={
+                  <div className="tbl-w" tabIndex={0} role="region" aria-label="The four rival fuses"><table>
+                    <thead><tr><th>Fuse</th><th>Socket</th><th>Circuit</th><th>Says no when</th><th>Fee</th></tr></thead>
+                    <tbody>
+                      <tr><td><b><Link href="/app/fuse/6">Per-Payment Cap</Link></b></td><td>Daily Cap</td><td>#22 · 37 NAND</td><td>A single payment is over the cap (today&apos;s spend isn&apos;t counted)</td><td>0.001</td></tr>
+                      <tr><td><b><Link href="/app/fuse/7">Strict Payee Book</Link></b></td><td>Payee Guard</td><td>#23 · 39 NAND</td><td>The payee isn&apos;t saved, or is still cooling off: no trial amount at all</td><td>0.001</td></tr>
+                      <tr><td><b><Link href="/app/fuse/8">Two-Strike Breaker</Link></b></td><td>Breaker</td><td>#24 · 16 NAND + 2 LATCH</td><td>The first payment to a stranger is refused and remembered; the second blows it</td><td>0.0005</td></tr>
+                      <tr><td><b><Link href="/app/fuse/9">Lead Approver</Link></b></td><td>Two of Three</td><td>#25 · 43 NAND</td><td>Over the threshold without two approvals, one of them from seat 1</td><td>0.002</td></tr>
+                    </tbody>
+                  </table></div>
+                }
+                zh={
+                  <div className="tbl-w" tabIndex={0} role="region" aria-label="4 个竞争设计"><table>
+                    <thead><tr><th>保险丝</th><th>插槽</th><th>电路</th><th>何时说“否”</th><th>费用</th></tr></thead>
+                    <tbody>
+                      <tr><td><b><Link href="/app/fuse/6">Per-Payment Cap</Link></b></td><td>Daily Cap</td><td>#22 · 37 NAND</td><td>单笔付款超过上限（不计今日已支出）</td><td>0.001</td></tr>
+                      <tr><td><b><Link href="/app/fuse/7">Strict Payee Book</Link></b></td><td>Payee Guard</td><td>#23 · 39 NAND</td><td>收款方未保存，或仍在冷静期：没有任何试付额度</td><td>0.001</td></tr>
+                      <tr><td><b><Link href="/app/fuse/8">Two-Strike Breaker</Link></b></td><td>Breaker</td><td>#24 · 16 NAND + 2 LATCH</td><td>第一次付给陌生地址被拒绝并记下；第二次让它熔断</td><td>0.0005</td></tr>
+                      <tr><td><b><Link href="/app/fuse/9">Lead Approver</Link></b></td><td>Two of Three</td><td>#25 · 43 NAND</td><td>超过阈值，且没有两份审批，或其中没有 1 号席位的审批</td><td>0.002</td></tr>
+                    </tbody>
+                  </table></div>
+                }
+              />
+              <p className="small"><T en={<>The Fusebox team taped the rivals out to show designs competing on one socket; outside designers list theirs the same way (<a href="#designers">selling a fuse</a>). Check any of the nine yourself: its page shows the netlist read from TapeOut&apos;s processor, and OKLink has <a href="https://www.oklink.com/x-layer/evm/address/0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355" target="_blank" rel="noreferrer">the processor</a> and <a href="https://www.oklink.com/x-layer/evm/token/0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355" target="_blank" rel="noreferrer">the circuit-NFT collection</a>.</>} zh={<>这 4 个竞争设计由 Fusebox 团队流片，用来展示同一插槽上的设计竞争；外部设计者也用同样的方式上架（见<a href="#designers">出售保险丝</a>）。9 个保险丝都可以自己核验：每个页面都展示从 TapeOut 处理器读取的网表，OKLink 上也能查看<a href="https://www.oklink.com/x-layer/evm/address/0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355" target="_blank" rel="noreferrer">处理器</a>和<a href="https://www.oklink.com/x-layer/evm/token/0x57F319CF056F72F48cF1dbb670F2A3DB007Aa355" target="_blank" rel="noreferrer">电路 NFT 合集</a>。</>} /></p>
             </section>
 
             <section id="fees">

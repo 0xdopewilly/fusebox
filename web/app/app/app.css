@@ -1327,3 +1327,15 @@ html.panel-open .msticky { visibility: hidden; }
 .done-card { position: relative; }
 .wzm-prog i { transition: background-color 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
 .mseg button { transition: background-color 0.3s, color 0.3s, border-color 0.3s; }
+/* fuse page: "Check it yourself" (components/app/VerifyLinks) */
+.vfy { margin-top: 28px; }
+.vfy-list { list-style: none; margin: 10px 0 0; padding: 0; border-top: 1px solid var(--hair); }
+.vfy-list li { border-bottom: 1px solid var(--hair); padding: 12px 0; }
+.vfy-list a { display: flex; flex-direction: column; gap: 4px; color: var(--soft); text-decoration: none; }
+.vfy-list a b { color: var(--ink); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; transition: color 0.2s; }
+.vfy-list a span { font-size: 13px; line-height: 1.5; color: var(--mute); }
+.vfy-list a:hover b, .vfy-list a:focus-visible b { color: var(--lime); }
+.vfy-copy { margin-top: 10px; background: none; border: 1px solid var(--hair3); color: var(--soft); padding: 7px 10px; font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; cursor: pointer; transition: border-color 0.2s, color 0.2s; }
+.vfy-copy:hover { border-color: var(--lime); color: var(--lime); }
+.ms .vfy { margin-top: 20px; }
+.vfy .vfy-list li a { text-decoration: none; } /* beats the site-wide "li a" underline */

@@ -1,4 +1,5 @@
 "use client";
+import VerifyLinks from "../VerifyLinks";
 import Link from "next/link";
 import { ATLAS_PATH } from "../HomeView";
 import { useState } from "react";
@@ -147,7 +148,7 @@ export function FuseMobile({ data, f }: { data: Market; f: Fuse }) {
       <div className="mrows">
         {f.listed && <MRow href={`/app/simulate?f=${f.fuseId}`} icon={<Glyph name="sim" size={16} />} title={t("Try it on payments", "用付款试试")} sub={t("In the line simulator", "在线路模拟器里")} />}
         <MRow onClick={() => setSheet("pins")} icon={<Glyph name="docs" size={16} />} title={t("Pinout", "引脚")} sub={t("What the wallet tells the circuit", "钱包告诉电路什么")} />
-        <MRow onClick={() => setSheet("chain")} icon={<Glyph name="ext" size={16} />} title={t("On X Layer", "在 X Layer 上")} sub={t("Processor, designer, netlist hash", "处理器、设计者、网表哈希")} />
+        <MRow onClick={() => setSheet("chain")} icon={<Glyph name="ext" size={16} />} title={t("On X Layer", "在 X Layer 上")} sub={t("Processor, designer, netlist hash, where to check it", "处理器、设计者、网表哈希，以及在哪里核验")} />
         {f.onAtlas && <MRow href={ATLAS_PATH} icon={<Glyph name="mine" size={16} />} title={t("Running on Atlas", "在 Atlas 上运行")} sub={t("See it decide live", "实时看它决策")} />}
       </div>
       <MSheet open={sheet === "pins"} onClose={() => setSheet(null)} title={t("Pinout", "引脚")}>
@@ -164,6 +165,7 @@ export function FuseMobile({ data, f }: { data: Market; f: Fuse }) {
           {meta?.source && <><span>{t("Source", "源码")}</span><span><a href={meta.source} target="_blank" rel="noreferrer">{t("code ↗", "代码 ↗")}</a></span></>}
           <span>{t("Split", "分成")}</span><span>{t(`${100 - data.protocolBps / 100}% designer · ${data.protocolBps / 100}% Fusebox`, `设计者 ${100 - data.protocolBps / 100}% · Fusebox ${data.protocolBps / 100}%`)}</span>
         </div>
+        <VerifyLinks processor={f.processor} circuitId={f.circuitId} fuseId={f.fuseId} />
       </MSheet>
     </div>
   );
