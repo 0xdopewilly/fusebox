@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { GLOSSARY, type GlossKey } from "@/lib/plain";
 import { useLang } from "@/lib/i18n";
+import { powerOn, powerOff, usePresence } from "@/lib/motion";
 import { useMobile } from "./useMobile";
 import { MSheet } from "./ui";
 
@@ -15,6 +16,9 @@ export default function Term({ k, children }: { k: GlossKey; children?: React.Re
   const mobile = useMobile();
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLSpanElement>(null);
+  const pop = useRef<HTMLSpanElement>(null);
+  // desktop card: the wire draws from the word, the card unrolls, the term decodes from bits
+  const shown = usePresence(open && !mobile, pop, (el) => powerOn(el, { from: "left", rows: [], decode: el.querySelectorAll("b") }), (el, done) => powerOff(el, done, { rows: [] }));
   useEffect(() => {
     if (!open || mobile) return;
     const off = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
@@ -25,7 +29,7 @@ export default function Term({ k, children }: { k: GlossKey; children?: React.Re
   return (
     <span className="term" ref={box}>
       <button type="button" className="term-w" aria-expanded={open} onClick={(e) => { e.stopPropagation(); e.preventDefault(); setOpen((o) => !o); }}>{children ?? g.term}</button>
-      {open && !mobile && <span className="term-pop" role="tooltip"><b>{g.term}</b>{g.say} <Link href="/docs#glossary">{zh ? "全部术语 →" : "All terms →"}</Link></span>}
+      {shown && !mobile && <span className="term-pop" role="tooltip" ref={pop}><i className="pw-wire" aria-hidden="true" /><i className="pw-scan" aria-hidden="true" /><b key={g.term} data-t={g.term}>{g.term}</b>{g.say} <Link href="/docs#glossary">{zh ? "全部术语 →" : "All terms →"}</Link></span>}
       {mobile && <MSheet open={open} onClose={() => setOpen(false)} title={g.term}><div className="ms-info"><p>{g.say}</p><p><Link href="/docs#glossary">{zh ? "所有术语，一页看完 →" : "Every term, in one place →"}</Link></p></div></MSheet>}
     </span>
   );

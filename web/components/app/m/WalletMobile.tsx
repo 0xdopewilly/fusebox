@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { alertsLink } from "@/lib/alerts";
 import AcceptOwnership from "../AcceptOwnership";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useSwapIn } from "@/lib/motion";
 import type { Atlas, DecisionRow, FuseSlot } from "@/lib/atlas";
 import { LAYERS } from "@/lib/fuses";
 import { describe } from "@/lib/sockets";
@@ -62,6 +63,11 @@ export default function WalletMobile({ a, fresh }: { a: Atlas; fresh: Set<number
   const { t, zh } = useLang();
   const owner = !!account && account.toLowerCase() === a.owner.toLowerCase();
   const [tab, setTab] = useState<"act" | "fuses" | "spend" | "owner">("act");
+  const tabBox = useRef<HTMLDivElement>(null);
+  const tabDir = useRef<1 | -1>(1);
+  const TAB_ORDER = ["act", "fuses", "spend", "owner"] as const;
+  const pickTab = (v: typeof tab) => { tabDir.current = TAB_ORDER.indexOf(v) >= TAB_ORDER.indexOf(tab) ? 1 : -1; setTab(v); };
+  useSwapIn(tab, tabBox, tabDir.current);
   const [dec, setDec] = useState<DecisionRow | null>(null);
   const [fuse, setFuse] = useState<FuseSlot | null>(null);
   const [tools, setTools] = useState(false);
@@ -110,7 +116,8 @@ export default function WalletMobile({ a, fresh }: { a: Atlas; fresh: Set<number
       )}
       {(a.paused || blown) && <p className="mnote">{a.paused ? t("The owner froze this wallet; nothing pays until they unfreeze it.", "所有者冻结了这个钱包；解冻之前不会付出任何款项。") : t(`${blown!.name} is blown. Nothing can be paid until the owner resets it.`, `${blown!.name} 已熔断。所有者重置之前，任何付款都无法执行。`)}</p>}
       <MActions items={actions} />
-      <MSeg label={t("Wallet views", "钱包视图")} items={tabs} value={tab} onChange={setTab} />
+      <MSeg label={t("Wallet views", "钱包视图")} items={tabs} value={tab} onChange={pickTab} />
+      <div className="swap" ref={tabBox}>
 
       {tab === "act" && <>
         <MStats items={[[t("Payments", "付款"), a.counts.decisions], [t("Paid", "已付款"), <span key="p" className="lime">{a.counts.allowed}</span>], [t("Stopped", "已拦截"), <span key="s" style={{ color: "var(--red)" }}>{a.counts.blocked}</span>]]} />
@@ -157,6 +164,7 @@ export default function WalletMobile({ a, fresh }: { a: Atlas; fresh: Set<number
 
       {tab === "spend" && <SpendView wallet={a.wallet} refreshKey={a.counts.decisions} />}
       {tab === "owner" && owner && <OwnerConsole data={a} />}
+      </div>
 
       <MSheet open={!!dec} onClose={() => setDec(null)} title={dec ? t(`Payment #${dec.id}`, `付款 #${dec.id}`) : ""}>
         {dec && <>

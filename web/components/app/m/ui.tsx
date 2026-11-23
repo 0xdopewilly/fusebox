@@ -38,6 +38,10 @@ export function MSheet({ open, onClose, title, children }: { open: boolean; onCl
       gsap.killTweensOf([sheet.current, shade.current]);
       gsap.fromTo(shade.current, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.25 });
       gsap.fromTo(sheet.current, { yPercent: 100 }, { yPercent: 0, duration: 0.5, ease: "expo.out" });
+      // the lime edge powers on from the middle and the contents rise in behind it (lib/motion's language)
+      gsap.fromTo(sheet.current.querySelector(".pw-wire"), { scaleX: 0, transformOrigin: "center" }, { scaleX: 1, duration: 0.6, ease: "wire", delay: 0.12 });
+      const rows = sheet.current.querySelectorAll(":scope > .ms-h, :scope > .ms-body > *");
+      gsap.fromTo(rows, { y: 22, autoAlpha: 0 }, { y: 0, autoAlpha: 1, duration: 0.5, stagger: 0.045, ease: "snap", delay: 0.16, clearProps: "transform,opacity,visibility" });
     }
     const esc = (e: KeyboardEvent) => e.key === "Escape" && close();
     window.addEventListener("keydown", esc);
@@ -51,6 +55,7 @@ export function MSheet({ open, onClose, title, children }: { open: boolean; onCl
   return createPortal(
     <div className="ms-shade" ref={shade} onClick={close}>
       <div className="ms" ref={sheet} role="dialog" aria-modal="true" aria-label={title ?? t("Details", "详情")} tabIndex={-1} onClick={(e) => e.stopPropagation()}>
+        <i className="pw-wire" aria-hidden="true" />
         <div className="ms-grab" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}><i /></div>
         {title && <div className="ms-h"><b>{title}</b><button className="ms-x m" onClick={close} aria-label={t("Close", "关闭")}>{t("Close", "关闭")}</button></div>}
         <div className="ms-body">{children}</div>

@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { growOpen, shrinkClosed, usePresence } from "@/lib/motion";
 import { encodeAbiParameters, encodeFunctionData, formatUnits, getAddress, isAddress, keccak256, parseUnits, type Address, type Hash } from "viem";
 import { fuseboxWalletAbi, fuseRegistryAbi } from "@/lib/abi";
 import { erc20Abi } from "@/lib/erc20";
@@ -187,6 +188,8 @@ function FuseRow({ f, i, data, busy, one }: P & { f: FuseSlot; i: number }) {
   const spec = SOCKETS[f.socket];
   const fields = fieldsFor(f.socket, f.paramLabels); // a rival circuit may use the socket's settings differently
   const [open, setOpen] = useState(false);
+  const edit = useRef<HTMLDivElement>(null);
+  const editShown = usePresence(open && !!spec, edit, (el) => growOpen(el, 0, { rows: el.querySelectorAll(":scope > :not(.pw-wire)") }), (el, done) => shrinkClosed(el, 0, done, { rows: el.querySelectorAll(":scope > :not(.pw-wire)") }));
   const [vals, setVals] = useState<Record<string, string>>({ a: String(f.a), b: String(f.b) });
   const raised = parseUnits(f.fee, 6) > parseUnits(f.maxFee, 6);
   const parsed = spec ? parse(fields, vals, zh) : t("Unknown socket", "未知插槽");
@@ -208,8 +211,9 @@ function FuseRow({ f, i, data, busy, one }: P & { f: FuseSlot; i: number }) {
           <button className="btn" disabled={busy} onClick={() => one(t(`Accept ${f.name}'s new fee`, `接受 ${f.name} 的新费用`), () => write({ ...W, functionName: "setFuseMaxFee", args: [BigInt(i), parseUnits(f.fee, 6)] }))}>{t("Accept", "接受")} {f.fee}</button>
         </div>
       )}
-      {open && spec && (
-        <div className="of-edit">
+      {editShown && spec && (
+        <div className="of-edit" ref={edit}>
+          <i className="pw-wire" aria-hidden="true" />
           <Fields fields={fields} vals={vals} set={(k, v) => setVals({ ...vals, [k]: v })} unit={f.unit} />
           {typeof parsed === "string" && <span className="oc-err">{parsed}</span>}
           {f.key === "daily-cap" && f.original !== false && <span className="m mute" style={{ fontSize: 11 }}>{t(<>Today&apos;s spend so far ({Number(f.spentToday).toFixed(2)} USD₮0) still counts against the new cap.</>, <>今天已花费的 {Number(f.spentToday).toFixed(2)} USD₮0 仍计入新的限额。</>)}</span>}

@@ -55,11 +55,13 @@ export function T({ en, zh }: { en: React.ReactNode; zh: React.ReactNode }) {
 /** EN / 中文 */
 export function LangSwitch({ className = "" }: { className?: string }) {
   const { lang, setLang } = useLang();
+  // the page plays its language-change sweep (components/fx/UiFx) when the visitor switches
+  const pick = (l: Lang) => { if (l === lang) return; setLang(l); window.dispatchEvent(new CustomEvent("fusebox:lang", { detail: l })); };
   return (
     <div className={`langsw m ${className}`} role="group" aria-label="Language / 语言">
-      <button type="button" aria-pressed={lang === "en"} onClick={() => setLang("en")} lang="en">EN</button>
+      <button type="button" aria-pressed={lang === "en"} onClick={() => pick("en")} lang="en">EN</button>
       <span aria-hidden="true">/</span>
-      <button type="button" aria-pressed={lang === "zh"} onClick={() => setLang("zh")} lang="zh-CN">中文</button>
+      <button type="button" aria-pressed={lang === "zh"} onClick={() => pick("zh")} lang="zh-CN">中文</button>
     </div>
   );
 }

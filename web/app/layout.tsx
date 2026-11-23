@@ -5,6 +5,7 @@ import "lenis/dist/lenis.css";
 import "./globals.css";
 import SmoothScroll from "@/components/fx/SmoothScroll";
 import Cursor from "@/components/fx/Cursor";
+import UiFx from "@/components/fx/UiFx";
 
 // Latin only is preloaded: the page is English and ₮ has its own tiny font (globals.css); latin-ext still loads on demand
 const display = Archivo({ subsets: ["latin"], axes: ["wdth"], variable: "--f-display", display: "swap" });
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <a className="skip" href="#main"><T en="Skip to content" zh="跳到正文" /></a>
           <SmoothScroll />
           <Cursor />
+          <UiFx />
           {children}
         </LangProvider>
       </body>

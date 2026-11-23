@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { growOpen, shrinkClosed, usePresence } from "@/lib/motion";
 import { useLang } from "@/lib/i18n";
 
 type Lenis = { scrollTo(t: Element | number, o?: object): void };
@@ -10,6 +11,9 @@ export default function DocsNav({ sections }: { sections: { id: string; title: s
   const name = (s: (typeof sections)[number]) => (zh && s.titleZh) || s.title;
   const [cur, setCur] = useState(sections[0].id);
   const [open, setOpen] = useState(false);
+  const list = useRef<HTMLDivElement>(null);
+  // the phone picker grows open under the bar, a wire drawing across it and the sections rising in (lib/motion)
+  const shown = usePresence(open, list, (el) => growOpen(el, 0, { rows: el.querySelectorAll(":scope > a") }), (el, done) => shrinkClosed(el, 0, done, { rows: el.querySelectorAll(":scope > a") }));
   useEffect(() => {
     const els = sections.map((s) => document.getElementById(s.id)).filter(Boolean) as HTMLElement[];
     const io = new IntersectionObserver((es) => {
@@ -43,8 +47,9 @@ export default function DocsNav({ sections }: { sections: { id: string; title: s
         <button className="dn-m-btn m" onClick={() => setOpen(!open)} aria-expanded={open}>
           <span className="mute">{t("On this page", "本页内容")}</span><b>{title}</b><span className="chev" aria-hidden="true" />
         </button>
-        {open && (
-          <div className="dn-m-list">
+        {shown && (
+          <div className="dn-m-list" ref={list}>
+            <i className="pw-wire" aria-hidden="true" />
             {sections.map((s, i) => <a key={s.id} href={`#${s.id}`} onClick={(e) => go(e, s.id)} className={cur === s.id ? "on" : ""}><span className="m">{String(i + 1).padStart(2, "0")}</span>{name(s)}</a>)}
           </div>
         )}

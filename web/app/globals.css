@@ -648,3 +648,20 @@ p a:not(.btn), li a:not(.btn), .docs-foot .mute a { text-decoration: underline; 
 @media (max-width: 1100px) { .navlang { display: none; } }
 .top nav .navlink { flex-shrink: 0; white-space: nowrap; }
 @media (max-width: 420px) { .sitebar .sitelang { display: none; } }
+
+/* ---------- motion kit (lib/motion.ts): the lime wire and scan line a panel powers on with ---------- */
+.pw-wire { position: absolute; left: -1px; right: -1px; top: -1px; height: 2px; z-index: 3; pointer-events: none; background: var(--lime); box-shadow: 0 0 12px rgba(187, 254, 47, 0.55); }
+.pw-scan { position: absolute; left: 0; right: 0; top: -44px; height: 44px; z-index: 3; pointer-events: none; opacity: 0; visibility: hidden; background: linear-gradient(to bottom, transparent, rgba(187, 254, 47, 0.13) 70%, rgba(187, 254, 47, 0.5)); }
+/* the language switch: a lime underline slides to the active language */
+.langsw button { position: relative; transition: color 0.25s; }
+.langsw button::after { content: ""; position: absolute; left: 2px; right: 2px; bottom: 0; height: 1px; background: var(--lime); transform: scaleX(0); transform-origin: left; transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1); }
+.langsw button[aria-pressed="true"]::after { transform: scaleX(1); }
+.langsw button[aria-pressed="false"]::after { transform-origin: right; }
+/* accordions: the summary's marker turns as it opens (motion kit grows the body) */
+details > summary { transition: color 0.25s; }
+/* language switch: a scan line sweeps the screen (components/fx/UiFx) */
+.lang-scan { position: fixed; left: 0; right: 0; top: -180px; height: 180px; z-index: 9000; pointer-events: none; opacity: 0; visibility: hidden; background: linear-gradient(to bottom, transparent, rgba(187, 254, 47, 0.06) 70%, rgba(187, 254, 47, 0.35) 98%, var(--lime)); }
+/* accordions: a lime wire zips under the summary as it opens */
+details.fx-zip > summary { background-image: linear-gradient(var(--lime), var(--lime)); background-repeat: no-repeat; animation: fx-zip 0.75s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
+@keyframes fx-zip { 0% { background-size: 0% 1px; background-position: left bottom; } 55% { background-size: 100% 1px; background-position: left bottom; } 56% { background-position: right bottom; } 100% { background-size: 0% 1px; background-position: right bottom; } }
+/* docs FAQ: the + turns into × */

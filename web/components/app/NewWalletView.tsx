@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import { alertsLink } from "@/lib/alerts";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { powerOn, useSwapIn } from "@/lib/motion";
 import GuardrailsCard from "./GuardrailsCard";
 import { decodeEventLog, domainSeparator, isAddress, parseSignature, parseUnits, getAddress, toHex, type Address, type Hex } from "viem";
 import { fuseboxFactoryAbi, fuseboxSetupAbi, fuseboxWalletAbi, fuseRegistryAbi } from "@/lib/abi";
@@ -293,6 +294,10 @@ export default function NewWalletView() {
   // when the last step lands, bring the "It's live" card into view (on phones it sits under the step list)
   // the key made here belongs to the new wallet now: keep it for the assistant (or not), and drop the pending copy
   useEffect(() => { if (!made?.wallet || !keyLive) return; if (keepKey) saveAgentKey(made.wallet, keyLive); savePendingKey(null); }, [made?.wallet]); // eslint-disable-line react-hooks/exhaustive-deps
+  // the "It's live" card powers on like a circuit when the wallet lands (lib/motion)
+  const doneCard = useRef<HTMLDivElement>(null);
+  const doneCardD = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => { if (!made?.wallet) return; for (const el of [doneCard.current, doneCardD.current]) if (el) powerOn(el, { from: "left" }); }, [made?.wallet]);
   useEffect(() => { if (made?.wallet) setTimeout(() => document.querySelector(".done-card")?.scrollIntoView({ behavior: "smooth", block: "center" }), 150); }, [made?.wallet]);
 
   const toggle = (k: Key) => setOn({ ...on, [k]: !on[k] });
@@ -327,7 +332,11 @@ export default function NewWalletView() {
   const agentErr = !agent.trim() ? tr("Enter the address your agent signs with.", "请输入智能体用来签名的地址。") : !isAddress(agent.trim(), { strict: false }) ? tr("That isn't an address.", "这不是一个有效地址。") : account && agent.trim().toLowerCase() === account.toLowerCase() ? tr("Use a separate key for the agent, not your own.", "请给智能体用单独的密钥，不要用你自己的。") : null;
   const blockNext = step === 2 && !!agentErr;
   const activeStarter = STARTERS.find((x) => FUSES.every((f) => on[f.key] === x.on[f.key]) && (!x.on["daily-cap"] || cap === x.cap) && (!x.on["payee-guard"] || (cool === x.cool && trial === x.trial)) && (!x.on["approval-2of3"] || thr === x.thr) && (!x.on["repeat-guard"] || win === x.win));
-  const go = (n: number) => { setStep(n); window.scrollTo({ top: 0 }); };
+  const stepBox = useRef<HTMLDivElement>(null);
+  const stepDir = useRef<1 | -1>(1);
+  const go = (n: number) => { stepDir.current = n >= step ? 1 : -1; setStep(n); window.scrollTo({ top: 0 }); };
+  useSwapIn(step, stepBox, stepDir.current);
+
   const mobileView = (
     <div className="mpage wzm">
       <PageChrome title={tr("Wire up", "搭建钱包")} sub={made?.wallet ? tr("Done", "完成") : tr(`Step ${step + 1} of ${STEPS.length} · ${STEPS[step]}`, `第 ${step + 1} 步，共 ${STEPS.length} 步 · ${STEPS[step]}`)}
@@ -336,7 +345,8 @@ export default function NewWalletView() {
       <div className="wzm-prog" aria-hidden="true" style={{ gridTemplateColumns: `repeat(${STEPS.length}, 1fr)` }}>{STEPS.map((s, i) => <i key={s} className={i <= step || made?.wallet ? "on" : ""} />)}</div>
 
       {made?.wallet ? (
-        <div className="done-card">
+        <div className="done-card" ref={doneCard}>
+          <i className="pw-wire" aria-hidden="true" /><i className="pw-scan" aria-hidden="true" />
           <div className="mtitle">{tr(<>It&apos;s live.</>, <>已上线。</>)}</div>
           <p className="mcap" style={{ marginTop: 10 }}>{tr(<>Your wallet <span className="m lime">{short(made.wallet)}</span> is on X Layer with its fuses spliced in. Now hand it to your agent, or make your first payment right here.</>, <>你的钱包 <span className="m lime">{short(made.wallet)}</span> 已在 X Layer 上线，保险丝均已接入。现在把它交给你的智能体，或者就在这里完成第一笔付款。</>)}</p>
           <Link className="btn lime" style={{ marginTop: 16, justifyContent: "center", height: 52 }} href={`/app/first?wallet=${made.wallet}`}>{tr("Make your first payment", "完成第一笔付款")} <span className="k">→</span></Link>
@@ -346,6 +356,7 @@ export default function NewWalletView() {
           <Link className="btn" style={{ marginTop: 12, justifyContent: "center", height: 48 }} href={`/app/w/${made.wallet}`}>{tr("Open my wallet", "打开我的钱包")}</Link>
         </div>
       ) : <>
+        <div className="swap" ref={stepBox}>
         {step === 0 && <>
           <div><div className="mtitle">{tr("Before you start", "开始之前")}</div><p className="mcap" style={{ marginTop: 8 }}>{tr(<>You&apos;ll need four things. Fusebox checks what it can.</>, <>你需要准备四样东西。能检查的，Fusebox 会帮你检查。</>)}</p></div>
           <NeedList account={account} bal={bal} />
@@ -443,6 +454,7 @@ export default function NewWalletView() {
           {!q.running && problems.length > 0 && <p className="mnote" style={{ color: "var(--red)" }}>{problems[0]}</p>}
         </>}
         {step === 5 && !q.steps.length && <p className="m mute">{CURRENT.setup ? tr("Three taps: a free signature, one transaction that sets everything up, then make it yours.", "三步完成：一次免费签名，一笔完成全部设置的交易，然后成为所有者。") : tr("Each step is one transaction you sign.", "每一步都是一笔需要你签名的交易。")}</p>}
+        </div>
         <MSticky>
           {step > 0 && <button className="btn fit" onClick={() => go(step - 1)} disabled={q.running}>{tr("Back", "返回")}</button>}
           {step < STEPS.length - 1
@@ -635,7 +647,8 @@ export default function NewWalletView() {
             )}
             <div className="go">
               {made?.wallet ? (
-                <div className="done-card">
+                <div className="done-card" ref={doneCardD}>
+                  <i className="pw-wire" aria-hidden="true" /><i className="pw-scan" aria-hidden="true" />
                   <h4>{tr(<>It&apos;s live.</>, <>已上线。</>)}</h4>
                   <p style={{ color: "var(--soft)", fontSize: 14, lineHeight: 1.5 }}>{tr(<>Your wallet <span className="m lime">{short(made.wallet)}</span> is on X Layer with its fuses spliced in. Hand it to your agent, or make your first payment here.</>, <>你的钱包 <span className="m lime">{short(made.wallet)}</span> 已在 X Layer 上线，保险丝均已接入。把它交给你的智能体，或在这里完成第一笔付款。</>)}</p>
                   <div className="prow" style={{ marginTop: 14 }}><Link className="btn lime" href={`/app/first?wallet=${made.wallet}`} data-cursor={tr("Pay", "付款")}>{tr("Make your first payment", "完成第一笔付款")} <span className="k">→</span></Link><Link className="btn" href={`/app/w/${made.wallet}`} data-cursor={tr("Open", "打开")}>{tr("Open my wallet", "打开我的钱包")}</Link></div>
