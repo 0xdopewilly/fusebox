@@ -113,10 +113,12 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .navlink:hover span + span { transform: translateY(0); }
 .top nav .btn { height: 36px; margin-left: 8px; }
 .top nav .btn { flex: none; }
-@media (max-width: 1400px) { .top nav { gap: 14px; } }
-@media (max-width: 1500px) { .top nav .navlink[href="#designers"] { display: none; } }
-@media (max-width: 1300px) { .top nav .navlink[href="#fuses"] { display: none; } }
-@media (max-width: 1220px) { .top nav .navlink[href="#tapeout"] { display: none; } }
+/* the nav spans three columns and sheds links by its own width, so it never runs into the block counter */
+@media (min-width: 761px) { .top nav { container-type: inline-size; min-width: 0; } } /* phones size the nav to its content */
+@container (max-width: 600px) { .top nav { gap: 18px; } }
+@container (max-width: 560px) { .navlink[href="#designers"] { display: none; } }
+@container (max-width: 500px) { .navlink[href="#fuses"] { display: none; } }
+@container (max-width: 420px) { .navlink[href="#tapeout"] { display: none; } }
 
 /* ---------- hero ---------- */
 .hero { height: max(1000px, 100svh); position: relative; overflow: hidden; border-bottom: 1px solid var(--hair); }
@@ -665,3 +667,5 @@ details > summary { transition: color 0.25s; }
 details.fx-zip > summary { background-image: linear-gradient(var(--lime), var(--lime)); background-repeat: no-repeat; animation: fx-zip 0.75s cubic-bezier(0.76, 0, 0.24, 1) forwards; }
 @keyframes fx-zip { 0% { background-size: 0% 1px; background-position: left bottom; } 55% { background-size: 100% 1px; background-position: left bottom; } 56% { background-position: right bottom; } 100% { background-size: 0% 1px; background-position: right bottom; } }
 /* docs FAQ: the + turns into × */
+.top .tcol { white-space: nowrap; }
+@media (min-width: 761px) { .top.cols { grid-template-columns: repeat(6, minmax(0, 1fr)); } } /* equal columns: one-line info may run into the empty column beside it */

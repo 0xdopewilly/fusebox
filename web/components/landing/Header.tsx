@@ -72,9 +72,8 @@ export default function Header() {
     <header className="wrap cols top" ref={ref}>
       <a className="logo" href="#" data-h data-cursor="Top"><Logo />FUSEBOX<sup>®</sup></a>
       <div className="tcol m mute" data-h><span className="scr">{t("Circuit fuses", "电路保险丝")}</span><br /><span className="scr">{t("for AI agent wallets", "守护 AI 智能体钱包")}</span></div>
-      <div className="tcol m mute" data-h><span className="scr">{t("X Layer · chain 196", "X Layer · 链 196")}</span><br /><span className="scr">{t("Taped out on TapeOut", "在 TapeOut 上流片")}</span></div>
       <div className="tcol m mute" data-h><span className="live" />{t("Block", "区块")} {block ? <Digits value={b} /> : <span style={{ color: "#f2f2ee" }}>{b}</span>}<br />{t("X Layer mainnet · live", "X Layer 主网 · 运行中")}</div>
-      <nav className="m" style={{ gridColumn: "5 / 7" }} data-h aria-label={t("Site", "网站")}>
+      <nav className="m" style={{ gridColumn: "4 / 7" }} data-h aria-label={t("Site", "网站")}>
         <NavLink href="#how" label={t("How", "原理")} />
         <NavLink href="#tapeout" label="TapeOut" />
         <NavLink href="#fuses" label={t("Fuses", "保险丝")} />
