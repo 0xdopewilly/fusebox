@@ -89,3 +89,4 @@ details p { padding-bottom: 16px; }
 @media (max-width: 700px) { .gloss > div { grid-template-columns: 1fr; gap: 4px; } }
 .dn-m-list { position: relative; }
 .dn-m .chev { transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1); }
+.mcp-badge { margin: 4px 0 22px; } .mcp-badge img { display: block; max-width: 100%; height: auto; } .mcp-badge a { display: inline-block; transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1); } .mcp-badge a:hover { transform: translateY(-2px); }

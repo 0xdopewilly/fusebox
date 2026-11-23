@@ -457,6 +457,8 @@ if (allowed) await agent.writeContract({ address: WALLET, abi: fuseboxWalletAbi,
 
             <section id="mcp">
               <H2 id="mcp" />
+              {/* eslint-disable-next-line @next/next/no-img-element -- an external, server-rendered listing badge */}
+              <p className="mcp-badge"><a href="https://mcprush.com/to/fusebox-mcp?ref=badge" target="_blank" rel="noreferrer"><img src="https://mcprush.com/badge/fusebox-mcp/card.svg" alt="Fusebox MCP server on mcprush: security A, 7 tools, works with 14 clients" width={380} height={200} loading="lazy" /></a></p>
               <T
                 en={
                   <div className="tbl-w" tabIndex={0} role="region" aria-label="MCP tools table"><table>

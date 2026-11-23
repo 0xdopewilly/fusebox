@@ -6,6 +6,8 @@
 
 Fusebox 是一个给 AI 智能体用的钱包，运行在 X Layer 上。智能体发起的每一笔付款，都必须先经过一组「保险丝」：在 [TapeOut](https://tapeout.net) 上流片的小型逻辑电路，与付款在同一笔交易里、在 X Layer 链上完成检查。所有保险丝都说可以，钱才会转出；只要有一个说不，什么都不会发生。每个保险丝的设计者，在它每次检查付款时都能赚取费用。
 
+[![Fusebox MCP 服务器](https://mcprush.com/badge/fusebox-mcp/card.svg)](https://mcprush.com/to/fusebox-mcp?ref=badge)
+
 ## 评审速览（X Layer TapeOut Accelerate）
 
 | | |

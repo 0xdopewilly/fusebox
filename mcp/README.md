@@ -2,6 +2,8 @@
 
 MCP tools for an AI agent that pays through a [Fusebox](https://fusebox-xlayer.vercel.app) wallet on X Layer. Every payment runs through the wallet's fuses (TapeOut logic circuits on X Layer), and it only goes out if every fuse says yes.
 
+[![Fusebox MCP server](https://mcprush.com/badge/fusebox-mcp/card.svg)](https://mcprush.com/to/fusebox-mcp?ref=badge)
+
 | Tool | What it does |
 |---|---|
 | `fusebox_check` | Dry-runs a payment against every fuse and returns each verdict with its reason. It's free and read-only. |
